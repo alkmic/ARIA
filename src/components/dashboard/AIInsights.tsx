@@ -52,7 +52,7 @@ export const AIInsights: React.FC = () => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
-            className="min-w-[320px] glass-card p-6 hover:shadow-2xl transition-shadow duration-300"
+            className="min-w-[320px] glass-card p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-default"
           >
             <div className="flex items-start justify-between mb-3">
               <span className="text-3xl">{typeIcons[insight.type]}</span>

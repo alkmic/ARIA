@@ -36,7 +36,7 @@ export const UpcomingVisits: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
                 onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
-                className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                className="flex items-start space-x-3 p-3 hover:bg-slate-50 hover:scale-[1.01] rounded-lg transition-all duration-200 cursor-pointer"
               >
                 <Avatar
                   src={visit.practitioner.avatarUrl}
@@ -115,7 +115,7 @@ export const UpcomingVisits: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
                 onClick={() => navigate(`/practitioner/${practitioner.id}`)}
-                className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                className="flex items-start space-x-3 p-3 hover:bg-slate-50 hover:scale-[1.01] rounded-lg transition-all duration-200 cursor-pointer"
               >
                 <Avatar
                   src={practitioner.avatarUrl}
