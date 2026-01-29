@@ -32,6 +32,7 @@ export interface Practitioner {
   aiSummary: string; // Résumé généré (2-3 phrases)
   nextBestAction: string;
   riskLevel: 'low' | 'medium' | 'high';
+  keyPoints?: string[]; // Points clés pour la visite
 
   // Conversations passées (mock)
   conversations: {
@@ -39,6 +40,15 @@ export interface Practitioner {
     summary: string;
     sentiment: 'positive' | 'neutral' | 'negative';
     actions: string[];
+    type?: string;
+    duration?: string;
+  }[];
+
+  // Historique volumes (pour graphiques)
+  volumeHistory?: {
+    month: string;
+    volume: number;
+    vingtileAvg: number;
   }[];
 
   // Avatar (généré)
@@ -93,4 +103,13 @@ export interface PerformanceData {
   yourVolume: number;
   objective: number;
   teamAverage: number;
+}
+
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  practitioners?: Practitioner[];
+  insights?: string[];
+  timestamp: Date;
 }

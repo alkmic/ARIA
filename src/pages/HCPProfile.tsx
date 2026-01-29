@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Filter, MapPin, TrendingUp } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
@@ -7,6 +8,7 @@ import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 
 export const HCPProfile: React.FC = () => {
+  const navigate = useNavigate();
   const { filterPractitioners } = useAppStore();
   const practitioners = filterPractitioners();
 
@@ -40,7 +42,7 @@ export const HCPProfile: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
           >
-            <Card hover className="cursor-pointer">
+            <Card hover className="cursor-pointer" onClick={() => navigate(`/practitioner/${practitioner.id}`)}>
               <div className="flex items-start space-x-4">
                 <Avatar
                   src={practitioner.avatarUrl}
