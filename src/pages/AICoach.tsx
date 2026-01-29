@@ -89,7 +89,7 @@ export default function AICoach() {
               {SUGGESTION_CHIPS.map((chip, i) => (
                 <button
                   key={i}
-                  onClick={() => handleSend(chip)}
+                  onClick={() => setInput(chip)}
                   className="px-4 py-2 bg-al-blue-50 text-al-blue-600 rounded-full text-sm font-medium
                            hover:bg-al-blue-100 transition-colors"
                 >

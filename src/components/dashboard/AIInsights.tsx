@@ -1,12 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 
 export const AIInsights: React.FC = () => {
   const { insights } = useAppStore();
+  const navigate = useNavigate();
 
   const priorityColors = {
     high: 'danger' as const,
@@ -19,6 +21,16 @@ export const AIInsights: React.FC = () => {
     alert: '⚠️',
     reminder: '📅',
     achievement: '🏆',
+  };
+
+  const handleAction = (insight: typeof insights[0]) => {
+    if (insight.practitionerId) {
+      // Navigate to practitioner profile
+      navigate(`/practitioner/${insight.practitionerId}`);
+    } else if (insight.actionLabel === 'Planifier visites') {
+      // Navigate to practitioners list
+      navigate('/practitioners');
+    }
   };
 
   return (
@@ -50,7 +62,12 @@ export const AIInsights: React.FC = () => {
             <p className="text-sm text-slate-600 mb-4 line-clamp-3">{insight.message}</p>
 
             {insight.actionLabel && (
-              <Button variant="secondary" size="sm" className="w-full">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full cursor-pointer"
+                onClick={() => handleAction(insight)}
+              >
                 {insight.actionLabel}
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>

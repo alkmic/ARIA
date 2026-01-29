@@ -1,24 +1,31 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
+import { Landing } from './pages/Landing';
 import { Dashboard } from './pages/Dashboard';
 import { HCPProfile } from './pages/HCPProfile';
 import PractitionerProfile from './pages/PractitionerProfile';
 import { PitchGenerator } from './pages/PitchGenerator';
 import AICoach from './pages/AICoach';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/practitioners" element={<HCPProfile />} />
-          <Route path="/practitioner/:id" element={<PractitionerProfile />} />
-          <Route path="/pitch" element={<PitchGenerator />} />
-          <Route path="/coach" element={<AICoach />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        {/* Landing page without Layout */}
+        <Route path="/" element={<Landing />} />
+
+        {/* App pages with Layout */}
+        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+        <Route path="/practitioners" element={<Layout><HCPProfile /></Layout>} />
+        <Route path="/practitioner/:id" element={<Layout><PractitionerProfile /></Layout>} />
+        <Route path="/pitch" element={<Layout><PitchGenerator /></Layout>} />
+        <Route path="/coach" element={<Layout><AICoach /></Layout>} />
+        <Route path="/settings" element={<Layout><Settings /></Layout>} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }

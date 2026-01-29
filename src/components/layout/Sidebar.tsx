@@ -4,7 +4,7 @@ import { Avatar } from '../ui/Avatar';
 import { useAppStore } from '../../stores/useAppStore';
 
 const menuItems = [
-  { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/' },
+  { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
   { id: 'practitioners', icon: Users, label: 'Praticiens', path: '/practitioners' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
   { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach' },
@@ -18,7 +18,7 @@ export const Sidebar = () => {
     <div className="w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 text-white flex flex-col fixed left-0 top-0 z-20">
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
-        <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+        <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
             <span className="text-2xl">🤖</span>
           </div>
@@ -57,10 +57,13 @@ export const Sidebar = () => {
 
       {/* Settings */}
       <div className="p-3 border-t border-white/10">
-        <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200">
+        <Link
+          to="/settings"
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200"
+        >
           <Settings className="w-5 h-5" />
           <span className="font-medium">Paramètres</span>
-        </button>
+        </Link>
       </div>
 
       {/* User Profile */}

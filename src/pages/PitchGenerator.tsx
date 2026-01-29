@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -68,11 +68,7 @@ export function PitchGenerator() {
   });
   const { speak, pause, resume, stop, isSpeaking, isPaused } = useSpeech();
 
-  useEffect(() => {
-    if (!practitioner) {
-      navigate('/practitioners');
-    }
-  }, [practitioner, navigate]);
+  // Removed auto-redirect - now shows practitioner selector instead
 
   // Parser le texte streamé en sections
   const parsePitchSections = (text: string): PitchSection[] => {
@@ -197,7 +193,68 @@ export function PitchGenerator() {
     }
   };
 
-  if (!practitioner) return null;
+  // Show practitioner selector if none selected
+  if (!practitioner) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-8"
+          >
+            <div className="text-center mb-8">
+              <Sparkles className="w-16 h-16 text-airLiquide-teal mx-auto mb-4" />
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Générateur de Pitch IA
+              </h1>
+              <p className="text-gray-600">
+                Sélectionnez un praticien pour générer un pitch personnalisé
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {practitioners.slice(0, 12).map((p) => (
+                <motion.button
+                  key={p.id}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate(`/pitch?practitionerId=${p.id}`)}
+                  className="glass-card p-4 text-left hover:shadow-xl transition-shadow cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-airLiquide-primary to-airLiquide-teal flex items-center justify-center text-white font-bold">
+                      {p.firstName[0]}{p.lastName[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-gray-900 truncate">
+                        {p.title} {p.firstName} {p.lastName}
+                      </div>
+                      <div className="text-sm text-gray-600 truncate">
+                        {p.specialty}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {p.city} · {(p.volumeL / 1000).toFixed(0)}K L/an
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+
+            <div className="mt-8 text-center">
+              <button
+                onClick={() => navigate('/practitioners')}
+                className="text-airLiquide-primary hover:underline"
+              >
+                Voir tous les praticiens →
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-8">

@@ -9,7 +9,7 @@ import { Card } from '../components/ui/Card';
 
 export const HCPProfile: React.FC = () => {
   const navigate = useNavigate();
-  const { filterPractitioners } = useAppStore();
+  const { filterPractitioners, searchQuery } = useAppStore();
   const practitioners = filterPractitioners();
 
   return (
@@ -34,8 +34,17 @@ export const HCPProfile: React.FC = () => {
       </div>
 
       {/* Practitioners Grid */}
-      <div className="grid grid-cols-3 gap-6">
-        {practitioners.slice(0, 12).map((practitioner, index) => (
+      {practitioners.length === 0 ? (
+        <div className="glass-card p-12 text-center">
+          <p className="text-gray-600">
+            {searchQuery
+              ? `Aucun praticien trouvé pour "${searchQuery}"`
+              : 'Aucun praticien dans votre portefeuille'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-6">
+          {practitioners.map((practitioner, index) => (
           <motion.div
             key={practitioner.id}
             initial={{ opacity: 0, y: 20 }}
@@ -93,8 +102,9 @@ export const HCPProfile: React.FC = () => {
               </div>
             </Card>
           </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };
