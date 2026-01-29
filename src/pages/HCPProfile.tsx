@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Filter, MapPin, TrendingUp } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
@@ -11,9 +11,20 @@ import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { filterPractitioners, searchQuery } = useAppStore();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({});
+
+  // Handle ?filter=priority query param
+  useEffect(() => {
+    if (searchParams.get('filter') === 'priority') {
+      // Show high priority practitioners (high risk level or KOL)
+      setFilters({
+        riskLevel: ['high'],
+      });
+    }
+  }, [searchParams]);
   const practitioners = filterPractitioners(filters);
 
   return (

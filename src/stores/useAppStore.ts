@@ -85,18 +85,71 @@ const mockInsights: AIInsight[] = [
 function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
   const today = new Date();
   const visits: UpcomingVisit[] = [];
+  let visitCounter = 1;
 
-  // 3 visites aujourd'hui
+  // Helper to add days to a date
+  const addDays = (date: Date, days: number) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
+  // 3 visites aujourd'hui (Pneumologues)
   const todayPractitioners = practitioners.filter(p => p.specialty === 'Pneumologue').slice(0, 3);
   todayPractitioners.forEach((p, i) => {
     visits.push({
-      id: `V00${i + 1}`,
+      id: `V${String(visitCounter++).padStart(3, '0')}`,
       practitionerId: p.id,
       practitioner: p,
       date: today.toISOString().split('T')[0],
-      time: ['10:00', '14:30', '16:00'][i],
+      time: ['09:00', '14:30', '16:00'][i],
       type: 'scheduled',
       notes: 'Présentation des nouvelles options thérapeutiques',
+    });
+  });
+
+  // 2 visites demain
+  const tomorrowPractitioners = practitioners.filter(p => p.isKOL).slice(0, 2);
+  tomorrowPractitioners.forEach((p, i) => {
+    visits.push({
+      id: `V${String(visitCounter++).padStart(3, '0')}`,
+      practitionerId: p.id,
+      practitioner: p,
+      date: addDays(today, 1).toISOString().split('T')[0],
+      time: ['10:00', '15:00'][i],
+      type: 'scheduled',
+      notes: 'Suivi KOL - Discussion nouveaux protocoles',
+    });
+  });
+
+  // 4 visites cette semaine (jours +2 à +5)
+  const weekPractitioners = practitioners.filter(p => p.vingtile <= 3).slice(0, 8);
+  for (let day = 2; day <= 5; day++) {
+    const dayPractitioners = weekPractitioners.slice((day - 2) * 2, (day - 1) * 2);
+    dayPractitioners.forEach((p, i) => {
+      visits.push({
+        id: `V${String(visitCounter++).padStart(3, '0')}`,
+        practitionerId: p.id,
+        practitioner: p,
+        date: addDays(today, day).toISOString().split('T')[0],
+        time: i === 0 ? '10:30' : '14:00',
+        type: 'scheduled',
+        notes: 'Visite de routine - Point sur les prescriptions',
+      });
+    });
+  }
+
+  // 3 visites semaine prochaine
+  const nextWeekPractitioners = practitioners.filter(p => p.riskLevel === 'high').slice(0, 3);
+  nextWeekPractitioners.forEach((p, i) => {
+    visits.push({
+      id: `V${String(visitCounter++).padStart(3, '0')}`,
+      practitionerId: p.id,
+      practitioner: p,
+      date: addDays(today, 7 + i).toISOString().split('T')[0],
+      time: ['09:30', '11:00', '15:30'][i],
+      type: 'scheduled',
+      notes: 'Visite de réactivation - Praticien à risque',
     });
   });
 
