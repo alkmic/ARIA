@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Landing } from './pages/Landing';
+import Welcome from './pages/Welcome';
 import { Dashboard } from './pages/Dashboard';
 import { HCPProfile } from './pages/HCPProfile';
 import PractitionerProfile from './pages/PractitionerProfile';
@@ -14,7 +15,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Landing page without Layout */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Navigate to="/welcome" replace />} />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/welcome" element={<Welcome />} />
 
         {/* App pages with Layout */}
         <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />

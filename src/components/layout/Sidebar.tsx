@@ -40,10 +40,10 @@ export const Sidebar = () => {
             <Link
               key={item.id}
               to={item.path}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'bg-white text-al-navy shadow-lg'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02]'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -60,7 +60,7 @@ export const Sidebar = () => {
       <div className="p-3 border-t border-white/10">
         <Link
           to="/settings"
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200"
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02] transition-all duration-200 cursor-pointer"
         >
           <Settings className="w-5 h-5" />
           <span className="font-medium">Paramètres</span>

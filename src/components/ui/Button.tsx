@@ -13,7 +13,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'font-semibold rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'font-semibold rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
   const variants = {
     primary: 'bg-gradient-to-r from-al-blue-500 to-al-sky text-white hover:shadow-lg hover:shadow-al-blue-500/25',
