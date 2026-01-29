@@ -1,12 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 
 export const UpcomingVisits: React.FC = () => {
+  const navigate = useNavigate();
   const { getTodayVisits, getHighPriorityPractitioners } = useAppStore();
   const todayVisits = getTodayVisits();
   const priorityPractitioners = getHighPriorityPractitioners();
@@ -33,7 +35,8 @@ export const UpcomingVisits: React.FC = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors"
+                onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
+                className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
               >
                 <Avatar
                   src={visit.practitioner.avatarUrl}
@@ -72,7 +75,12 @@ export const UpcomingVisits: React.FC = () => {
           )}
 
           {todayVisits.length > 0 && (
-            <Button variant="ghost" size="sm" className="w-full">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full cursor-pointer"
+              onClick={() => navigate('/visits')}
+            >
               Voir toutes les visites
             </Button>
           )}
@@ -106,6 +114,7 @@ export const UpcomingVisits: React.FC = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
+                onClick={() => navigate(`/practitioner/${practitioner.id}`)}
                 className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
               >
                 <Avatar
@@ -133,7 +142,12 @@ export const UpcomingVisits: React.FC = () => {
             );
           })}
 
-          <Button variant="ghost" size="sm" className="w-full">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full cursor-pointer"
+            onClick={() => navigate('/practitioners?filter=priority')}
+          >
             Voir tous les prioritaires
           </Button>
         </div>

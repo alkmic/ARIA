@@ -7,6 +7,7 @@ import PractitionerProfile from './pages/PractitionerProfile';
 import { PitchGenerator } from './pages/PitchGenerator';
 import AICoach from './pages/AICoach';
 import { Settings } from './pages/Settings';
+import { Visits } from './pages/Visits';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
         <Route path="/practitioners" element={<Layout><HCPProfile /></Layout>} />
         <Route path="/practitioner/:id" element={<Layout><PractitionerProfile /></Layout>} />
+        <Route path="/visits" element={<Layout><Visits /></Layout>} />
         <Route path="/pitch" element={<Layout><PitchGenerator /></Layout>} />
         <Route path="/coach" element={<Layout><AICoach /></Layout>} />
         <Route path="/settings" element={<Layout><Settings /></Layout>} />

@@ -24,7 +24,10 @@ export const AIInsights: React.FC = () => {
   };
 
   const handleAction = (insight: typeof insights[0]) => {
-    if (insight.practitionerId) {
+    if (insight.actionLabel === 'Préparer visite' && insight.practitionerId) {
+      // Navigate to pitch generator for this practitioner
+      navigate(`/pitch?practitionerId=${insight.practitionerId}`);
+    } else if (insight.practitionerId) {
       // Navigate to practitioner profile
       navigate(`/practitioner/${insight.practitionerId}`);
     } else if (insight.actionLabel === 'Planifier visites') {

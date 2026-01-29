@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Sparkles, MessageCircle, Settings } from 'lucide-react';
+import { Home, Users, Sparkles, MessageCircle, Settings, Calendar } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { useAppStore } from '../../stores/useAppStore';
 
 const menuItems = [
   { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
   { id: 'practitioners', icon: Users, label: 'Praticiens', path: '/practitioners' },
+  { id: 'visits', icon: Calendar, label: 'Visites', path: '/visits' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
   { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach' },
 ];
