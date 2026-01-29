@@ -74,6 +74,7 @@ export function generateCoachResponse(
         .sort((a, b) => b.daysSinceVisit - a.daysSinceVisit);
 
       const notSeenRecently = kols.filter(k => k.daysSinceVisit > 60);
+      const visitsRemaining = userObjectives.visitsMonthly - userObjectives.visitsCompleted;
 
       return {
         message: `Vous avez ${kols.length} KOLs sur votre territoire. ${notSeenRecently.length} n'ont pas été vus depuis plus de 60 jours :`,
@@ -81,7 +82,8 @@ export function generateCoachResponse(
         insights: [
           notSeenRecently.length > 0
             ? `🔴 ${notSeenRecently.length} KOL(s) nécessitent une visite urgente.`
-            : `✅ Tous vos KOLs ont été vus récemment. Excellent travail !`
+            : `✅ Tous vos KOLs ont été vus récemment. Excellent travail !`,
+          `📊 Impact objectif : ${Math.min(notSeenRecently.length, visitsRemaining)} visite(s) KOL comptabilisée(s) sur vos ${visitsRemaining} visites restantes ce mois.`
         ]
       };
     }
@@ -112,12 +114,16 @@ export function generateCoachResponse(
         .sort((a, b) => a.loyaltyScore - b.loyaltyScore)
         .slice(0, 5);
 
+      const totalVolumeAtRisk = atRisk.reduce((sum, p) => sum + p.volumeL, 0);
+      const visitsRemaining = userObjectives.visitsMonthly - userObjectives.visitsCompleted;
+
       return {
         message: `J'ai identifié ${atRisk.length} praticiens à risque de churn :`,
         practitioners: atRisk,
         insights: [
           `⚠️ Ces praticiens montrent des signes de désengagement (baisse prescriptions ou fidélité faible).`,
-          `💡 Recommandation : planifiez des visites de réactivation avec des offres personnalisées.`
+          `💰 Volume à risque : ${(totalVolumeAtRisk / 1000).toFixed(0)}K L/an - impact direct sur vos résultats trimestriels.`,
+          `📊 Prioriser ${Math.min(atRisk.length, visitsRemaining)} visite(s) de réactivation ce mois peut stabiliser ce volume.`
         ]
       };
     }
@@ -129,12 +135,16 @@ export function generateCoachResponse(
         .sort((a, b) => a.vingtile - b.vingtile)
         .slice(0, 5);
 
+      const potentialVolume = opportunities.reduce((sum, p) => sum + p.volumeL, 0);
+      const visitsRemaining = userObjectives.visitsMonthly - userObjectives.visitsCompleted;
+
       return {
         message: `Voici ${opportunities.length} opportunités de nouveaux prescripteurs à fort potentiel :`,
         practitioners: opportunities,
         insights: [
           `🎯 Ces praticiens sont dans le Top 25% mais n'ont jamais été contactés.`,
-          `💰 Potentiel cumulé : ${opportunities.reduce((sum, p) => sum + p.volumeL, 0).toLocaleString()} L/an`
+          `💰 Potentiel cumulé : ${(potentialVolume / 1000).toFixed(0)}K L/an - impact significatif sur vos objectifs annuels.`,
+          `📊 ${Math.min(opportunities.length, visitsRemaining)} visite(s) d'approche ce mois = ${Math.min(opportunities.length, visitsRemaining)}/${userObjectives.visitsMonthly} visites comptabilisées vers votre objectif.`
         ]
       };
     }

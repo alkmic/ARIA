@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Filter, MapPin, TrendingUp } from 'lucide-react';
@@ -6,11 +6,15 @@ import { useAppStore } from '../stores/useAppStore';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
+import { FilterPanel } from '../components/practitioners/FilterPanel';
+import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
   const navigate = useNavigate();
   const { filterPractitioners, searchQuery } = useAppStore();
-  const practitioners = filterPractitioners();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>({});
+  const practitioners = filterPractitioners(filters);
 
   return (
     <motion.div
@@ -27,11 +31,34 @@ export const HCPProfile: React.FC = () => {
             {practitioners.length} praticiens dans votre portefeuille
           </p>
         </div>
-        <button className="btn-primary flex items-center space-x-2">
+        <button
+          onClick={() => setIsFilterOpen(true)}
+          className="btn-primary flex items-center space-x-2 cursor-pointer"
+        >
           <Filter className="w-5 h-5" />
           <span>Filtres</span>
+          {(filters.specialty?.length || 0) +
+            (filters.vingtile?.length || 0) +
+            (filters.riskLevel?.length || 0) +
+            (filters.isKOL !== undefined ? 1 : 0) >
+            0 && (
+            <span className="ml-2 bg-white text-airLiquide-primary px-2 py-0.5 rounded-full text-xs font-bold">
+              {(filters.specialty?.length || 0) +
+                (filters.vingtile?.length || 0) +
+                (filters.riskLevel?.length || 0) +
+                (filters.isKOL !== undefined ? 1 : 0)}
+            </span>
+          )}
         </button>
       </div>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onFilterChange={setFilters}
+      />
 
       {/* Practitioners Grid */}
       {practitioners.length === 0 ? (

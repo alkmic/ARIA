@@ -156,8 +156,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // Additional filters
     if (filters) {
-      if (filters.specialty) {
-        filtered = filtered.filter((p) => p.specialty === filters.specialty);
+      if (filters.specialty && filters.specialty.length > 0) {
+        filtered = filtered.filter((p) => filters.specialty!.includes(p.specialty));
+      }
+      if (filters.vingtile && filters.vingtile.length > 0) {
+        filtered = filtered.filter((p) => filters.vingtile!.includes(p.vingtile));
       }
       if (filters.vingtileMin !== undefined) {
         filtered = filtered.filter((p) => p.vingtile >= filters.vingtileMin!);
@@ -171,8 +174,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (filters.isKOL !== undefined) {
         filtered = filtered.filter((p) => p.isKOL === filters.isKOL);
       }
-      if (filters.riskLevel) {
-        filtered = filtered.filter((p) => p.riskLevel === filters.riskLevel);
+      if (filters.riskLevel && filters.riskLevel.length > 0) {
+        filtered = filtered.filter((p) => filters.riskLevel!.includes(p.riskLevel));
       }
     }
 

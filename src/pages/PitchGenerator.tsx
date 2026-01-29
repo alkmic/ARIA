@@ -17,6 +17,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useGroq } from '../hooks/useGroq';
 import { useSpeech } from '../hooks/useSpeech';
 import { buildSystemPrompt, buildUserPrompt, buildRegenerateSectionPrompt } from '../services/pitchPrompts';
+import { SkeletonPitchSection } from '../components/ui/Skeleton';
 import type { PitchConfig, PitchSection } from '../types/pitch';
 
 // Produits Air Liquide disponibles
@@ -590,14 +591,22 @@ export function PitchGenerator() {
                   ))}
 
                   {isGenerating && sections.length === 0 && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="glass-card p-8 text-center"
-                    >
-                      <Loader2 className="w-12 h-12 text-airLiquide-primary mx-auto mb-4 animate-spin" />
-                      <p className="text-gray-600">L'IA génère votre pitch personnalisé...</p>
-                    </motion.div>
+                    <>
+                      <div className="flex items-center gap-2 mb-6">
+                        <Loader2 className="w-5 h-5 text-airLiquide-primary animate-spin" />
+                        <p className="text-gray-600 font-medium">L'IA génère votre pitch personnalisé...</p>
+                      </div>
+                      {[1, 2, 3, 4].map((i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                        >
+                          <SkeletonPitchSection />
+                        </motion.div>
+                      ))}
+                    </>
                   )}
                 </motion.div>
               )}

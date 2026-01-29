@@ -80,12 +80,13 @@ export interface AIInsight {
 }
 
 export interface FilterOptions {
-  specialty?: 'Médecin généraliste' | 'Pneumologue';
+  specialty?: ('Médecin généraliste' | 'Pneumologue')[];
+  vingtile?: number[];
   vingtileMin?: number;
   vingtileMax?: number;
   department?: string;
   isKOL?: boolean;
-  riskLevel?: 'low' | 'medium' | 'high';
+  riskLevel?: ('low' | 'medium' | 'high')[];
 }
 
 export interface UpcomingVisit {
