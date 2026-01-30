@@ -25,6 +25,9 @@ export function useGroq(options: UseGroqOptions = {}) {
 
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 
+  // Vérifier si la clé API est configurée
+  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey.length > 10;
+
   // Streaming completion - LE PLUS IMPORTANT POUR L'EFFET WOW
   const streamCompletion = useCallback(
     async (
@@ -34,6 +37,13 @@ export function useGroq(options: UseGroqOptions = {}) {
     ) => {
       setIsLoading(true);
       setError(null);
+
+      // Vérifier la clé API avant d'appeler l'API
+      if (!isApiKeyValid) {
+        setError('🔑 Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setIsLoading(false);
+        return;
+      }
 
       try {
         const response = await fetch(GROQ_API_URL, {
@@ -99,7 +109,7 @@ export function useGroq(options: UseGroqOptions = {}) {
         setIsLoading(false);
       }
     },
-    [model, temperature, maxTokens, apiKey]
+    [model, temperature, maxTokens, apiKey, isApiKeyValid]
   );
 
   // Non-streaming completion (pour régénération de section)
@@ -107,6 +117,13 @@ export function useGroq(options: UseGroqOptions = {}) {
     async (messages: GroqMessage[]): Promise<string | null> => {
       setIsLoading(true);
       setError(null);
+
+      // Vérifier la clé API avant d'appeler l'API
+      if (!isApiKeyValid) {
+        setError('🔑 Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setIsLoading(false);
+        return null;
+      }
 
       try {
         const response = await fetch(GROQ_API_URL, {
@@ -139,7 +156,7 @@ export function useGroq(options: UseGroqOptions = {}) {
         setIsLoading(false);
       }
     },
-    [model, temperature, maxTokens, apiKey]
+    [model, temperature, maxTokens, apiKey, isApiKeyValid]
   );
 
   return { streamCompletion, complete, isLoading, error };

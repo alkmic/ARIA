@@ -33,6 +33,7 @@ export interface Practitioner {
   nextBestAction: string;
   riskLevel: 'low' | 'medium' | 'high';
   keyPoints?: string[]; // Points clés pour la visite
+  notes?: string; // Notes personnelles de l'utilisateur
 
   // Conversations passées (mock)
   conversations: {

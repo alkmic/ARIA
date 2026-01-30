@@ -12,7 +12,16 @@
 
 @layer components {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl;
+    @apply bg-white/70 backdrop-blur-xl border border-white/30 shadow-xl rounded-2xl;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(255, 255, 255, 0.6) 100%
+    );
+  }
+
+  .glass-card-dark {
+    @apply bg-slate-900/70 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl;
   }
 
   .gradient-text {
@@ -22,12 +31,12 @@
   .btn-primary {
     @apply px-6 py-3 bg-gradient-to-r from-al-blue-500 to-al-sky text-white font-semibold rounded-xl
            hover:shadow-lg hover:shadow-al-blue-500/25 transition-all duration-300
-           active:scale-95;
+           active:scale-95 hover:scale-[1.02];
   }
 
   .btn-secondary {
     @apply px-6 py-3 bg-white border-2 border-al-blue-500 text-al-blue-500 font-semibold rounded-xl
-           hover:bg-al-blue-50 transition-all duration-300;
+           hover:bg-al-blue-50 transition-all duration-300 hover:scale-[1.02];
   }
 
   .input-field {
@@ -37,7 +46,16 @@
   }
 
   .stat-card {
-    @apply glass-card p-6 hover:scale-[1.02] transition-transform duration-300;
+    @apply glass-card p-6 hover:scale-[1.02] transition-transform duration-300 cursor-pointer;
+  }
+
+  /* Micro-interactions */
+  .hover-lift {
+    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-xl;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-al-blue-500/30;
   }
 }
 

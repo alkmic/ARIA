@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Sparkles, MessageCircle, Settings, Calendar } from 'lucide-react';
+import { Home, Users, Sparkles, MessageCircle, Settings, Calendar, Map, BarChart3 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -7,8 +7,13 @@ const menuItems = [
   { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
   { id: 'practitioners', icon: Users, label: 'Praticiens', path: '/practitioners' },
   { id: 'visits', icon: Calendar, label: 'Visites', path: '/visits' },
+  { id: 'map', icon: Map, label: 'Territoire', path: '/map' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
   { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach' },
+];
+
+const managerItems = [
+  { id: 'manager', icon: BarChart3, label: 'Vue équipe', path: '/manager' },
 ];
 
 export const Sidebar = () => {
@@ -31,7 +36,7 @@ export const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 px-3 space-y-2">
+      <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -54,6 +59,33 @@ export const Sidebar = () => {
             </Link>
           );
         })}
+
+        {/* Section Manager */}
+        <div className="pt-6 mt-6 border-t border-white/10">
+          <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4">Manager</p>
+          {managerItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+
+            return (
+              <Link
+                key={item.id}
+                to={item.path}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-white text-al-navy shadow-lg'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02]'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+                {isActive && (
+                  <div className="ml-auto w-2 h-2 bg-al-teal rounded-full animate-pulse" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Settings */}
