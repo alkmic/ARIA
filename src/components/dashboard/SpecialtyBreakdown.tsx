@@ -29,6 +29,27 @@ export const SpecialtyBreakdown: React.FC = () => {
     { name: 'Généralistes', value: genVolume, color: '#00B5AD' }
   ];
 
+  // Custom label renderer for pie charts
+  const renderLabel = ({ cx, cy, midAngle, outerRadius, percent }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 25;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#334155"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className="text-xs sm:text-sm font-semibold"
+      >
+        {`${((percent || 0) * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -47,15 +68,15 @@ export const SpecialtyBreakdown: React.FC = () => {
           <h3 className="text-xs sm:text-sm font-semibold text-slate-600 text-center mb-3 sm:mb-4">
             Nombre de Praticiens
           </h3>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
                 data={countData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={80}
+                label={renderLabel}
+                outerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -74,6 +95,16 @@ export const SpecialtyBreakdown: React.FC = () => {
               />
             </PieChart>
           </ResponsiveContainer>
+          <div className="flex justify-center gap-4 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-al-blue-500"></div>
+              <span className="text-xs text-slate-600">Pneumo ({pneumologues.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-al-teal"></div>
+              <span className="text-xs text-slate-600">Généralistes ({generalistes.length})</span>
+            </div>
+          </div>
         </div>
 
         {/* Volume Pie Chart */}
@@ -81,15 +112,15 @@ export const SpecialtyBreakdown: React.FC = () => {
           <h3 className="text-xs sm:text-sm font-semibold text-slate-600 text-center mb-3 sm:mb-4">
             Volume Total (Litres)
           </h3>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
                 data={volumeData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={80}
+                label={renderLabel}
+                outerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -109,6 +140,16 @@ export const SpecialtyBreakdown: React.FC = () => {
               />
             </PieChart>
           </ResponsiveContainer>
+          <div className="flex justify-center gap-4 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-al-blue-500"></div>
+              <span className="text-xs text-slate-600">Pneumo ({(pneumoVolume / 1000000).toFixed(1)}M L)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-al-teal"></div>
+              <span className="text-xs text-slate-600">Généralistes ({(genVolume / 1000000).toFixed(1)}M L)</span>
+            </div>
+          </div>
         </div>
       </div>
 

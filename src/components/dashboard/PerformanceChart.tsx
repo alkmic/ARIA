@@ -1,10 +1,40 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAppStore } from '../../stores/useAppStore';
+import type { TimePeriod } from '../../pages/Dashboard';
 
-export const PerformanceChart: React.FC = () => {
+interface PerformanceChartProps {
+  timePeriod: TimePeriod;
+}
+
+export const PerformanceChart: React.FC<PerformanceChartProps> = ({ timePeriod }) => {
   const { performanceData } = useAppStore();
+
+  // Filter data based on selected time period
+  const filteredData = useMemo(() => {
+    if (timePeriod === 'month') {
+      // Show last 4 weeks data
+      return performanceData.slice(-1);
+    } else if (timePeriod === 'quarter') {
+      // Show last 3 months
+      return performanceData.slice(-3);
+    }
+    // Show full year
+    return performanceData;
+  }, [performanceData, timePeriod]);
+
+  // Get period label
+  const periodLabel = useMemo(() => {
+    if (timePeriod === 'month') return 'mensuelle';
+    if (timePeriod === 'quarter') return 'trimestrielle';
+    return 'annuelle';
+  }, [timePeriod]);
+
+  // Calculate total volume for the period
+  const periodVolume = useMemo(() => {
+    return filteredData.reduce((acc, d) => acc + d.yourVolume, 0);
+  }, [filteredData]);
 
   return (
     <motion.div
@@ -16,7 +46,7 @@ export const PerformanceChart: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
           <span>📈</span>
-          <span>Performance annuelle</span>
+          <span>Performance {periodLabel}</span>
         </h2>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -35,7 +65,7 @@ export const PerformanceChart: React.FC = () => {
       </div>
 
       <ResponsiveContainer width="100%" height={280}>
-        <AreaChart data={performanceData}>
+        <AreaChart data={filteredData}>
           <defs>
             <linearGradient id="colorVolumes" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#0066B3" stopOpacity={0.3} />
@@ -89,9 +119,9 @@ export const PerformanceChart: React.FC = () => {
 
       <div className="mt-6 grid grid-cols-3 gap-4">
         <div className="text-center">
-          <p className="text-sm text-slate-600 mb-1">Volume annuel</p>
+          <p className="text-sm text-slate-600 mb-1">Volume {timePeriod === 'month' ? 'mensuel' : timePeriod === 'quarter' ? 'trimestriel' : 'annuel'}</p>
           <p className="text-2xl font-bold text-slate-800">
-            {(performanceData.reduce((acc, d) => acc + d.yourVolume, 0) / 1000000).toFixed(1)}M L
+            {(periodVolume / 1000000).toFixed(1)}M L
           </p>
         </div>
         <div className="text-center">

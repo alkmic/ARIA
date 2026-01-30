@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
@@ -13,9 +13,12 @@ import { NationalStats } from '../components/dashboard/NationalStats';
 import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
 import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
 
+export type TimePeriod = 'month' | 'quarter' | 'year';
+
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
   const { objectives } = currentUser;
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('month');
 
   // Calculate average loyalty score
   const avgLoyalty = (
@@ -130,10 +133,14 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto">
-          <select className="flex-1 lg:flex-none px-2 sm:px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-xs sm:text-sm">
-            <option>Ce mois</option>
-            <option>Ce trimestre</option>
-            <option>Cette année</option>
+          <select
+            value={timePeriod}
+            onChange={(e) => setTimePeriod(e.target.value as TimePeriod)}
+            className="flex-1 lg:flex-none px-2 sm:px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-xs sm:text-sm"
+          >
+            <option value="month">Ce mois</option>
+            <option value="quarter">Ce trimestre</option>
+            <option value="year">Cette année</option>
           </select>
           <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap">
             Dernière sync: il y a 5 min
@@ -223,7 +230,7 @@ export const Dashboard: React.FC = () => {
       {/* Graphique + Réussites (2 colonnes) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2">
-          <PerformanceChart />
+          <PerformanceChart timePeriod={timePeriod} />
         </div>
         <div className="lg:col-span-1">
           <WeeklyWins />
