@@ -34,20 +34,20 @@ export const SpecialtyBreakdown: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className="glass-card p-6"
+      className="glass-card p-4 sm:p-6"
     >
-      <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center space-x-2">
-        <Stethoscope className="w-5 h-5 text-al-blue-500" />
+      <h2 className="text-base sm:text-lg font-bold text-slate-800 mb-4 sm:mb-6 flex items-center space-x-2">
+        <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-al-blue-500" />
         <span>Répartition par Spécialité</span>
       </h2>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Count Pie Chart */}
         <div>
-          <h3 className="text-sm font-semibold text-slate-600 text-center mb-4">
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-600 text-center mb-3 sm:mb-4">
             Nombre de Praticiens
           </h3>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={countData}
@@ -78,10 +78,10 @@ export const SpecialtyBreakdown: React.FC = () => {
 
         {/* Volume Pie Chart */}
         <div>
-          <h3 className="text-sm font-semibold text-slate-600 text-center mb-4">
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-600 text-center mb-3 sm:mb-4">
             Volume Total (Litres)
           </h3>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={volumeData}
@@ -113,73 +113,73 @@ export const SpecialtyBreakdown: React.FC = () => {
       </div>
 
       {/* Detailed Stats Table */}
-      <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
-        <table className="w-full text-sm">
+      <div className="mt-4 sm:mt-6 overflow-x-auto rounded-lg border border-slate-200">
+        <table className="w-full text-xs sm:text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-slate-700">Spécialité</th>
-              <th className="px-4 py-3 text-center font-semibold text-slate-700">Praticiens</th>
-              <th className="px-4 py-3 text-center font-semibold text-slate-700">KOL</th>
-              <th className="px-4 py-3 text-center font-semibold text-slate-700">Volume Total</th>
-              <th className="px-4 py-3 text-center font-semibold text-slate-700">Moy./Praticien</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-slate-700">Spécialité</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">Prat.</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">KOL</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-slate-700">Volume Total</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">Moy.</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             <tr className="hover:bg-al-blue-50/50 transition-colors">
-              <td className="px-4 py-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-al-blue-500"></div>
-                  <span className="font-medium text-slate-800">Pneumologues</span>
+              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-al-blue-500 flex-shrink-0"></div>
+                  <span className="font-medium text-slate-800 text-xs sm:text-sm">Pneumologues</span>
                 </div>
               </td>
-              <td className="px-4 py-3 text-center font-semibold text-slate-800">{pneumologues.length}</td>
-              <td className="px-4 py-3 text-center">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-800">{pneumologues.length}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
+                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-100 text-amber-800">
                   {pneumoKOL}
                 </span>
               </td>
-              <td className="px-4 py-3 text-center font-semibold text-al-blue-600">
+              <td className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-al-blue-600">
                 {(pneumoVolume / 1000000).toFixed(2)}M L
               </td>
-              <td className="px-4 py-3 text-center text-slate-600">
-                {pneumologues.length > 0 ? (pneumoVolume / pneumologues.length / 1000).toFixed(0) : '0'}K L
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-600">
+                {pneumologues.length > 0 ? (pneumoVolume / pneumologues.length / 1000).toFixed(0) : '0'}K
               </td>
             </tr>
             <tr className="hover:bg-al-teal/10 transition-colors">
-              <td className="px-4 py-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-al-teal"></div>
-                  <span className="font-medium text-slate-800">Médecins généralistes</span>
+              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-al-teal flex-shrink-0"></div>
+                  <span className="font-medium text-slate-800 text-xs sm:text-sm">Médecins généralistes</span>
                 </div>
               </td>
-              <td className="px-4 py-3 text-center font-semibold text-slate-800">{generalistes.length}</td>
-              <td className="px-4 py-3 text-center">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-800">{generalistes.length}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
+                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-100 text-amber-800">
                   {genKOL}
                 </span>
               </td>
-              <td className="px-4 py-3 text-center font-semibold text-al-teal">
+              <td className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-al-teal">
                 {(genVolume / 1000000).toFixed(2)}M L
               </td>
-              <td className="px-4 py-3 text-center text-slate-600">
-                {generalistes.length > 0 ? (genVolume / generalistes.length / 1000).toFixed(0) : '0'}K L
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-600">
+                {generalistes.length > 0 ? (genVolume / generalistes.length / 1000).toFixed(0) : '0'}K
               </td>
             </tr>
             <tr className="bg-slate-50 font-semibold">
-              <td className="px-4 py-3 text-slate-800">Total</td>
-              <td className="px-4 py-3 text-center text-slate-800">{practitioners.length}</td>
-              <td className="px-4 py-3 text-center">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900">
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-800">Total</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-800">{practitioners.length}</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
+                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-200 text-amber-900">
                   {pneumoKOL + genKOL}
                 </span>
               </td>
-              <td className="px-4 py-3 text-center text-slate-800">
+              <td className="hidden sm:table-cell px-4 py-3 text-center text-slate-800">
                 {((pneumoVolume + genVolume) / 1000000).toFixed(2)}M L
               </td>
-              <td className="px-4 py-3 text-center text-slate-600">
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-600">
                 {practitioners.length > 0
                   ? ((pneumoVolume + genVolume) / practitioners.length / 1000).toFixed(0)
-                  : '0'}K L
+                  : '0'}K
               </td>
             </tr>
           </tbody>
@@ -187,12 +187,12 @@ export const SpecialtyBreakdown: React.FC = () => {
       </div>
 
       {/* Key insight */}
-      <div className="mt-4 p-3 bg-gradient-to-r from-al-navy/5 to-al-blue-500/5 rounded-lg border border-al-blue-200">
-        <div className="flex items-start space-x-3">
-          <Users2 className="w-5 h-5 text-al-blue-500 mt-0.5" />
+      <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-gradient-to-r from-al-navy/5 to-al-blue-500/5 rounded-lg border border-al-blue-200">
+        <div className="flex items-start space-x-2 sm:space-x-3">
+          <Users2 className="w-4 h-4 sm:w-5 sm:h-5 text-al-blue-500 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-slate-800">Insight clé</p>
-            <p className="text-xs text-slate-600 mt-1">
+            <p className="text-xs sm:text-sm font-semibold text-slate-800">Insight clé</p>
+            <p className="text-[10px] sm:text-xs text-slate-600 mt-1">
               Les pneumologues représentent {((pneumologues.length / practitioners.length) * 100).toFixed(1)}%
               des praticiens mais génèrent {((pneumoVolume / (pneumoVolume + genVolume)) * 100).toFixed(1)}%
               du volume total - un ratio de {(pneumoVolume / pneumologues.length / (genVolume / generalistes.length)).toFixed(1)}x

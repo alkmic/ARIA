@@ -114,28 +114,28 @@ export const Dashboard: React.FC = () => {
       className="space-y-6"
     >
       {/* Header avec date/météo */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-al-navy">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy">
             Bonjour {currentUser.name.split(' ')[0]} 👋
           </h1>
-          <p className="text-slate-500 flex items-center gap-2 mt-1">
-            <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Sun className="w-4 h-4 text-amber-500" />
+          <p className="text-sm sm:text-base text-slate-500 flex flex-wrap items-center gap-2 mt-1">
+            <span className="text-xs sm:text-sm">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1 text-xs sm:text-sm">
+              <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />
               Lyon, 8°C
             </span>
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <select className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-sm">
+        <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto">
+          <select className="flex-1 lg:flex-none px-2 sm:px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-xs sm:text-sm">
             <option>Ce mois</option>
             <option>Ce trimestre</option>
             <option>Cette année</option>
           </select>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap">
             Dernière sync: il y a 5 min
           </span>
         </div>
@@ -149,7 +149,7 @@ export const Dashboard: React.FC = () => {
       />
 
       {/* 5 KPIs animés */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
         <AnimatedStatCard
           icon={Calendar}
           iconBgColor="bg-al-blue-500"
@@ -199,11 +199,11 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Ma journée + Mini carte (2 colonnes) */}
-      <div className="grid grid-cols-5 gap-6">
-        <div className="col-span-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+        <div className="lg:col-span-3">
           <DayTimeline visits={todayVisits} />
         </div>
-        <div className="col-span-2">
+        <div className="lg:col-span-2">
           <TerritoryMiniMap stats={territoryStats} points={mapPoints} />
         </div>
       </div>
@@ -221,11 +221,11 @@ export const Dashboard: React.FC = () => {
       <VingtileDistribution />
 
       {/* Graphique + Réussites (2 colonnes) */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="lg:col-span-2">
           <PerformanceChart />
         </div>
-        <div className="col-span-1">
+        <div className="lg:col-span-1">
           <WeeklyWins />
         </div>
       </div>
