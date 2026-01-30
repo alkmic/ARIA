@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAppStore } from '../../stores/useAppStore';
 
 export const PerformanceChart: React.FC = () => {
@@ -13,19 +13,37 @@ export const PerformanceChart: React.FC = () => {
       transition={{ duration: 0.5, delay: 0.6 }}
       className="glass-card p-6"
     >
-      <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center space-x-2">
-        <span>📈</span>
-        <span>Évolution des volumes (12 mois)</span>
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
+          <span>📈</span>
+          <span>Performance annuelle</span>
+        </h2>
+        <div className="flex gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-al-blue-500" />
+            <span className="text-slate-600">Vos volumes</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <span className="text-slate-600">Objectif</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-slate-400" />
+            <span className="text-slate-600">Moyenne équipe</span>
+          </div>
+        </div>
+      </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={performanceData}>
+      <ResponsiveContainer width="100%" height={280}>
+        <AreaChart data={performanceData}>
+          <defs>
+            <linearGradient id="colorVolumes" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#0066B3" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#0066B3" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis
-            dataKey="month"
-            stroke="#64748b"
-            style={{ fontSize: '12px' }}
-          />
+          <XAxis dataKey="month" stroke="#64748b" style={{ fontSize: '12px' }} />
           <YAxis
             stroke="#64748b"
             style={{ fontSize: '12px' }}
@@ -33,44 +51,40 @@ export const PerformanceChart: React.FC = () => {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              border: 'none',
+              backgroundColor: 'rgba(255,255,255,0.95)',
               borderRadius: '12px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+              border: 'none',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}
             formatter={(value: number | undefined) => value ? [`${(value / 1000).toFixed(0)}K L`, ''] : ['', '']}
           />
-          <Legend
-            wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }}
-          />
-          <Line
+          <Area
             type="monotone"
             dataKey="yourVolume"
             stroke="#0066B3"
             strokeWidth={3}
-            dot={{ fill: '#0066B3', r: 4 }}
-            activeDot={{ r: 6 }}
+            fill="url(#colorVolumes)"
             name="Vos volumes"
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="objective"
-            stroke="#F59E0B"
+            stroke="#10B981"
             strokeWidth={2}
-            strokeDasharray="5 5"
-            dot={false}
+            strokeDasharray="8 4"
+            fill="none"
             name="Objectif"
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="teamAverage"
-            stroke="#00B5AD"
+            stroke="#94A3B8"
             strokeWidth={2}
-            strokeDasharray="3 3"
-            dot={false}
+            strokeDasharray="4 4"
+            fill="none"
             name="Moyenne équipe"
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
 
       <div className="mt-6 grid grid-cols-3 gap-4">
