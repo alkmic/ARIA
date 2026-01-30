@@ -279,7 +279,6 @@ Tous droits réservés.
 ## 🆘 Support
 
 Pour toute question ou problème technique :
-- 📧 Email : support-aria@airliquide.com
 - 📚 Documentation complète : Voir `/docs` (à venir)
 - 🐛 Issues : GitHub Issues
 
