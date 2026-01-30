@@ -35,6 +35,39 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'VILLEURBANNE': [45.7667, 4.8800],
   'VÉNISSIEUX': [45.6975, 4.8867],
   'VILLEFRANCHE-SUR-SAÔNE': [45.9856, 4.7186],
+  'VIENNE': [45.5255, 4.8769],
+  'VOIRON': [45.3663, 5.5897],
+  'BOURGOIN-JALLIEU': [45.5858, 5.2739],
+  'ROMANS-SUR-ISÈRE': [45.0458, 5.0522],
+  'MONTÉLIMAR': [44.5586, 4.7508],
+  'ALBERTVILLE': [45.6758, 6.3914],
+  'SAINT-JEAN-DE-MAURIENNE': [45.2786, 6.3469],
+  'THONON-LES-BAINS': [46.3708, 6.4789],
+  'CLUSES': [46.0603, 6.5806],
+  'OYONNAX': [46.2564, 5.6556],
+  'AMBÉRIEU-EN-BUGEY': [45.9603, 5.3592],
+  'BELLEGARDE-SUR-VALSERINE': [46.1089, 5.8258],
+  'GEX': [46.3331, 6.0581],
+  'FERNEY-VOLTAIRE': [46.2556, 6.1089],
+  'SAINT-GENIS-POUILLY': [46.2436, 6.0219],
+  'DIVONNE-LES-BAINS': [46.3558, 6.1428],
+  'MEYTHET': [45.9181, 6.0922],
+  'CRAN-GEVRIER': [45.9003, 6.1036],
+  'SEYNOD': [45.8842, 6.0914],
+  'SAINT-PRIEST': [45.6975, 4.9425],
+  'CALUIRE-ET-CUIRE': [45.7950, 4.8450],
+  'BRON': [45.7364, 4.9114],
+  'MEYZIEU': [45.7664, 5.0033],
+  'DÉCINES-CHARPIEU': [45.7686, 4.9592],
+  'RILLIEUX-LA-PAPE': [45.8206, 4.8978],
+  'GIVORS': [45.5894, 4.7686],
+  'OULLINS': [45.7142, 4.8081],
+  'SAINT-FONS': [45.7092, 4.8539],
+  'FONTAINE': [45.1936, 5.6906],
+  'ÉCHIROLLES': [45.1464, 5.7181],
+  'SAINT-MARTIN-D\'HÈRES': [45.1678, 5.7647],
+  'MEYLAN': [45.2078, 5.7731],
+  'SASSENAGE': [45.2108, 5.6592],
 };
 
 type OptimizationCriteria = 'time' | 'kol-first' | 'volume' | 'distance' | 'balanced';
@@ -111,8 +144,39 @@ export const TourOptimizationPage: React.FC = () => {
 
   // Générer des coordonnées précises pour chaque praticien avec un offset aléatoire mais déterministe
   const generatePractitionerCoords = (practitioner: Practitioner): [number, number] => {
-    const baseCoords = CITY_COORDS[practitioner.city.toUpperCase()];
-    if (!baseCoords) return [45.7640, 4.8357]; // Default Lyon
+    let cityKey = practitioner.city.toUpperCase();
+    let baseCoords = CITY_COORDS[cityKey];
+
+    // Si la ville exacte n'est pas trouvée, essayer de matcher par préfixe
+    if (!baseCoords) {
+      // Gérer les variantes de Lyon (Lyon 3e, Lyon 2e, etc.)
+      if (cityKey.startsWith('LYON')) {
+        baseCoords = CITY_COORDS['LYON'];
+      }
+      // Gérer les variantes de Grenoble
+      else if (cityKey.startsWith('GRENOBLE')) {
+        baseCoords = CITY_COORDS['GRENOBLE'];
+      }
+      // Gérer les variantes d'Annecy
+      else if (cityKey.startsWith('ANNECY')) {
+        baseCoords = CITY_COORDS['ANNECY'];
+      }
+      // Essayer de trouver une ville qui commence par les mêmes mots
+      else {
+        const cityWords = cityKey.split(/[\s-]+/);
+        const mainWord = cityWords[0];
+        const match = Object.keys(CITY_COORDS).find(key => key.startsWith(mainWord));
+        if (match) {
+          baseCoords = CITY_COORDS[match];
+        }
+      }
+    }
+
+    // Fallback sur Lyon si toujours pas trouvé
+    if (!baseCoords) {
+      console.warn(`Ville non trouvée: ${practitioner.city}, utilisation de Lyon par défaut`);
+      baseCoords = [45.7640, 4.8357];
+    }
 
     // Utiliser l'ID du praticien pour générer un offset déterministe
     const hash = practitioner.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
