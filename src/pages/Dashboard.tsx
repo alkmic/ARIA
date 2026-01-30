@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Target, Users, Star } from 'lucide-react';
-import { StatCard } from '../components/dashboard/StatCard';
+import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun } from 'lucide-react';
+import { useAppStore } from '../stores/useAppStore';
+import { ObjectiveProgress } from '../components/dashboard/ObjectiveProgress';
+import { AnimatedStatCard } from '../components/dashboard/AnimatedStatCard';
+import { DayTimeline } from '../components/dashboard/DayTimeline';
+import { TerritoryMiniMap } from '../components/dashboard/TerritoryMiniMap';
 import { AIInsights } from '../components/dashboard/AIInsights';
-import { UpcomingVisits } from '../components/dashboard/UpcomingVisits';
 import { PerformanceChart } from '../components/dashboard/PerformanceChart';
+import { WeeklyWins } from '../components/dashboard/WeeklyWins';
 import { NationalStats } from '../components/dashboard/NationalStats';
 import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
 import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
-import { useAppStore } from '../stores/useAppStore';
 
 export const Dashboard: React.FC = () => {
-  const { currentUser, practitioners } = useAppStore();
+  const { currentUser, practitioners, upcomingVisits } = useAppStore();
   const { objectives } = currentUser;
 
   // Calculate average loyalty score
@@ -19,61 +22,196 @@ export const Dashboard: React.FC = () => {
     practitioners.reduce((acc, p) => acc + p.loyaltyScore, 0) / practitioners.length
   ).toFixed(1);
 
+  // Get today's visits
+  const todayVisits = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return upcomingVisits
+      .filter(v => v.date === today)
+      .slice(0, 3)
+      .map((v, index) => ({
+        id: v.id,
+        time: v.time,
+        practitioner: v.practitioner,
+        status: index === 0 ? 'to-prepare' as const : 'prepared' as const,
+        isNext: index === 0,
+      }));
+  }, [upcomingVisits]);
+
+  // Territory stats (mock data based on real practitioners)
+  const territoryStats = useMemo(() => {
+    const today = new Date();
+    const urgent = practitioners.filter(p => {
+      if (!p.lastVisitDate) return true;
+      const lastVisit = new Date(p.lastVisitDate);
+      const daysSince = Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+      return daysSince > 90;
+    }).length;
+
+    const toSchedule = practitioners.filter(p => {
+      if (!p.lastVisitDate) return false;
+      const lastVisit = new Date(p.lastVisitDate);
+      const daysSince = Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+      return daysSince >= 30 && daysSince <= 90;
+    }).length;
+
+    const upToDate = practitioners.length - urgent - toSchedule;
+
+    return { urgent, toSchedule, upToDate };
+  }, [practitioners]);
+
+  // Map points (sample of practitioners with coordinates)
+  const mapPoints = useMemo(() => {
+    const cities: Record<string, [number, number]> = {
+      'LYON': [45.7640, 4.8357],
+      'GRENOBLE': [45.1885, 5.7245],
+      'VILLEURBANNE': [45.7676, 4.8799],
+      'BOURG-EN-BRESSE': [46.2056, 5.2256],
+    };
+
+    return practitioners
+      .filter(p => cities[p.city?.toUpperCase()])
+      .slice(0, 20)
+      .map(p => {
+        const coords = cities[p.city.toUpperCase()];
+        const today = new Date();
+        let status: 'urgent' | 'toSchedule' | 'upToDate' = 'upToDate';
+
+        if (p.lastVisitDate) {
+          const lastVisit = new Date(p.lastVisitDate);
+          const daysSince = Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSince > 90) status = 'urgent';
+          else if (daysSince >= 30) status = 'toSchedule';
+        } else {
+          status = 'urgent';
+        }
+
+        return {
+          id: p.id,
+          lat: coords[0] + (Math.random() - 0.5) * 0.02,
+          lng: coords[1] + (Math.random() - 0.5) * 0.02,
+          status,
+          name: `${p.title} ${p.lastName}`,
+        };
+      });
+  }, [practitioners]);
+
+  // Calculate total volume
+  const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
+
+  // Get KOLs that need attention
+  const urgentKOLs = practitioners.filter(p => p.isKOL && p.riskLevel === 'high').length;
+
+  // Calculate days remaining in month
+  const today = new Date();
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const daysRemaining = lastDay.getDate() - today.getDate();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="space-y-8"
+      className="space-y-6"
     >
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold gradient-text mb-2">
-          Bonjour {currentUser.name.split(' ')[0]} 👋
-        </h1>
-        <p className="text-slate-600">
-          Voici un aperçu de votre activité et des recommandations personnalisées.
-        </p>
+      {/* Header avec date/météo */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-al-navy">
+            Bonjour {currentUser.name.split(' ')[0]} 👋
+          </h1>
+          <p className="text-slate-500 flex items-center gap-2 mt-1">
+            <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Sun className="w-4 h-4 text-amber-500" />
+              Lyon, 8°C
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <select className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-sm">
+            <option>Ce mois</option>
+            <option>Ce trimestre</option>
+            <option>Cette année</option>
+          </select>
+          <span className="text-xs text-slate-400">
+            Dernière sync: il y a 5 min
+          </span>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6">
-        <StatCard
+      {/* Barre d'objectif proéminente */}
+      <ObjectiveProgress
+        current={objectives.visitsCompleted}
+        target={objectives.visitsMonthly}
+        daysRemaining={daysRemaining}
+      />
+
+      {/* 5 KPIs animés */}
+      <div className="grid grid-cols-5 gap-4">
+        <AnimatedStatCard
           icon={Calendar}
-          label="VISITES CE MOIS"
+          iconBgColor="bg-al-blue-500"
+          label="Visites ce mois"
           value={objectives.visitsCompleted}
-          total={objectives.visitsMonthly}
-          trend={{ value: 15, isPositive: true }}
+          suffix={`/${objectives.visitsMonthly}`}
+          trend={15}
           delay={0}
         />
-        <StatCard
-          icon={Target}
-          label="OBJECTIF VISITES"
-          value={Math.round((objectives.visitsCompleted / objectives.visitsMonthly) * 100)}
-          suffix="%"
+        <AnimatedStatCard
+          icon={UserPlus}
+          iconBgColor="bg-green-500"
+          label="Nouveaux prescripteurs"
+          value={objectives.newPrescribers}
+          prefix="+"
+          trend={20}
+          trendLabel="vs mois dernier"
           delay={0.1}
         />
-        <StatCard
-          icon={Users}
-          label="NOUVEAUX PRESCRIPTEURS"
-          value={objectives.newPrescribers}
-          suffix="ce mois"
-          trend={{ value: 20, isPositive: true }}
+        <AnimatedStatCard
+          icon={Droplets}
+          iconBgColor="bg-cyan-500"
+          label="Volume prescrit"
+          value={totalVolume / 1000000}
+          suffix="M L"
+          decimals={1}
+          trend={12}
           delay={0.2}
         />
-        <StatCard
+        <AnimatedStatCard
           icon={Star}
-          label="FIDÉLITÉ MOYENNE"
+          iconBgColor="bg-amber-500"
+          label="Score NPS moyen"
           value={parseFloat(avgLoyalty)}
           suffix="/10"
+          decimals={1}
           delay={0.3}
+        />
+        <AnimatedStatCard
+          icon={AlertTriangle}
+          iconBgColor="bg-red-500"
+          label="KOLs à voir urgent"
+          value={urgentKOLs}
+          trendLabel="Non vus >90 jours"
+          delay={0.4}
         />
       </div>
 
-      {/* AI Insights */}
+      {/* Ma journée + Mini carte (2 colonnes) */}
+      <div className="grid grid-cols-5 gap-6">
+        <div className="col-span-3">
+          <DayTimeline visits={todayVisits} />
+        </div>
+        <div className="col-span-2">
+          <TerritoryMiniMap stats={territoryStats} points={mapPoints} />
+        </div>
+      </div>
+
+      {/* ARIA Insights */}
       <AIInsights />
 
-      {/* National Statistics and Territory Overview */}
+      {/* National Statistics */}
       <NationalStats />
 
       {/* Specialty Breakdown */}
@@ -82,11 +220,15 @@ export const Dashboard: React.FC = () => {
       {/* Vingtile Distribution */}
       <VingtileDistribution />
 
-      {/* Upcoming Visits & Priority Practitioners */}
-      <UpcomingVisits />
-
-      {/* Performance Chart */}
-      <PerformanceChart />
+      {/* Graphique + Réussites (2 colonnes) */}
+      <div className="grid grid-cols-3 gap-6">
+        <div className="col-span-2">
+          <PerformanceChart />
+        </div>
+        <div className="col-span-1">
+          <WeeklyWins />
+        </div>
+      </div>
     </motion.div>
   );
 };
