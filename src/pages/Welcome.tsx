@@ -121,11 +121,6 @@ const Welcome: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Footer discret */}
-      <div className="absolute bottom-8 left-0 right-0 text-center text-white/40 text-sm">
-        <p>© 2025 Air Liquide Healthcare - Powered by Advanced AI</p>
-      </div>
     </div>
   );
 };

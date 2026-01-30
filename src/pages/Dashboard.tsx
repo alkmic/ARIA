@@ -5,6 +5,9 @@ import { StatCard } from '../components/dashboard/StatCard';
 import { AIInsights } from '../components/dashboard/AIInsights';
 import { UpcomingVisits } from '../components/dashboard/UpcomingVisits';
 import { PerformanceChart } from '../components/dashboard/PerformanceChart';
+import { NationalStats } from '../components/dashboard/NationalStats';
+import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
+import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
 import { useAppStore } from '../stores/useAppStore';
 
 export const Dashboard: React.FC = () => {
@@ -69,6 +72,15 @@ export const Dashboard: React.FC = () => {
 
       {/* AI Insights */}
       <AIInsights />
+
+      {/* National Statistics and Territory Overview */}
+      <NationalStats />
+
+      {/* Specialty Breakdown */}
+      <SpecialtyBreakdown />
+
+      {/* Vingtile Distribution */}
+      <VingtileDistribution />
 
       {/* Upcoming Visits & Priority Practitioners */}
       <UpcomingVisits />
