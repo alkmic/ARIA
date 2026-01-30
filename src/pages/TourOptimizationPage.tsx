@@ -178,12 +178,22 @@ export const TourOptimizationPage: React.FC = () => {
       baseCoords = [45.7640, 4.8357];
     }
 
-    // Utiliser l'ID du praticien pour générer un offset déterministe
-    const hash = practitioner.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    // Créer un hash unique basé sur plusieurs propriétés pour plus de variation
+    const hashString = `${practitioner.id}-${practitioner.firstName}-${practitioner.lastName}-${practitioner.volumeL}`;
+    let hash = 0;
+    for (let i = 0; i < hashString.length; i++) {
+      const char = hashString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
 
-    // Offset de 0.005 à 0.03 degrés (environ 0.5 à 3 km)
-    const latOffset = ((hash % 50) - 25) * 0.001; // -0.025 à +0.025
-    const lngOffset = (((hash * 7) % 50) - 25) * 0.001;
+    // Utiliser le hash pour générer des offsets plus larges et plus variés
+    // Offset entre -0.05 et +0.05 degrés (environ 5.5 km max)
+    const latSeed = Math.abs(hash) % 1000;
+    const lngSeed = Math.abs(hash * 13) % 1000;
+
+    const latOffset = ((latSeed % 100) - 50) * 0.001; // -0.05 à +0.05
+    const lngOffset = ((lngSeed % 100) - 50) * 0.001; // -0.05 à +0.05
 
     return [baseCoords[0] + latOffset, baseCoords[1] + lngOffset];
   };
