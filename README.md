@@ -274,7 +274,7 @@ Projet développé pour **Air Liquide Santé** en collaboration avec **Capgemini
 
 ## 📄 Licence
 
-Propriété de **Air Liquide Santé**. Tous droits réservés.
+Tous droits réservés.
 
 ## 🆘 Support
 
