@@ -136,7 +136,10 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
         >
           Voir toutes les visites
         </button>
-        <button className="flex-1 btn-primary text-xs sm:text-sm py-2">
+        <button
+          onClick={() => navigate('/tour-optimization')}
+          className="flex-1 btn-primary text-xs sm:text-sm py-2"
+        >
           Optimiser ma tournée
         </button>
       </div>

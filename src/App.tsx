@@ -11,6 +11,8 @@ import { Settings } from './pages/Settings';
 import { Visits } from './pages/Visits';
 import TerritoryMap from './pages/TerritoryMap';
 import ManagerDashboard from './pages/ManagerDashboard';
+import KOLPlanningPage from './pages/KOLPlanningPage';
+import TourOptimizationPage from './pages/TourOptimizationPage';
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
         <Route path="/coach" element={<Layout><AICoach /></Layout>} />
         <Route path="/map" element={<Layout><TerritoryMap /></Layout>} />
         <Route path="/manager" element={<Layout><ManagerDashboard /></Layout>} />
+        <Route path="/kol-planning" element={<Layout><KOLPlanningPage /></Layout>} />
+        <Route path="/tour-optimization" element={<Layout><TourOptimizationPage /></Layout>} />
         <Route path="/settings" element={<Layout><Settings /></Layout>} />
 
         {/* Fallback */}

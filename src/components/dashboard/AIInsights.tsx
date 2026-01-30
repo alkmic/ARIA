@@ -31,8 +31,8 @@ export const AIInsights: React.FC = () => {
       // Navigate to practitioner profile
       navigate(`/practitioner/${insight.practitionerId}`);
     } else if (insight.actionLabel === 'Planifier visites') {
-      // Navigate to practitioners list
-      navigate('/practitioners');
+      // Navigate to KOL planning page
+      navigate('/kol-planning');
     }
   };
 
