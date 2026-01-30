@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, TrendingUp, Droplet } from 'lucide-react';
+import { Users, TrendingUp } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
 export const NationalStats: React.FC = () => {

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Phone, Mail, MapPin, TrendingUp, Sparkles, Target,
-  CheckCircle, Lightbulb, Swords, Calendar, Wand2
+  CheckCircle, Lightbulb, Swords, Calendar, Wand2, Newspaper, FileEdit
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { Avatar } from '../components/ui/Avatar';
@@ -11,8 +11,10 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatDate } from '../utils/helpers';
+import { NewsTab } from '../components/practitioner/NewsTab';
+import { NotesTab } from '../components/practitioner/NotesTab';
 
-type TabType = 'synthesis' | 'history' | 'metrics';
+type TabType = 'synthesis' | 'history' | 'metrics' | 'news' | 'notes';
 
 export default function PractitionerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +51,9 @@ export default function PractitionerProfile() {
   const tabs = [
     { id: 'synthesis', label: 'Synthèse IA', icon: Sparkles },
     { id: 'history', label: 'Historique', icon: Calendar },
-    { id: 'metrics', label: 'Métriques', icon: TrendingUp }
+    { id: 'metrics', label: 'Métriques', icon: TrendingUp },
+    { id: 'news', label: 'Actualités', icon: Newspaper },
+    { id: 'notes', label: 'Notes', icon: FileEdit }
   ];
 
   return (
@@ -210,6 +214,12 @@ export default function PractitionerProfile() {
             )}
             {activeTab === 'metrics' && (
               <MetricsTab volumeHistory={volumeHistory} practitioner={practitioner} />
+            )}
+            {activeTab === 'news' && (
+              <NewsTab practitioner={practitioner} />
+            )}
+            {activeTab === 'notes' && (
+              <NotesTab practitioner={practitioner} />
             )}
           </div>
         </div>

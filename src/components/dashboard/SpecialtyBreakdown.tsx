@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAppStore } from '../../stores/useAppStore';
 import { Stethoscope, Users2 } from 'lucide-react';
 
@@ -54,7 +54,7 @@ export const SpecialtyBreakdown: React.FC = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -88,7 +88,7 @@ export const SpecialtyBreakdown: React.FC = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -105,7 +105,7 @@ export const SpecialtyBreakdown: React.FC = () => {
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                   fontSize: '12px'
                 }}
-                formatter={(value: number) => `${(value / 1000000).toFixed(2)}M L`}
+                formatter={(value: number | undefined) => value ? `${(value / 1000000).toFixed(2)}M L` : '0M L'}
               />
             </PieChart>
           </ResponsiveContainer>

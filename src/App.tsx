@@ -9,6 +9,8 @@ import { PitchGenerator } from './pages/PitchGenerator';
 import AICoach from './pages/AICoach';
 import { Settings } from './pages/Settings';
 import { Visits } from './pages/Visits';
+import TerritoryMap from './pages/TerritoryMap';
+import ManagerDashboard from './pages/ManagerDashboard';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
         <Route path="/visits" element={<Layout><Visits /></Layout>} />
         <Route path="/pitch" element={<Layout><PitchGenerator /></Layout>} />
         <Route path="/coach" element={<Layout><AICoach /></Layout>} />
+        <Route path="/map" element={<Layout><TerritoryMap /></Layout>} />
+        <Route path="/manager" element={<Layout><ManagerDashboard /></Layout>} />
         <Route path="/settings" element={<Layout><Settings /></Layout>} />
 
         {/* Fallback */}
