@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, User, Filter, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -8,17 +8,26 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { format, addDays, isSameDay, startOfWeek, addWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { PeriodSelector } from '../components/shared/PeriodSelector';
+import { filterVisitsByPeriod } from '../services/metricsCalculator';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 
 export const Visits: React.FC = () => {
   const navigate = useNavigate();
   const { upcomingVisits, practitioners } = useAppStore();
+  const { timePeriod } = useTimePeriod();
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  // Filter visits by time period first
+  const periodFilteredVisits = useMemo(() => {
+    return filterVisitsByPeriod(upcomingVisits, timePeriod);
+  }, [upcomingVisits, timePeriod]);
+
   // Filter visits based on the selected filter type
-  const filteredVisits = upcomingVisits.filter((visit) => {
+  const filteredVisits = periodFilteredVisits.filter((visit) => {
     const visitDate = new Date(visit.date);
     const today = new Date();
 
@@ -105,6 +114,9 @@ export const Visits: React.FC = () => {
               </button>
             ))}
           </div>
+          <div className="ml-auto">
+            <PeriodSelector />
+          </div>
         </div>
 
         {/* Week Day Quick Filter */}
@@ -112,7 +124,7 @@ export const Visits: React.FC = () => {
           {weekDays.map((day, index) => {
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isToday = isSameDay(day, new Date());
-            const dayVisits = upcomingVisits.filter((v) =>
+            const dayVisits = periodFilteredVisits.filter((v) =>
               isSameDay(new Date(v.date), day)
             );
 

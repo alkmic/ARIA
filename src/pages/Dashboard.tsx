@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
+import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { calculatePeriodMetrics } from '../services/metricsCalculator';
+import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { ObjectiveProgress } from '../components/dashboard/ObjectiveProgress';
 import { AnimatedStatCard } from '../components/dashboard/AnimatedStatCard';
 import { DayTimeline } from '../components/dashboard/DayTimeline';
@@ -13,17 +16,14 @@ import { NationalStats } from '../components/dashboard/NationalStats';
 import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
 import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
 
-export type TimePeriod = 'month' | 'quarter' | 'year';
-
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
-  const { objectives } = currentUser;
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('month');
+  const { timePeriod, periodLabelShort } = useTimePeriod();
 
-  // Calculate average loyalty score
-  const avgLoyalty = (
-    practitioners.reduce((acc, p) => acc + p.loyaltyScore, 0) / practitioners.length
-  ).toFixed(1);
+  // Calculer les métriques pour la période sélectionnée
+  const periodMetrics = useMemo(() => {
+    return calculatePeriodMetrics(practitioners, upcomingVisits, timePeriod);
+  }, [practitioners, upcomingVisits, timePeriod]);
 
   // Get today's visits
   const todayVisits = useMemo(() => {
@@ -98,12 +98,6 @@ export const Dashboard: React.FC = () => {
       });
   }, [practitioners]);
 
-  // Calculate total volume
-  const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
-
-  // Get KOLs that need attention
-  const urgentKOLs = practitioners.filter(p => p.isKOL && p.riskLevel === 'high').length;
-
   // Calculate days remaining in month
   const today = new Date();
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -133,15 +127,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto">
-          <select
-            value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value as TimePeriod)}
-            className="flex-1 lg:flex-none px-2 sm:px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-xs sm:text-sm"
-          >
-            <option value="month">Ce mois</option>
-            <option value="quarter">Ce trimestre</option>
-            <option value="year">Cette année</option>
-          </select>
+          <PeriodSelector className="flex-1 lg:flex-none" size="sm" />
           <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap">
             Dernière sync: il y a 5 min
           </span>
@@ -150,8 +136,8 @@ export const Dashboard: React.FC = () => {
 
       {/* Barre d'objectif proéminente */}
       <ObjectiveProgress
-        current={objectives.visitsCompleted}
-        target={objectives.visitsMonthly}
+        current={periodMetrics.visitsCount}
+        target={periodMetrics.visitsObjective}
         daysRemaining={daysRemaining}
       />
 
@@ -160,9 +146,9 @@ export const Dashboard: React.FC = () => {
         <AnimatedStatCard
           icon={Calendar}
           iconBgColor="bg-al-blue-500"
-          label="Visites ce mois"
-          value={objectives.visitsCompleted}
-          suffix={`/${objectives.visitsMonthly}`}
+          label={`Visites ${periodLabelShort}`}
+          value={periodMetrics.visitsCount}
+          suffix={`/${periodMetrics.visitsObjective}`}
           trend={15}
           delay={0}
         />
@@ -170,7 +156,7 @@ export const Dashboard: React.FC = () => {
           icon={UserPlus}
           iconBgColor="bg-green-500"
           label="Nouveaux prescripteurs"
-          value={objectives.newPrescribers}
+          value={periodMetrics.newPrescribers}
           prefix="+"
           trend={20}
           trendLabel="vs mois dernier"
@@ -180,7 +166,7 @@ export const Dashboard: React.FC = () => {
           icon={Droplets}
           iconBgColor="bg-cyan-500"
           label="Volume prescrit"
-          value={totalVolume / 1000000}
+          value={periodMetrics.totalVolume / 1000000}
           suffix="M L"
           decimals={1}
           trend={12}
@@ -190,7 +176,7 @@ export const Dashboard: React.FC = () => {
           icon={Star}
           iconBgColor="bg-amber-500"
           label="Score NPS moyen"
-          value={parseFloat(avgLoyalty)}
+          value={periodMetrics.avgLoyalty}
           suffix="/10"
           decimals={1}
           delay={0.3}
@@ -199,7 +185,7 @@ export const Dashboard: React.FC = () => {
           icon={AlertTriangle}
           iconBgColor="bg-red-500"
           label="KOLs à voir urgent"
-          value={urgentKOLs}
+          value={periodMetrics.undervisitedKOLs}
           trendLabel="Non vus >90 jours"
           delay={0.4}
         />
@@ -230,7 +216,7 @@ export const Dashboard: React.FC = () => {
       {/* Graphique + Réussites (2 colonnes) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2">
-          <PerformanceChart timePeriod={timePeriod} />
+          <PerformanceChart />
         </div>
         <div className="lg:col-span-1">
           <WeeklyWins />

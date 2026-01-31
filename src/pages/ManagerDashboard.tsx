@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, Target, Award, ArrowUpRight,
@@ -11,7 +11,8 @@ import {
   AreaChart, Area, Line, BarChart, Bar
 } from 'recharts';
 import { useAppStore } from '../stores/useAppStore';
-import type { TimePeriod } from './Dashboard';
+import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { PeriodSelector } from '../components/shared/PeriodSelector';
 
 // Mock team data - in real app would come from backend
 const teamMembers = [
@@ -42,7 +43,7 @@ const projectionData = [
 
 export default function ManagerDashboard() {
   const { practitioners, upcomingVisits } = useAppStore();
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('month');
+  const { timePeriod } = useTimePeriod();
 
   // Calculate real metrics from store data
   const metrics = useMemo(() => {
@@ -93,7 +94,7 @@ export default function ManagerDashboard() {
       undervisitedKOLs,
       totalVisits: upcomingVisits.length,
     };
-  }, [practitioners, upcomingVisits]);
+  }, [practitioners, upcomingVisits, timePeriod]);
 
   // Calculate team performance (simulated per member)
   const teamPerformance = useMemo(() => {
@@ -120,7 +121,7 @@ export default function ManagerDashboard() {
         practitioners: memberPractitioners.length,
       };
     });
-  }, [practitioners]);
+  }, [practitioners, timePeriod]);
 
   // Prepare specialty distribution for pie chart
   const specialtyData = useMemo(() => {
@@ -189,15 +190,7 @@ export default function ManagerDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full lg:w-auto">
-          <select
-            value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value as TimePeriod)}
-            className="flex-1 lg:flex-none px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-sm"
-          >
-            <option value="month">Ce mois</option>
-            <option value="quarter">Ce trimestre</option>
-            <option value="year">Cette année</option>
-          </select>
+          <PeriodSelector size="sm" />
         </div>
       </div>
 

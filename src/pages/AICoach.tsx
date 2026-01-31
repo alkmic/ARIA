@@ -18,6 +18,8 @@ import {
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
 import { useAppStore } from '../stores/useAppStore';
+import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -31,17 +33,6 @@ interface Message {
   timestamp: Date;
 }
 
-const SUGGESTION_CHIPS = [
-  "Qui voir en priorité cette semaine ?",
-  "Mes KOLs non vus depuis 2 mois",
-  "Comment atteindre mon objectif ?",
-  "Praticiens à risque de churn",
-  "Opportunités nouveaux prescripteurs",
-  "Qui est le plus gros prescripteur d'O2 de la région ?",
-  "Quels sont les pneumologues de Lyon ?",
-  "Analyse de mon territoire",
-];
-
 export default function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -50,10 +41,23 @@ export default function AICoach() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const { practitioners, currentUser, upcomingVisits } = useAppStore();
+  const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
   const { complete } = useGroq();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Suggestions contextuelles basées sur la période
+  const SUGGESTION_CHIPS = [
+    `Quels sont mes KOLs non vus ${periodLabel.toLowerCase()} ?`,
+    `Comment atteindre mon objectif ${periodLabel.toLowerCase()} ?`,
+    `Qui sont les top prescripteurs ${periodLabel.toLowerCase()} ?`,
+    "Quels praticiens dois-je visiter en priorité ?",
+    "Praticiens à risque de churn",
+    "Opportunités nouveaux prescripteurs",
+    "Qui est le plus gros prescripteur d'O2 de la région ?",
+    "Analyse de mon territoire",
+  ];
 
   // Auto-scroll vers le bas
   useEffect(() => {
@@ -140,55 +144,85 @@ export default function AICoach() {
     setAutoSpeak(!autoSpeak);
   };
 
-  // Créer un contexte riche pour l'IA
+  // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
   const buildContext = () => {
+    // Calculer les métriques de la période sélectionnée
+    const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
+
+    // Statistiques globales
     const totalPractitioners = practitioners.length;
     const kols = practitioners.filter(p => p.isKOL);
+    const kolCount = kols.length;
     const pneumologues = practitioners.filter(p => p.specialty === 'Pneumologue');
     const generalistes = practitioners.filter(p => p.specialty === 'Médecin généraliste');
     const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
-    const topPrescriber = practitioners.reduce((top, p) => p.volumeL > top.volumeL ? p : top, practitioners[0]);
 
+    // Top praticiens par volume
+    const topPractitioners = getTopPractitioners(practitioners, 'year', 10);
+
+    // Praticiens à risque (fidélité faible + volume élevé OU KOL avec fidélité faible)
+    const atRiskPractitioners = practitioners
+      .filter(p => (p.loyaltyScore < 6 && p.volumeL > 100000) || (p.isKOL && p.loyaltyScore < 7))
+      .sort((a, b) => b.volumeL - a.volumeL)
+      .slice(0, 10);
+
+    // KOLs non vus depuis longtemps
     const today = new Date();
-    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
     const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-
-    const recentVisits = upcomingVisits.filter(v => new Date(v.date) > thirtyDaysAgo);
-    const urgentPractitioners = practitioners.filter(p => {
-      const lastVisit = p.lastVisitDate ? new Date(p.lastVisitDate) : null;
-      return !lastVisit || lastVisit < ninetyDaysAgo;
+    const undervisitedKOLs = kols.filter(p => {
+      if (!p.lastVisitDate) return true;
+      const lastVisit = new Date(p.lastVisitDate);
+      return lastVisit < ninetyDaysAgo;
     });
 
     return `Tu es un assistant stratégique pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
 
-CONTEXTE TERRITOIRE :
-- ${totalPractitioners} praticiens au total (${pneumologues.length} pneumologues, ${generalistes.length} médecins généralistes)
-- ${kols.length} KOLs (Key Opinion Leaders) identifiés
-- Volume total prescrit : ${(totalVolume / 1000000).toFixed(1)}M litres/an
-- Plus gros prescripteur : Dr ${topPrescriber.firstName} ${topPrescriber.lastName} (${(topPrescriber.volumeL / 1000000).toFixed(2)}M L/an)
+CONTEXTE TERRITOIRE (${periodLabel}) :
+- Nombre total de praticiens : ${totalPractitioners} (${pneumologues.length} pneumologues, ${generalistes.length} médecins généralistes)
+- KOLs identifiés : ${kolCount}
+- Volume total annuel : ${(totalVolume / 1000000).toFixed(1)}M L
+- Fidélité moyenne : ${periodMetrics.avgLoyalty.toFixed(1)}/10
+- Visites ${periodLabel} : ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective}
+- Praticiens à risque : ${atRiskPractitioners.length}
+- KOLs sous-visités : ${undervisitedKOLs.length}
 
-OBJECTIFS UTILISATEUR :
-- Objectif mensuel : ${currentUser.objectives.visitsMonthly} visites
-- Visites réalisées : ${currentUser.objectives.visitsCompleted}
-- Restantes : ${currentUser.objectives.visitsMonthly - currentUser.objectives.visitsCompleted}
-
-SITUATION ACTUELLE :
-- ${recentVisits.length} visites réalisées ce mois
-- ${urgentPractitioners.length} praticiens non vus depuis plus de 90 jours
-- ${urgentPractitioners.filter(p => p.isKOL).length} KOLs nécessitent une visite urgente
-
-PRATICIENS DISPONIBLES :
-${practitioners.slice(0, 20).map(p =>
-  `- Dr ${p.firstName} ${p.lastName}, ${p.specialty}, ${p.city}, Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an, Vingtile: ${p.vingtile}${p.isKOL ? ', KOL' : ''}`
+TOP 10 PRATICIENS (VOLUME ANNUEL) :
+${topPractitioners.map((p, i) =>
+  `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} - ${p.specialty}, ${p.city}
+   Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${p.loyaltyScore}/10 | Vingtile: ${p.vingtile}${p.isKOL ? ' | KOL ⭐' : ''}`
 ).join('\n')}
 
+PRATICIENS À RISQUE (haute priorité) :
+${atRiskPractitioners.length > 0 ? atRiskPractitioners.map(p =>
+  `- ${p.title} ${p.lastName} (${p.city}): Fidélité ${p.loyaltyScore}/10, Volume ${(p.volumeL / 1000).toFixed(0)}K L/an${p.isKOL ? ', KOL' : ''}`
+).join('\n') : '- Aucun praticien à risque critique'}
+
+KOLS SOUS-VISITÉS (>90 jours) :
+${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 8).map(p =>
+  `- ${p.title} ${p.firstName} ${p.lastName} (${p.city}): ${(p.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
+).join('\n') : '- Tous les KOLs sont à jour'}
+
+MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
+- Objectif visites : ${periodMetrics.visitsObjective}
+- Visites réalisées : ${periodMetrics.visitsCount} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
+- Nouveaux prescripteurs : ${periodMetrics.newPrescribers}
+- Volume période : ${(periodMetrics.totalVolume / 1000000).toFixed(2)}M L
+- Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
+
+BASE DE DONNÉES PRATICIENS (accès complet - échantillon de 30) :
+${practitioners.slice(0, 30).map(p =>
+  `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.city} | V: ${(p.volumeL / 1000).toFixed(0)}K L | F: ${p.loyaltyScore}/10 | V${p.vingtile}${p.isKOL ? ' | KOL' : ''}${p.lastVisitDate ? ` | DV: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ''}`
+).join('\n')}
+(... ${practitioners.length} praticiens au total dans le système)
+
 INSTRUCTIONS :
-- Réponds de manière concise et actionnableavec des recommandations concrètes
-- Utilise les données contextuelles pour personnaliser tes réponses
-- Priorise les praticiens par impact stratégique (KOL + volume + urgence)
-- Fournis des chiffres précis et des insights basés sur les données
+- Réponds de manière concise et professionnelle avec des recommandations concrètes
+- Utilise les données contextuelles ci-dessus pour personnaliser tes réponses
+- Si on te demande des infos sur un praticien spécifique, cherche dans la base et donne TOUS ses détails (nom, spécialité, ville, volume, fidélité, vingtile, statut KOL, dernière visite)
+- Priorise toujours par impact stratégique : KOL > Volume > Urgence > Fidélité
+- Fournis des chiffres précis et des insights basés sur les données réelles
 - Sois encourageant et positif dans ton ton
-- Si on te pose une question sur un praticien spécifique, donne ses détails précis`;
+- Adapte tes recommandations à la période sélectionnée (${periodLabel})`;
   };
 
   const handleSend = async (question: string) => {
