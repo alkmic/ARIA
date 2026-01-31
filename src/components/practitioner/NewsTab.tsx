@@ -1,36 +1,52 @@
 import { motion } from 'framer-motion';
-import { FileText, Mic, Building, BookOpen, CheckCircle } from 'lucide-react';
+import { FileText, Mic, Building, BookOpen, CheckCircle, Award, GraduationCap } from 'lucide-react';
 import type { Practitioner } from '../../types';
+import { DataService } from '../../services/dataService';
 
 interface NewsTabProps {
   practitioner: Practitioner;
 }
 
 export function NewsTab({ practitioner }: NewsTabProps) {
-  // News mockées mais réalistes
-  const news = [
-    {
-      type: 'publication',
-      title: `Publication dans l'European Respiratory Journal`,
-      date: '15 janvier 2026',
-      summary: 'Co-auteur d\'une étude sur le sevrage tabagique chez le patient BPCO avec oxygénothérapie...',
-      relevance: 'Opportunité de discussion sur nos programmes d\'accompagnement'
-    },
-    {
-      type: 'conference',
-      title: 'Intervention au Congrès de Pneumologie',
-      date: '8 janvier 2026',
-      summary: 'Présentation sur la téléréhabilitation respiratoire et l\'amélioration de l\'observance...',
-      relevance: 'Nos solutions connectées s\'inscrivent dans cette approche'
-    },
-    {
-      type: 'institutional',
-      title: `Nouveau chef de service à l'hôpital de ${practitioner.city}`,
-      date: '2 janvier 2026',
-      summary: 'Réorganisation du service pneumologie avec focus sur la prise en charge ambulatoire...',
-      relevance: 'Moment opportun pour renforcer le partenariat'
-    },
-  ];
+  // Récupérer les VRAIES actualités depuis la base de données
+  const practitionerProfile = DataService.getPractitionerById(practitioner.id);
+  const news = practitionerProfile?.news || [];
+
+  // Fonction pour obtenir l'icône selon le type
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'publication':
+        return <FileText className="w-5 h-5" />;
+      case 'conference':
+        return <Mic className="w-5 h-5" />;
+      case 'certification':
+        return <GraduationCap className="w-5 h-5" />;
+      case 'award':
+        return <Award className="w-5 h-5" />;
+      case 'event':
+        return <Building className="w-5 h-5" />;
+      default:
+        return <FileText className="w-5 h-5" />;
+    }
+  };
+
+  // Fonction pour obtenir la couleur selon le type
+  const getColor = (type: string) => {
+    switch (type) {
+      case 'publication':
+        return 'bg-blue-100 text-blue-600';
+      case 'conference':
+        return 'bg-purple-100 text-purple-600';
+      case 'certification':
+        return 'bg-green-100 text-green-600';
+      case 'award':
+        return 'bg-amber-100 text-amber-600';
+      case 'event':
+        return 'bg-teal-100 text-teal-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -39,37 +55,43 @@ export function NewsTab({ practitioner }: NewsTabProps) {
         <span className="text-xs text-slate-500">Mis à jour il y a 2h</span>
       </div>
 
-      {news.map((item, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.1 }}
-          className="glass-card p-4"
-        >
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg ${
-              item.type === 'publication' ? 'bg-blue-100 text-blue-600' :
-              item.type === 'conference' ? 'bg-purple-100 text-purple-600' :
-              'bg-green-100 text-green-600'
-            }`}>
-              {item.type === 'publication' ? <FileText className="w-5 h-5" /> :
-               item.type === 'conference' ? <Mic className="w-5 h-5" /> :
-               <Building className="w-5 h-5" />}
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">{item.title}</p>
-              <p className="text-sm text-slate-500 mt-1">{item.summary}</p>
-              <div className="mt-2 p-2 bg-amber-50 rounded-lg">
-                <p className="text-xs text-amber-700">
-                  💡 <strong>Pertinence :</strong> {item.relevance}
+      {news.length > 0 ? (
+        news.map((item, i) => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="glass-card p-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg ${getColor(item.type)}`}>
+                {getIcon(item.type)}
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">{item.title}</p>
+                <p className="text-sm text-slate-500 mt-1">{item.content}</p>
+                {item.relevance && (
+                  <div className="mt-2 p-2 bg-amber-50 rounded-lg">
+                    <p className="text-xs text-amber-700">{item.relevance}</p>
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 mt-2">
+                  {new Date(item.date).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
                 </p>
               </div>
-              <p className="text-xs text-slate-400 mt-2">{item.date}</p>
             </div>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        ))
+      ) : (
+        <div className="glass-card p-6 text-center text-slate-500">
+          <p className="text-sm">Aucune actualité récente pour ce praticien.</p>
+        </div>
+      )}
 
       {/* Section Guidelines BPCO */}
       <div className="glass-card p-4 bg-gradient-to-br from-al-blue-50 to-al-sky/10">

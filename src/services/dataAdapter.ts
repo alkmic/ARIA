@@ -48,7 +48,7 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     avatarUrl: profile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${profile.firstName}${profile.lastName}`,
     email: profile.contact.email,
     phone: profile.contact.phone,
-    notes: profile.notes.length > 0 ? profile.notes[0].content : undefined,
+    notes: profile.personalNotes || undefined,
 
     // Champs additionnels pour compatibilité
     address: profile.address.street,

@@ -79,6 +79,7 @@ export interface PractitionerProfile {
   notes: PractitionerNote[];
   news: PractitionerNews[];
   visitHistory: VisitRecord[];
+  personalNotes?: string; // Notes personnelles de l'utilisateur
 
   // Métadonnées
   createdAt: string;

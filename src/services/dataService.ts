@@ -145,6 +145,12 @@ export class DataService {
       });
     }
 
+    // Notes personnelles de l'utilisateur
+    if (p.personalNotes && p.personalNotes.trim()) {
+      context += `\n✍️ NOTES PERSONNELLES DE L'UTILISATEUR :\n`;
+      context += `${p.personalNotes}\n`;
+    }
+
     context += `\n═══════════════════════════════════════════════════════════════════════════\n`;
 
     return context;
@@ -199,5 +205,24 @@ export class DataService {
       pneumologues: practitioners.filter(p => p.specialty === 'Pneumologue').length,
       generalistes: practitioners.filter(p => p.specialty === 'Médecin généraliste').length,
     };
+  }
+
+  /**
+   * Met à jour les notes personnelles d'un praticien
+   */
+  static updatePersonalNotes(practitionerId: string, personalNotes: string): boolean {
+    const practitioner = this.getPractitionerById(practitionerId);
+    if (!practitioner) return false;
+
+    practitioner.personalNotes = personalNotes;
+    return true;
+  }
+
+  /**
+   * Récupère les notes personnelles d'un praticien
+   */
+  static getPersonalNotes(practitionerId: string): string {
+    const practitioner = this.getPractitionerById(practitionerId);
+    return practitioner?.personalNotes || '';
   }
 }

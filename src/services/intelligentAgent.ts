@@ -164,6 +164,12 @@ function buildNewsContext(practitioner: PractitionerProfile): string {
     context += '\nAucune actualité ou publication récente enregistrée pour ce praticien.\n';
   }
 
+  // Notes personnelles de l'utilisateur
+  if (practitioner.personalNotes && practitioner.personalNotes.trim()) {
+    context += `\n✍️ NOTES PERSONNELLES DE L'UTILISATEUR :\n`;
+    context += `${practitioner.personalNotes}\n`;
+  }
+
   context += `\n═══════════════════════════════════════════════════════════════════════════\n`;
   return context;
 }
@@ -199,6 +205,12 @@ function buildNotesContext(practitioner: PractitionerProfile): string {
     context += '\nAucune note de visite enregistrée pour ce praticien.\n';
   }
 
+  // Notes personnelles de l'utilisateur
+  if (practitioner.personalNotes && practitioner.personalNotes.trim()) {
+    context += `\n✍️ NOTES PERSONNELLES DE L'UTILISATEUR :\n`;
+    context += `${practitioner.personalNotes}\n`;
+  }
+
   context += `\n═══════════════════════════════════════════════════════════════════════════\n`;
   return context;
 }
@@ -207,7 +219,7 @@ function buildNotesContext(practitioner: PractitionerProfile): string {
  * Construire le contexte pour les informations de contact
  */
 function buildContactContext(practitioner: PractitionerProfile): string {
-  return `
+  let context = `
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║ COORDONNÉES - ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
 ╚════════════════════════════════════════════════════════════════════════════╝
@@ -222,9 +234,16 @@ function buildContactContext(practitioner: PractitionerProfile): string {
 - Coordonnées GPS : ${practitioner.address.coords.lat.toFixed(6)}, ${practitioner.address.coords.lng.toFixed(6)}
 - Email : ${practitioner.contact.email}
 - Téléphone : ${practitioner.contact.phone}${practitioner.contact.mobile ? `\n- Mobile : ${practitioner.contact.mobile}` : ''}${practitioner.contact.fax ? `\n- Fax : ${practitioner.contact.fax}` : ''}
-
-═══════════════════════════════════════════════════════════════════════════
 `;
+
+  // Notes personnelles de l'utilisateur
+  if (practitioner.personalNotes && practitioner.personalNotes.trim()) {
+    context += `\n✍️ NOTES PERSONNELLES DE L'UTILISATEUR :\n`;
+    context += `${practitioner.personalNotes}\n`;
+  }
+
+  context += `\n═══════════════════════════════════════════════════════════════════════════\n`;
+  return context;
 }
 
 /**
@@ -236,7 +255,7 @@ function buildMetricsContext(practitioner: PractitionerProfile): string {
     ? Math.floor((today.getTime() - new Date(practitioner.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
     : 999;
 
-  return `
+  let context = `
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║ MÉTRIQUES BUSINESS - ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
 ╚════════════════════════════════════════════════════════════════════════════╝
@@ -260,9 +279,16 @@ function buildMetricsContext(practitioner: PractitionerProfile): string {
 - Prochaine visite planifiée : ${practitioner.nextScheduledVisit ? new Date(practitioner.nextScheduledVisit).toLocaleDateString('fr-FR') : 'Non planifiée'}
 - Nombre de visites enregistrées : ${practitioner.visitHistory.length}
 - Priorité de visite : ${practitioner.metrics.isKOL && daysSinceVisit > 60 ? '🔴 TRÈS URGENT' : daysSinceVisit > 90 ? '🟠 URGENT' : daysSinceVisit > 60 ? '🟡 MOYEN' : '🟢 Normal'}
-
-═══════════════════════════════════════════════════════════════════════════
 `;
+
+  // Notes personnelles de l'utilisateur
+  if (practitioner.personalNotes && practitioner.personalNotes.trim()) {
+    context += `\n✍️ NOTES PERSONNELLES DE L'UTILISATEUR :\n`;
+    context += `${practitioner.personalNotes}\n`;
+  }
+
+  context += `\n═══════════════════════════════════════════════════════════════════════════\n`;
+  return context;
 }
 
 /**

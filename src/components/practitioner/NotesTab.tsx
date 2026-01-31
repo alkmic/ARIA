@@ -1,21 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import type { Practitioner } from '../../types';
+import { DataService } from '../../services/dataService';
 
 interface NotesTabProps {
   practitioner: Practitioner;
 }
 
 export function NotesTab({ practitioner }: NotesTabProps) {
-  const [notes, setNotes] = useState(practitioner.notes || '');
+  const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Charger les notes personnelles depuis la base de données
+  useEffect(() => {
+    const personalNotes = DataService.getPersonalNotes(practitioner.id);
+    setNotes(personalNotes);
+  }, [practitioner.id]);
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simuler sauvegarde
+    // Sauvegarder dans la base de données
+    DataService.updatePersonalNotes(practitioner.id, notes);
     await new Promise(resolve => setTimeout(resolve, 500));
     setIsSaving(false);
-    // TODO: Afficher toast de confirmation
   };
 
   return (
