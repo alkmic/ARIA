@@ -20,6 +20,7 @@ import { generateCoachResponse } from '../services/coachAI';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
+import { DataService } from '../services/dataService';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -149,22 +150,13 @@ export default function AICoach() {
     // Calculer les métriques de la période sélectionnée
     const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
 
-    // Statistiques globales
-    const totalPractitioners = practitioners.length;
-    const kols = practitioners.filter(p => p.isKOL);
-    const kolCount = kols.length;
-    const pneumologues = practitioners.filter(p => p.specialty === 'Pneumologue');
-    const generalistes = practitioners.filter(p => p.specialty === 'Médecin généraliste');
-    const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
+    // Utiliser le nouveau service de données pour les statistiques
+    const stats = DataService.getGlobalStats();
+    const kols = DataService.getKOLs();
+    const atRiskPractitioners = DataService.getAtRiskPractitioners().slice(0, 10);
 
     // Top praticiens par volume
     const topPractitioners = getTopPractitioners(practitioners, 'year', 10);
-
-    // Praticiens à risque (fidélité faible + volume élevé OU KOL avec fidélité faible)
-    const atRiskPractitioners = practitioners
-      .filter(p => (p.loyaltyScore < 6 && p.volumeL > 100000) || (p.isKOL && p.loyaltyScore < 7))
-      .sort((a, b) => b.volumeL - a.volumeL)
-      .slice(0, 10);
 
     // KOLs non vus depuis longtemps
     const today = new Date();
@@ -175,52 +167,28 @@ export default function AICoach() {
       return lastVisit < ninetyDaysAgo;
     });
 
-    // Détection intelligente : si la question mentionne un nom de praticien, ajouter ses détails complets
+    // Détection intelligente : si la question mentionne un nom de praticien, récupérer son contexte complet
     let specificPractitionerContext = '';
     if (userQuestion) {
-      const foundPractitioner = practitioners.find(p =>
-        userQuestion.toLowerCase().includes(p.lastName.toLowerCase()) ||
-        userQuestion.toLowerCase().includes(`${p.firstName} ${p.lastName}`.toLowerCase())
-      );
+      // Recherche floue pour trouver le praticien mentionné
+      const matches = DataService.fuzzySearchPractitioner(userQuestion);
 
-      if (foundPractitioner) {
-        const visits = upcomingVisits.filter(v => v.practitionerId === foundPractitioner.id);
-        const lastVisit = foundPractitioner.lastVisitDate
-          ? new Date(foundPractitioner.lastVisitDate).toLocaleDateString('fr-FR')
-          : 'jamais visité';
-        const daysSinceVisit = foundPractitioner.lastVisitDate
-          ? Math.floor((today.getTime() - new Date(foundPractitioner.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
-          : 999;
+      if (matches.length > 0) {
+        // Prendre le premier match (le plus pertinent)
+        const foundProfile = matches[0];
 
-        specificPractitionerContext = `
-
-DÉTAILS COMPLETS SUR ${foundPractitioner.title} ${foundPractitioner.firstName} ${foundPractitioner.lastName} :
-- Identité : ${foundPractitioner.title} ${foundPractitioner.firstName} ${foundPractitioner.lastName}
-- Spécialité : ${foundPractitioner.specialty}
-- Ville : ${foundPractitioner.city}
-- Volume annuel : ${(foundPractitioner.volumeL / 1000).toFixed(1)}K L/an
-- Score de fidélité : ${foundPractitioner.loyaltyScore}/10
-- Vingtile : ${foundPractitioner.vingtile}
-- Statut KOL : ${foundPractitioner.isKOL ? 'OUI ⭐' : 'Non'}
-- Dernière visite : ${lastVisit} (il y a ${daysSinceVisit} jours)
-- Visites planifiées : ${visits.length} visite(s)
-- Email : ${foundPractitioner.email || 'Non renseigné'}
-- Téléphone : ${foundPractitioner.phone || 'Non renseigné'}
-- Notes récentes : "${foundPractitioner.notes || 'Aucune note enregistrée pour ce praticien'}"
-- Publications/Actualités : ${foundPractitioner.isKOL ? 'Expert reconnu en oxygénothérapie, publications dans revues médicales' : 'Aucune publication référencée'}
-- Potentiel de prescription : ${foundPractitioner.vingtile <= 5 ? 'ÉLEVÉ' : foundPractitioner.vingtile <= 10 ? 'MOYEN' : 'FAIBLE'}
-- Priorité de visite : ${foundPractitioner.isKOL && daysSinceVisit > 60 ? 'TRÈS URGENT' : daysSinceVisit > 90 ? 'URGENT' : daysSinceVisit > 60 ? 'MOYEN' : 'Normal'}
-`;
+        // Récupérer le contexte COMPLET depuis le service
+        specificPractitionerContext = DataService.getCompletePractitionerContext(foundProfile.id);
       }
     }
 
     return `Tu es un assistant stratégique pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
 
 CONTEXTE TERRITOIRE (${periodLabel}) :
-- Nombre total de praticiens : ${totalPractitioners} (${pneumologues.length} pneumologues, ${generalistes.length} médecins généralistes)
-- KOLs identifiés : ${kolCount}
-- Volume total annuel : ${(totalVolume / 1000000).toFixed(1)}M L
-- Fidélité moyenne : ${periodMetrics.avgLoyalty.toFixed(1)}/10
+- Nombre total de praticiens : ${stats.totalPractitioners} (${stats.pneumologues} pneumologues, ${stats.generalistes} médecins généralistes)
+- KOLs identifiés : ${stats.totalKOLs}
+- Volume total annuel : ${(stats.totalVolume / 1000000).toFixed(1)}M L
+- Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
 - Visites ${periodLabel} : ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective}
 - Praticiens à risque : ${atRiskPractitioners.length}
 - KOLs sous-visités : ${undervisitedKOLs.length}
@@ -233,12 +201,12 @@ ${topPractitioners.map((p, i) =>
 
 PRATICIENS À RISQUE (haute priorité) :
 ${atRiskPractitioners.length > 0 ? atRiskPractitioners.map(p =>
-  `- ${p.title} ${p.lastName} (${p.city}): Fidélité ${p.loyaltyScore}/10, Volume ${(p.volumeL / 1000).toFixed(0)}K L/an${p.isKOL ? ', KOL' : ''}`
+  `- ${p.title} ${p.lastName} (${p.address.city}): Fidélité ${p.metrics.loyaltyScore}/10, Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.metrics.isKOL ? ', KOL' : ''}`
 ).join('\n') : '- Aucun praticien à risque critique'}
 
 KOLS SOUS-VISITÉS (>90 jours) :
 ${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 8).map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} (${p.city}): ${(p.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
+  `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
 ).join('\n') : '- Tous les KOLs sont à jour'}
 
 MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :

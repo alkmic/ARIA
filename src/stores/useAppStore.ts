@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Practitioner, User, AIInsight, FilterOptions, UpcomingVisit, PerformanceData } from '../types';
-import practitionersData from '../data/practitioners.json';
+import { DataService } from '../services/dataService';
+import { adaptPractitionerProfiles } from '../services/dataAdapter';
 
 interface AppState {
   // Data
@@ -172,12 +173,15 @@ const mockPerformanceData: PerformanceData[] = [
   { month: 'Déc', yourVolume: 780000, objective: 700000, teamAverage: 620000 },
 ];
 
+// Charger les praticiens depuis le nouveau service de données
+const loadedPractitioners = adaptPractitionerProfiles(DataService.getAllPractitioners());
+
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
-  practitioners: practitionersData as Practitioner[],
+  practitioners: loadedPractitioners,
   currentUser: mockUser,
   insights: mockInsights,
-  upcomingVisits: generateMockVisits(practitionersData as Practitioner[]),
+  upcomingVisits: generateMockVisits(loadedPractitioners),
   performanceData: mockPerformanceData,
   selectedPractitioner: null,
   searchQuery: '',
