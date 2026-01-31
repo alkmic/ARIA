@@ -111,6 +111,9 @@ export default function TerritoryMap() {
 
   const [optimizationResult, setOptimizationResult] = useState<RouteOptimizationResult | null>(null);
   const [showOptimization, setShowOptimization] = useState(false);
+  const [selectedPractitionerIds, setSelectedPractitionerIds] = useState<Set<string>>(new Set());
+  const [showSelectionList, setShowSelectionList] = useState(false);
+  const [nonOptimizedDistance, setNonOptimizedDistance] = useState<number>(0);
 
   // Filtrer les praticiens par période
   const periodFilteredPractitioners = useMemo(() => {
@@ -146,15 +149,62 @@ export default function TerritoryMap() {
   const generalistes = practitioners.filter(p => p.specialty === 'Médecin généraliste').length;
   const totalVolume = mappedPractitioners.reduce((sum, p) => sum + (p?.volumeL || 0), 0);
 
+  // Praticiens sélectionnés pour l'optimisation
+  const selectedPractitioners = useMemo(() => {
+    return mappedPractitioners.filter(p => p && selectedPractitionerIds.has(p.id));
+  }, [mappedPractitioners, selectedPractitionerIds]);
+
+  // Initialiser la sélection avec tous les praticiens filtrés
+  useMemo(() => {
+    if (mappedPractitioners.length > 0 && selectedPractitionerIds.size === 0) {
+      setSelectedPractitionerIds(new Set(mappedPractitioners.filter(p => p).map(p => p!.id)));
+    }
+  }, [mappedPractitioners]);
+
+  // Fonction pour calculer la distance d'un itinéraire non optimisé (ordre actuel)
+  const calculateNonOptimizedDistance = (practitioners: any[]) => {
+    if (practitioners.length < 2) return 0;
+    let totalDistance = 0;
+    for (let i = 0; i < practitioners.length - 1; i++) {
+      const p1 = practitioners[i];
+      const p2 = practitioners[i + 1];
+      if (p1.coords && p2.coords) {
+        const distance = Math.sqrt(
+          Math.pow(p2.coords[0] - p1.coords[0], 2) +
+          Math.pow(p2.coords[1] - p1.coords[1], 2)
+        ) * 111; // approximation en km
+        totalDistance += distance;
+      }
+    }
+    return totalDistance;
+  };
+
+  // Fonction pour basculer la sélection d'un praticien
+  const togglePractitionerSelection = (id: string) => {
+    setSelectedPractitionerIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   // Fonction pour calculer l'itinéraire optimal
   const handleOptimizeRoute = () => {
-    if (mappedPractitioners.length === 0) {
-      alert('Aucun praticien sélectionné pour l\'optimisation');
+    if (selectedPractitioners.length === 0) {
+      alert('Veuillez sélectionner au moins un praticien pour l\'optimisation');
       return;
     }
 
-    const practitionersToOptimize = mappedPractitioners.filter(p => p !== null);
-    const result = optimizeRoute(practitionersToOptimize as any[], optimizationCriteria);
+    // Calculer la distance non optimisée
+    const nonOptDist = calculateNonOptimizedDistance(selectedPractitioners);
+    setNonOptimizedDistance(nonOptDist);
+
+    // Optimiser
+    const result = optimizeRoute(selectedPractitioners as any[], optimizationCriteria);
     setOptimizationResult(result);
     setShowOptimization(true);
   };
@@ -249,6 +299,66 @@ export default function TerritoryMap() {
             </div>
           </div>
 
+          {/* Section Sélection des praticiens à visiter */}
+          <div className="p-6 border-b border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-purple-500" />
+                Praticiens à visiter
+              </h2>
+              <button
+                onClick={() => setShowSelectionList(!showSelectionList)}
+                className="text-sm text-al-blue-500 hover:underline font-medium"
+              >
+                {showSelectionList ? 'Masquer' : 'Voir la liste'}
+              </button>
+            </div>
+
+            <div className="text-sm text-slate-600 mb-3">
+              <strong>{selectedPractitioners.length}</strong> praticien(s) sélectionné(s) pour {periodLabel.toLowerCase()}
+            </div>
+
+            {showSelectionList && (
+              <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-lg">
+                {mappedPractitioners.map((p) => p && (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedPractitionerIds.has(p.id)}
+                      onChange={() => togglePractitionerSelection(p.id)}
+                      className="w-4 h-4 text-al-blue-500 rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {p.title} {p.lastName}
+                        {p.isKOL && ' ⭐'}
+                      </p>
+                      <p className="text-xs text-slate-500">{p.city} • {(p.volumeL / 1000).toFixed(0)}K L</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => setSelectedPractitionerIds(new Set(mappedPractitioners.filter(p => p).map(p => p!.id)))}
+                className="flex-1 text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+              >
+                Tout sélectionner
+              </button>
+              <button
+                onClick={() => setSelectedPractitionerIds(new Set())}
+                className="flex-1 text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+              >
+                Tout désélectionner
+              </button>
+            </div>
+          </div>
+
           {/* Section Optimisation d'itinéraire */}
           <div className="p-6 border-b border-slate-200">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -317,7 +427,7 @@ export default function TerritoryMap() {
 
             <button
               onClick={handleOptimizeRoute}
-              disabled={mappedPractitioners.length === 0}
+              disabled={selectedPractitioners.length === 0}
               className="w-full bg-al-blue-500 hover:bg-al-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <TrendingUp className="w-4 h-4" />
@@ -334,6 +444,36 @@ export default function TerritoryMap() {
               </h3>
 
               <p className="text-sm text-green-800 mb-4">{optimizationResult.summary}</p>
+
+              {/* Comparaison avant/après */}
+              {nonOptimizedDistance > 0 && (
+                <div className="mb-4 p-3 bg-white rounded-lg border-2 border-green-300">
+                  <p className="font-semibold text-sm text-green-900 mb-2">💡 Bénéfices de l'optimisation</p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Distance sans optimisation</span>
+                      <span className="font-medium text-slate-800">{nonOptimizedDistance.toFixed(1)} km</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Distance optimisée</span>
+                      <span className="font-medium text-green-700">{optimizationResult.totalDistance.toFixed(1)} km</span>
+                    </div>
+                    <div className="pt-2 border-t border-green-200 flex justify-between items-center">
+                      <span className="font-semibold text-green-900">Économie</span>
+                      <span className="font-bold text-green-700">
+                        -{(nonOptimizedDistance - optimizationResult.totalDistance).toFixed(1)} km
+                        ({(((nonOptimizedDistance - optimizationResult.totalDistance) / nonOptimizedDistance) * 100).toFixed(0)}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-green-900">Temps gagné</span>
+                      <span className="font-bold text-green-700">
+                        ~{Math.floor(((nonOptimizedDistance - optimizationResult.totalDistance) / 60) * 60)} min
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3">
                 {optimizationResult.routes.map((route, idx) => (

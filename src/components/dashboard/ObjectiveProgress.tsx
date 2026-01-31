@@ -21,6 +21,19 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
     return 'from-red-500 to-rose-500';
   };
 
+  // Générer le sous-titre basé sur la période
+  const getSubtitle = () => {
+    const now = new Date();
+    if (periodLabel.includes('mois')) {
+      return now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    } else if (periodLabel.includes('trimestre')) {
+      const quarter = Math.floor(now.getMonth() / 3) + 1;
+      return `T${quarter} ${now.getFullYear()}`;
+    } else {
+      return `Année ${now.getFullYear()}`;
+    }
+  };
+
   return (
     <div className="glass-card p-4 sm:p-6 mb-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
@@ -30,7 +43,7 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-bold text-al-navy">Objectif {periodLabel}</h2>
-            <p className="text-xs sm:text-sm text-slate-500">{new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
+            <p className="text-xs sm:text-sm text-slate-500">{getSubtitle()}</p>
           </div>
         </div>
 

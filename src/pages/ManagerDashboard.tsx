@@ -45,10 +45,14 @@ export default function ManagerDashboard() {
   const { practitioners, upcomingVisits } = useAppStore();
   const { timePeriod } = useTimePeriod();
 
-  // Calculate real metrics from store data
+  // Calculate real metrics from store data - adapted to period
   const metrics = useMemo(() => {
     const totalPractitioners = practitioners.length;
-    const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
+
+    // Adapter le volume à la période sélectionnée
+    const volumeMultiplier = timePeriod === 'month' ? 1/12 : timePeriod === 'quarter' ? 1/4 : 1;
+    const totalVolume = practitioners.reduce((sum, p) => sum + (p.volumeL * volumeMultiplier), 0);
+
     const kolCount = practitioners.filter(p => p.isKOL).length;
     const avgLoyalty = practitioners.reduce((sum, p) => sum + p.loyaltyScore, 0) / totalPractitioners;
 
@@ -58,13 +62,13 @@ export default function ManagerDashboard() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Calculate territory stats
+    // Calculate territory stats (volume adapté à la période)
     const territories = practitioners.reduce((acc, p) => {
       if (!acc[p.city]) {
         acc[p.city] = { count: 0, volume: 0, kols: 0 };
       }
       acc[p.city].count++;
-      acc[p.city].volume += p.volumeL;
+      acc[p.city].volume += p.volumeL * volumeMultiplier;
       if (p.isKOL) acc[p.city].kols++;
       return acc;
     }, {} as Record<string, { count: number; volume: number; kols: number }>);
@@ -96,28 +100,42 @@ export default function ManagerDashboard() {
     };
   }, [practitioners, upcomingVisits, timePeriod]);
 
-  // Calculate team performance (simulated per member)
+  // Calculate team performance (simulated per member) - adapted to period
   const teamPerformance = useMemo(() => {
+    // Adapter les objectifs et visites à la période
+    const periodMultiplier = timePeriod === 'month' ? 1 : timePeriod === 'quarter' ? 3 : 12;
+    const volumeMultiplier = timePeriod === 'month' ? 1/12 : timePeriod === 'quarter' ? 1/4 : 1;
+
     return teamMembers.map(member => {
       // Simulate assignment of practitioners to team members
       const memberPractitioners = practitioners.filter((_, idx) =>
         idx % teamMembers.length === teamMembers.indexOf(member)
       );
 
-      const visits = Math.floor(Math.random() * 20) + 40; // Simulated visits
-      const volume = memberPractitioners.reduce((sum, p) => sum + p.volumeL, 0);
-      const newPrescribers = Math.floor(Math.random() * 10) + 5;
+      // Visites adaptées à la période
+      const baseVisits = Math.floor(Math.random() * 20) + 40;
+      const visits = Math.floor(baseVisits * periodMultiplier);
+      const adjustedObjective = member.objective * periodMultiplier;
+
+      // Volume adapté à la période
+      const volume = memberPractitioners.reduce((sum, p) => sum + (p.volumeL * volumeMultiplier), 0);
+
+      // Nouveaux prescripteurs adaptés à la période
+      const baseNewPrescribers = Math.floor(Math.random() * 10) + 5;
+      const newPrescribers = Math.floor(baseNewPrescribers * periodMultiplier);
+
       const satisfaction = 7 + Math.random() * 2;
       const kolCoverage = memberPractitioners.filter(p => p.isKOL).length;
 
       return {
         ...member,
         visits,
+        objective: adjustedObjective,
         volume,
         newPrescribers,
         satisfaction: parseFloat(satisfaction.toFixed(1)),
         kolCoverage,
-        progress: Math.round((visits / member.objective) * 100),
+        progress: Math.round((visits / adjustedObjective) * 100),
         practitioners: memberPractitioners.length,
       };
     });

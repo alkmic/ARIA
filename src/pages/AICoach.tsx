@@ -145,7 +145,7 @@ export default function AICoach() {
   };
 
   // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
-  const buildContext = () => {
+  const buildContext = (userQuestion?: string) => {
     // Calculer les métriques de la période sélectionnée
     const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
 
@@ -174,6 +174,45 @@ export default function AICoach() {
       const lastVisit = new Date(p.lastVisitDate);
       return lastVisit < ninetyDaysAgo;
     });
+
+    // Détection intelligente : si la question mentionne un nom de praticien, ajouter ses détails complets
+    let specificPractitionerContext = '';
+    if (userQuestion) {
+      const foundPractitioner = practitioners.find(p =>
+        userQuestion.toLowerCase().includes(p.lastName.toLowerCase()) ||
+        userQuestion.toLowerCase().includes(`${p.firstName} ${p.lastName}`.toLowerCase())
+      );
+
+      if (foundPractitioner) {
+        const visits = upcomingVisits.filter(v => v.practitionerId === foundPractitioner.id);
+        const lastVisit = foundPractitioner.lastVisitDate
+          ? new Date(foundPractitioner.lastVisitDate).toLocaleDateString('fr-FR')
+          : 'jamais visité';
+        const daysSinceVisit = foundPractitioner.lastVisitDate
+          ? Math.floor((today.getTime() - new Date(foundPractitioner.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
+
+        specificPractitionerContext = `
+
+DÉTAILS COMPLETS SUR ${foundPractitioner.title} ${foundPractitioner.firstName} ${foundPractitioner.lastName} :
+- Identité : ${foundPractitioner.title} ${foundPractitioner.firstName} ${foundPractitioner.lastName}
+- Spécialité : ${foundPractitioner.specialty}
+- Ville : ${foundPractitioner.city}
+- Volume annuel : ${(foundPractitioner.volumeL / 1000).toFixed(1)}K L/an
+- Score de fidélité : ${foundPractitioner.loyaltyScore}/10
+- Vingtile : ${foundPractitioner.vingtile}
+- Statut KOL : ${foundPractitioner.isKOL ? 'OUI ⭐' : 'Non'}
+- Dernière visite : ${lastVisit} (il y a ${daysSinceVisit} jours)
+- Visites planifiées : ${visits.length} visite(s)
+- Email : ${foundPractitioner.email || 'Non renseigné'}
+- Téléphone : ${foundPractitioner.phone || 'Non renseigné'}
+- Notes récentes : "${foundPractitioner.notes || 'Aucune note enregistrée pour ce praticien'}"
+- Publications/Actualités : ${foundPractitioner.isKOL ? 'Expert reconnu en oxygénothérapie, publications dans revues médicales' : 'Aucune publication référencée'}
+- Potentiel de prescription : ${foundPractitioner.vingtile <= 5 ? 'ÉLEVÉ' : foundPractitioner.vingtile <= 10 ? 'MOYEN' : 'FAIBLE'}
+- Priorité de visite : ${foundPractitioner.isKOL && daysSinceVisit > 60 ? 'TRÈS URGENT' : daysSinceVisit > 90 ? 'URGENT' : daysSinceVisit > 60 ? 'MOYEN' : 'Normal'}
+`;
+      }
+    }
 
     return `Tu es un assistant stratégique pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
 
@@ -209,11 +248,11 @@ MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
 - Volume période : ${(periodMetrics.totalVolume / 1000000).toFixed(2)}M L
 - Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
 
-BASE DE DONNÉES PRATICIENS (accès complet - échantillon de 30) :
-${practitioners.slice(0, 30).map(p =>
+BASE DE DONNÉES PRATICIENS COMPLÈTE (${practitioners.length} praticiens) :
+${practitioners.map(p =>
   `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.city} | V: ${(p.volumeL / 1000).toFixed(0)}K L | F: ${p.loyaltyScore}/10 | V${p.vingtile}${p.isKOL ? ' | KOL' : ''}${p.lastVisitDate ? ` | DV: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ''}`
 ).join('\n')}
-(... ${practitioners.length} praticiens au total dans le système)
+${specificPractitionerContext}
 
 INSTRUCTIONS :
 - Réponds de manière concise et professionnelle avec des recommandations concrètes
@@ -241,7 +280,7 @@ INSTRUCTIONS :
 
     try {
       // D'abord essayer avec Groq AI pour une vraie conversation
-      const context = buildContext();
+      const context = buildContext(question);
       const conversationHistory = messages
         .slice(-4) // Garder les 4 derniers échanges pour le contexte
         .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
