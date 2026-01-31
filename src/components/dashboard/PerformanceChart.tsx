@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useAppStore } from '../../stores/useAppStore';
+import { useTimePeriod } from '../../contexts/TimePeriodContext';
+import { getPerformanceDataForPeriod } from '../../services/metricsCalculator';
 
 export const PerformanceChart: React.FC = () => {
-  const { performanceData } = useAppStore();
+  const { timePeriod, periodLabelShort } = useTimePeriod();
+
+  // Get performance data for the selected period
+  const performanceData = useMemo(() => {
+    return getPerformanceDataForPeriod(timePeriod);
+  }, [timePeriod]);
+
+  // Calculate total volume for the period
+  const periodVolume = useMemo(() => {
+    return performanceData.reduce((acc, d) => acc + d.yourVolume, 0);
+  }, [performanceData]);
 
   return (
     <motion.div
@@ -16,7 +27,7 @@ export const PerformanceChart: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
           <span>📈</span>
-          <span>Performance annuelle</span>
+          <span>Performance {periodLabelShort}</span>
         </h2>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -89,9 +100,9 @@ export const PerformanceChart: React.FC = () => {
 
       <div className="mt-6 grid grid-cols-3 gap-4">
         <div className="text-center">
-          <p className="text-sm text-slate-600 mb-1">Volume annuel</p>
+          <p className="text-sm text-slate-600 mb-1">Volume {timePeriod === 'month' ? 'mensuel' : timePeriod === 'quarter' ? 'trimestriel' : 'annuel'}</p>
           <p className="text-2xl font-bold text-slate-800">
-            {(performanceData.reduce((acc, d) => acc + d.yourVolume, 0) / 1000000).toFixed(1)}M L
+            {(periodVolume / 1000000).toFixed(1)}M L
           </p>
         </div>
         <div className="text-center">

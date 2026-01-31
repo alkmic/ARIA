@@ -21,6 +21,14 @@ export default {
         'al-navy': '#003366',
         'al-teal': '#00B5AD',
         'al-sky': '#00A3E0',
+        // Aliases for backward compatibility
+        airLiquide: {
+          primary: '#0066B3',
+          teal: '#00B5AD',
+          sky: '#00A3E0',
+          navy: '#003366',
+          lightBlue: '#E6F0F9',
+        },
         // Semantic
         'success': '#10B981',
         'warning': '#F59E0B',

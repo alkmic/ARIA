@@ -5,12 +5,13 @@ interface ObjectiveProgressProps {
   current: number;
   target: number;
   daysRemaining: number;
+  periodLabel?: string;
 }
 
-export function ObjectiveProgress({ current, target, daysRemaining }: ObjectiveProgressProps) {
+export function ObjectiveProgress({ current, target, daysRemaining, periodLabel = 'du mois' }: ObjectiveProgressProps) {
   const percentage = Math.round((current / target) * 100);
   const remaining = target - current;
-  const visitsPerDay = remaining > 0 ? (remaining / daysRemaining).toFixed(1) : '0.0';
+  const visitsPerDay = remaining > 0 && daysRemaining > 0 ? (remaining / daysRemaining).toFixed(1) : '0.0';
 
   // Couleur selon le statut
   const getStatusColor = () => {
@@ -28,8 +29,8 @@ export function ObjectiveProgress({ current, target, daysRemaining }: ObjectiveP
             <Target className="w-5 h-5 sm:w-6 sm:h-6 text-al-blue-600" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-al-navy">Objectif du mois</h2>
-            <p className="text-xs sm:text-sm text-slate-500">Janvier 2026</p>
+            <h2 className="text-base sm:text-lg font-bold text-al-navy">Objectif {periodLabel}</h2>
+            <p className="text-xs sm:text-sm text-slate-500">{new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
           </div>
         </div>
 

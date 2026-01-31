@@ -7,12 +7,16 @@ import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { FilterPanel } from '../components/practitioners/FilterPanel';
+import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { PeriodSelector } from '../components/shared/PeriodSelector';
+import { getTopPractitioners } from '../services/metricsCalculator';
 import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { filterPractitioners, searchQuery } = useAppStore();
+  const { timePeriod, periodLabel } = useTimePeriod();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({});
 
@@ -25,7 +29,12 @@ export const HCPProfile: React.FC = () => {
       });
     }
   }, [searchParams]);
+
   const practitioners = filterPractitioners(filters);
+
+  // Get top practitioners for the selected period
+  const topPractitioners = getTopPractitioners(practitioners, timePeriod, 10);
+  const topPractitionerIds = new Set(topPractitioners.map(p => p.id));
 
   return (
     <motion.div
@@ -35,32 +44,44 @@ export const HCPProfile: React.FC = () => {
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Praticiens</h1>
-          <p className="text-slate-600">
-            {practitioners.length} praticiens dans votre portefeuille
-          </p>
-        </div>
-        <button
-          onClick={() => setIsFilterOpen(true)}
-          className="btn-primary flex items-center space-x-2 cursor-pointer"
-        >
-          <Filter className="w-5 h-5" />
-          <span>Filtres</span>
-          {(filters.specialty?.length || 0) +
-            (filters.vingtile?.length || 0) +
-            (filters.riskLevel?.length || 0) +
-            (filters.isKOL !== undefined ? 1 : 0) >
-            0 && (
-            <span className="ml-2 bg-white text-airLiquide-primary px-2 py-0.5 rounded-full text-xs font-bold">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold gradient-text mb-2">Praticiens</h1>
+            <p className="text-slate-600">
+              {practitioners.length} praticiens dans votre portefeuille
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <PeriodSelector size="sm" />
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="btn-primary flex items-center space-x-2 cursor-pointer"
+            >
+              <Filter className="w-5 h-5" />
+              <span>Filtres</span>
               {(filters.specialty?.length || 0) +
                 (filters.vingtile?.length || 0) +
                 (filters.riskLevel?.length || 0) +
-                (filters.isKOL !== undefined ? 1 : 0)}
-            </span>
-          )}
-        </button>
+                (filters.isKOL !== undefined ? 1 : 0) >
+                0 && (
+                <span className="ml-2 bg-white text-airLiquide-primary px-2 py-0.5 rounded-full text-xs font-bold">
+                  {(filters.specialty?.length || 0) +
+                    (filters.vingtile?.length || 0) +
+                    (filters.riskLevel?.length || 0) +
+                    (filters.isKOL !== undefined ? 1 : 0)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Period Indicator */}
+        <div className="glass-card px-4 py-2 inline-block">
+          <p className="text-sm font-medium text-slate-700">
+            <span className="text-airLiquide-primary">Top praticiens</span> {periodLabel}
+          </p>
+        </div>
       </div>
 
       {/* Filter Panel */}
@@ -101,6 +122,9 @@ export const HCPProfile: React.FC = () => {
                     <h3 className="font-bold text-slate-800 truncate">
                       {practitioner.title} {practitioner.lastName}
                     </h3>
+                    {topPractitionerIds.has(practitioner.id) && (
+                      <Badge variant="success" size="sm">Top {periodLabel}</Badge>
+                    )}
                     {practitioner.isKOL && (
                       <Badge variant="warning" size="sm">KOL</Badge>
                     )}

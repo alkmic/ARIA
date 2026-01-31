@@ -13,6 +13,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { formatDate } from '../utils/helpers';
 import { NewsTab } from '../components/practitioner/NewsTab';
 import { NotesTab } from '../components/practitioner/NotesTab';
+import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { PeriodSelector } from '../components/shared/PeriodSelector';
 
 type TabType = 'synthesis' | 'history' | 'metrics' | 'news' | 'notes';
 
@@ -21,6 +23,7 @@ export default function PractitionerProfile() {
   const navigate = useNavigate();
   const { getPractitionerById } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('synthesis');
+  const { timePeriod, periodLabel, periodLabelShort } = useTimePeriod();
 
   const practitioner = getPractitionerById(id || '');
 
@@ -64,13 +67,16 @@ export default function PractitionerProfile() {
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Retour</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Retour</span>
+          </button>
+          <PeriodSelector size="sm" />
+        </div>
         <div className="flex items-center gap-3">
           <Badge variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'success'}>
             Risque {practitioner.riskLevel}
@@ -134,7 +140,7 @@ export default function PractitionerProfile() {
 
             <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <span className="text-slate-600">Volume annuel</span>
+                <span className="text-slate-600">Volume {periodLabelShort}</span>
                 <span className="font-semibold text-slate-800">
                   {(practitioner.volumeL / 1000).toFixed(0)}K L
                 </span>
@@ -210,10 +216,10 @@ export default function PractitionerProfile() {
               <SynthesisTab practitioner={practitioner} keyPoints={keyPoints} />
             )}
             {activeTab === 'history' && (
-              <HistoryTab conversations={practitioner.conversations} />
+              <HistoryTab conversations={practitioner.conversations} timePeriod={timePeriod} periodLabel={periodLabel} />
             )}
             {activeTab === 'metrics' && (
-              <MetricsTab volumeHistory={volumeHistory} practitioner={practitioner} />
+              <MetricsTab volumeHistory={volumeHistory} practitioner={practitioner} periodLabel={periodLabel} periodLabelShort={periodLabelShort} />
             )}
             {activeTab === 'news' && (
               <NewsTab practitioner={practitioner} />
@@ -303,23 +309,51 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
 }
 
 // Tab History
-function HistoryTab({ conversations }: { conversations: any[] }) {
+function HistoryTab({ conversations, timePeriod, periodLabel }: { conversations: any[]; timePeriod: string; periodLabel: string }) {
+  // Filtrer les conversations selon la période
+  const now = new Date();
+  const filteredConversations = conversations.filter(conv => {
+    const convDate = new Date(conv.date);
+    if (timePeriod === 'month') {
+      const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      return convDate >= oneMonthAgo;
+    } else if (timePeriod === 'quarter') {
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      return convDate >= threeMonthsAgo;
+    } else {
+      const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      return convDate >= oneYearAgo;
+    }
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
-      {conversations.length === 0 ? (
+      {/* Period indicator */}
+      <div className="glass-card p-3 bg-al-blue-50 border-al-blue-100">
+        <p className="text-sm text-slate-600">
+          Affichage des visites : <span className="font-semibold text-slate-800">{periodLabel}</span>
+          {filteredConversations.length !== conversations.length && (
+            <span className="ml-2 text-slate-500">
+              ({filteredConversations.length} sur {conversations.length})
+            </span>
+          )}
+        </p>
+      </div>
+
+      {filteredConversations.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">Aucune conversation enregistrée</p>
+          <p className="text-slate-500">Aucune conversation enregistrée pour cette période</p>
         </div>
       ) : (
-        conversations.map((conv, i) => (
+        filteredConversations.map((conv, i) => (
           <div key={i} className="glass-card p-5 relative">
             {/* Connection Line */}
-            {i < conversations.length - 1 && (
+            {i < filteredConversations.length - 1 && (
               <div className="absolute left-8 top-16 bottom-0 w-0.5 bg-slate-200 -mb-4" />
             )}
 
@@ -371,7 +405,7 @@ function HistoryTab({ conversations }: { conversations: any[] }) {
 }
 
 // Tab Metrics
-function MetricsTab({ volumeHistory, practitioner }: { volumeHistory: any[]; practitioner: any }) {
+function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort }: { volumeHistory: any[]; practitioner: any; periodLabel: string; periodLabelShort: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -380,7 +414,7 @@ function MetricsTab({ volumeHistory, practitioner }: { volumeHistory: any[]; pra
     >
       {/* Volume Chart */}
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Évolution des volumes (12 mois)</h3>
+        <h3 className="text-lg font-semibold mb-4">Évolution des volumes ({periodLabel})</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={volumeHistory}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -419,11 +453,11 @@ function MetricsTab({ volumeHistory, practitioner }: { volumeHistory: any[]; pra
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="glass-card p-4 text-center">
-          <p className="text-sm text-slate-600 mb-1">Volume total 12m</p>
+          <p className="text-sm text-slate-600 mb-1">Volume {periodLabelShort}</p>
           <p className="text-2xl font-bold text-slate-800">
             {(practitioner.volumeL / 1000).toFixed(0)}K L
           </p>
-          <p className="text-sm text-success mt-1">+12% vs N-1</p>
+          <p className="text-sm text-success mt-1">+12% vs période précédente</p>
         </div>
         <div className="glass-card p-4 text-center">
           <p className="text-sm text-slate-600 mb-1">Visites réalisées</p>
