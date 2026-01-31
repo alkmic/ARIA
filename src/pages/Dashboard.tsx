@@ -18,7 +18,7 @@ import { VingtileDistribution } from '../components/dashboard/VingtileDistributi
 
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
-  const { timePeriod, periodLabelShort } = useTimePeriod();
+  const { timePeriod, periodLabel, periodLabelShort } = useTimePeriod();
 
   // Calculer les métriques pour la période sélectionnée
   const periodMetrics = useMemo(() => {
@@ -98,10 +98,27 @@ export const Dashboard: React.FC = () => {
       });
   }, [practitioners]);
 
-  // Calculate days remaining in month
+  // Calculate days remaining in period
   const today = new Date();
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  const daysRemaining = lastDay.getDate() - today.getDate();
+  const daysRemaining = useMemo(() => {
+    let endDate: Date;
+
+    if (timePeriod === 'month') {
+      // Fin du mois actuel
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    } else if (timePeriod === 'quarter') {
+      // Fin du trimestre actuel
+      const currentQuarter = Math.floor(today.getMonth() / 3);
+      const quarterEndMonth = (currentQuarter + 1) * 3 - 1;
+      endDate = new Date(today.getFullYear(), quarterEndMonth + 1, 0);
+    } else {
+      // Fin de l'année
+      endDate = new Date(today.getFullYear(), 11, 31);
+    }
+
+    const diffTime = endDate.getTime() - today.getTime();
+    return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  }, [timePeriod]);
 
   return (
     <motion.div
@@ -139,6 +156,7 @@ export const Dashboard: React.FC = () => {
         current={periodMetrics.visitsCount}
         target={periodMetrics.visitsObjective}
         daysRemaining={daysRemaining}
+        periodLabel={periodLabel}
       />
 
       {/* 5 KPIs animés */}
