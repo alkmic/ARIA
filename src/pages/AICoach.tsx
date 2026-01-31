@@ -20,6 +20,7 @@ import { generateCoachResponse } from '../services/coachAI';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
+import { DataService } from '../services/dataService';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -145,26 +146,17 @@ export default function AICoach() {
   };
 
   // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
-  const buildContext = () => {
+  const buildContext = (userQuestion?: string) => {
     // Calculer les métriques de la période sélectionnée
     const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
 
-    // Statistiques globales
-    const totalPractitioners = practitioners.length;
-    const kols = practitioners.filter(p => p.isKOL);
-    const kolCount = kols.length;
-    const pneumologues = practitioners.filter(p => p.specialty === 'Pneumologue');
-    const generalistes = practitioners.filter(p => p.specialty === 'Médecin généraliste');
-    const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
+    // Utiliser le nouveau service de données pour les statistiques
+    const stats = DataService.getGlobalStats();
+    const kols = DataService.getKOLs();
+    const atRiskPractitioners = DataService.getAtRiskPractitioners().slice(0, 10);
 
     // Top praticiens par volume
     const topPractitioners = getTopPractitioners(practitioners, 'year', 10);
-
-    // Praticiens à risque (fidélité faible + volume élevé OU KOL avec fidélité faible)
-    const atRiskPractitioners = practitioners
-      .filter(p => (p.loyaltyScore < 6 && p.volumeL > 100000) || (p.isKOL && p.loyaltyScore < 7))
-      .sort((a, b) => b.volumeL - a.volumeL)
-      .slice(0, 10);
 
     // KOLs non vus depuis longtemps
     const today = new Date();
@@ -175,13 +167,28 @@ export default function AICoach() {
       return lastVisit < ninetyDaysAgo;
     });
 
+    // Détection intelligente : si la question mentionne un nom de praticien, récupérer son contexte complet
+    let specificPractitionerContext = '';
+    if (userQuestion) {
+      // Recherche floue pour trouver le praticien mentionné
+      const matches = DataService.fuzzySearchPractitioner(userQuestion);
+
+      if (matches.length > 0) {
+        // Prendre le premier match (le plus pertinent)
+        const foundProfile = matches[0];
+
+        // Récupérer le contexte COMPLET depuis le service
+        specificPractitionerContext = DataService.getCompletePractitionerContext(foundProfile.id);
+      }
+    }
+
     return `Tu es un assistant stratégique pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
 
 CONTEXTE TERRITOIRE (${periodLabel}) :
-- Nombre total de praticiens : ${totalPractitioners} (${pneumologues.length} pneumologues, ${generalistes.length} médecins généralistes)
-- KOLs identifiés : ${kolCount}
-- Volume total annuel : ${(totalVolume / 1000000).toFixed(1)}M L
-- Fidélité moyenne : ${periodMetrics.avgLoyalty.toFixed(1)}/10
+- Nombre total de praticiens : ${stats.totalPractitioners} (${stats.pneumologues} pneumologues, ${stats.generalistes} médecins généralistes)
+- KOLs identifiés : ${stats.totalKOLs}
+- Volume total annuel : ${(stats.totalVolume / 1000000).toFixed(1)}M L
+- Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
 - Visites ${periodLabel} : ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective}
 - Praticiens à risque : ${atRiskPractitioners.length}
 - KOLs sous-visités : ${undervisitedKOLs.length}
@@ -194,12 +201,12 @@ ${topPractitioners.map((p, i) =>
 
 PRATICIENS À RISQUE (haute priorité) :
 ${atRiskPractitioners.length > 0 ? atRiskPractitioners.map(p =>
-  `- ${p.title} ${p.lastName} (${p.city}): Fidélité ${p.loyaltyScore}/10, Volume ${(p.volumeL / 1000).toFixed(0)}K L/an${p.isKOL ? ', KOL' : ''}`
+  `- ${p.title} ${p.lastName} (${p.address.city}): Fidélité ${p.metrics.loyaltyScore}/10, Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.metrics.isKOL ? ', KOL' : ''}`
 ).join('\n') : '- Aucun praticien à risque critique'}
 
 KOLS SOUS-VISITÉS (>90 jours) :
 ${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 8).map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} (${p.city}): ${(p.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
+  `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
 ).join('\n') : '- Tous les KOLs sont à jour'}
 
 MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
@@ -209,11 +216,11 @@ MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
 - Volume période : ${(periodMetrics.totalVolume / 1000000).toFixed(2)}M L
 - Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
 
-BASE DE DONNÉES PRATICIENS (accès complet - échantillon de 30) :
-${practitioners.slice(0, 30).map(p =>
+BASE DE DONNÉES PRATICIENS COMPLÈTE (${practitioners.length} praticiens) :
+${practitioners.map(p =>
   `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.city} | V: ${(p.volumeL / 1000).toFixed(0)}K L | F: ${p.loyaltyScore}/10 | V${p.vingtile}${p.isKOL ? ' | KOL' : ''}${p.lastVisitDate ? ` | DV: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ''}`
 ).join('\n')}
-(... ${practitioners.length} praticiens au total dans le système)
+${specificPractitionerContext}
 
 INSTRUCTIONS :
 - Réponds de manière concise et professionnelle avec des recommandations concrètes
@@ -241,7 +248,7 @@ INSTRUCTIONS :
 
     try {
       // D'abord essayer avec Groq AI pour une vraie conversation
-      const context = buildContext();
+      const context = buildContext(question);
       const conversationHistory = messages
         .slice(-4) // Garder les 4 derniers échanges pour le contexte
         .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
