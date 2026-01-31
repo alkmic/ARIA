@@ -21,6 +21,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
 import { DataService } from '../services/dataService';
+import { processIntelligentQuery } from '../services/intelligentAgent';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -167,18 +168,14 @@ export default function AICoach() {
       return lastVisit < ninetyDaysAgo;
     });
 
-    // Détection intelligente : si la question mentionne un nom de praticien, récupérer son contexte complet
+    // NOUVEAU : Utiliser l'agent intelligent pour récupérer le contexte ciblé
     let specificPractitionerContext = '';
     if (userQuestion) {
-      // Recherche floue pour trouver le praticien mentionné
-      const matches = DataService.fuzzySearchPractitioner(userQuestion);
+      const agentResponse = processIntelligentQuery(userQuestion);
 
-      if (matches.length > 0) {
-        // Prendre le premier match (le plus pertinent)
-        const foundProfile = matches[0];
-
-        // Récupérer le contexte COMPLET depuis le service
-        specificPractitionerContext = DataService.getCompletePractitionerContext(foundProfile.id);
+      if (agentResponse.success) {
+        // L'agent a identifié un praticien et récupéré les données ciblées
+        specificPractitionerContext = agentResponse.context;
       }
     }
 

@@ -174,62 +174,99 @@ function generateRealisticVolume(vingtile: number, specialty: string, isKOL: boo
 }
 
 function generateNews(
-  _firstName: string,
-  _lastName: string,
-  _specialty: string,
-  isKOL: boolean
+  firstName: string,
+  lastName: string,
+  specialty: string,
+  isKOL: boolean,
+  city: string,
+  _vingtile: number
 ): PractitionerNews[] {
   const news: PractitionerNews[] = [];
 
   // KOLs ont plus d'actualités (3-6), autres ont moins (0-2)
   const newsCount = isKOL ? randomInt(3, 6) : randomInt(0, 2);
 
+  // Générer un seed unique basé sur le nom pour avoir des actualités cohérentes mais uniques
+  const nameSeed = `${firstName}${lastName}${city}`.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
   for (let i = 0; i < newsCount; i++) {
+    // Utiliser le seed pour sélectionner de manière déterministe
+    const typeIndex = (nameSeed + i * 7) % Object.keys(NEWS_TEMPLATES).length;
     const typeKeys = Object.keys(NEWS_TEMPLATES) as Array<keyof typeof NEWS_TEMPLATES>;
-    const type = randomChoice(typeKeys);
+    const type = typeKeys[typeIndex];
     const templates = NEWS_TEMPLATES[type];
-    const template: any = randomChoice(templates as any);
+    const templateIndex = (nameSeed + i * 13) % templates.length;
+    const template: any = templates[templateIndex];
 
     let content: string = template.contentTemplate;
     let title: string = template.title;
 
-    // Remplacer les placeholders selon le type
+    // Personnaliser le contenu avec les détails du praticien
     if (template.topics && Array.isArray(template.topics)) {
-      const topic = randomChoice(template.topics as string[]);
+      const topicIndex = (nameSeed + i * 17) % template.topics.length;
+      const topic = template.topics[topicIndex];
       content = content.replace('{topic}', topic);
     }
     if (template.certs && Array.isArray(template.certs)) {
-      const cert = randomChoice(template.certs as string[]);
+      const certIndex = (nameSeed + i * 19) % template.certs.length;
+      const cert = template.certs[certIndex];
       content = content.replace('{cert}', cert);
     }
     if (template.domains && Array.isArray(template.domains)) {
-      const domain = randomChoice(template.domains as string[]);
+      const domainIndex = (nameSeed + i * 23) % template.domains.length;
+      const domain = template.domains[domainIndex];
       content = content.replace('{domain}', domain);
     }
     if (template.events && Array.isArray(template.events)) {
-      const event = randomChoice(template.events as string[]);
+      const eventIndex = (nameSeed + i * 29) % template.events.length;
+      const event = template.events[eventIndex];
       content = content.replace('{event}', event);
     }
     if (template.achievements && Array.isArray(template.achievements)) {
-      const achievement = randomChoice(template.achievements as string[]);
+      const achievementIndex = (nameSeed + i * 31) % template.achievements.length;
+      const achievement = template.achievements[achievementIndex];
       content = content.replace('{achievement}', achievement);
     }
 
-    // Date dans les 6 derniers mois
-    const daysAgo = randomInt(10, 180);
+    // Ajouter des détails spécifiques au praticien
+    if (type === 'publication' && isKOL) {
+      // Mentionner la ville/hôpital pour les KOLs
+      const hospitals = ['CHU', 'Centre Hospitalier', 'Clinique'];
+      const hospital = hospitals[(nameSeed + i) % hospitals.length];
+      content += `\nÉtude menée en collaboration avec le ${hospital} de ${city}.`;
+    }
+
+    if (type === 'conference' && isKOL) {
+      content += `\nIntervention prévue en tant qu'expert reconnu en ${specialty.toLowerCase()}.`;
+    }
+
+    // Date dans les 6 derniers mois (déterministe)
+    const daysAgo = 10 + ((nameSeed + i * 37) % 170);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
 
+    // Relevance personnalisée selon le type et le profil
+    let relevance = '';
+    if (type === 'publication') {
+      relevance = "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations technologiques";
+    } else if (type === 'certification') {
+      relevance = "💡 Pertinence : Valoriser cette montée en compétence et proposer des formations patients";
+    } else if (type === 'conference') {
+      relevance = "💡 Pertinence : Opportunité de renforcer le partenariat et présenter nos nouveautés";
+    } else if (type === 'award') {
+      relevance = "💡 Pertinence : Féliciter et renforcer la relation, moment idéal pour un rendez-vous";
+    } else {
+      relevance = "💡 Pertinence : Maintenir la relation et valoriser l'expertise";
+    }
+
     news.push({
-      id: `news-${i + 1}`,
+      id: `news-${firstName}-${lastName}-${i + 1}`,
       date: date.toISOString().split('T')[0],
       title,
       content,
       type,
-      relevance: isKOL
-        ? "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
-        : "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
-      source: type === 'publication' ? 'Base bibliographique médicale' : undefined,
+      relevance,
+      source: type === 'publication' ? 'PubMed / Base bibliographique médicale' : undefined,
     });
   }
 
@@ -333,7 +370,7 @@ export function generatePractitioner(index: number): PractitionerProfile {
     lastName,
     specialty,
     subSpecialty: specialty === 'Pneumologue' ? randomChoice(['Allergologie', 'Oncologie thoracique', 'Réhabilitation respiratoire', undefined, undefined]) : undefined,
-    avatarUrl: `https://i.pravatar.cc/150?img=${index + 1}`,
+    avatarUrl: undefined, // Pas d'avatar photo, utiliser des initiales
 
     address: {
       street: `${streetNumber} ${streetName}`,
@@ -363,7 +400,7 @@ export function generatePractitioner(index: number): PractitionerProfile {
     },
 
     notes: generateNotes(firstName, lastName),
-    news: generateNews(firstName, lastName, specialty, isKOL),
+    news: generateNews(firstName, lastName, specialty, isKOL, city.name, vingtile),
     visitHistory: generateVisitHistory(lastName),
 
     createdAt: new Date('2024-01-15').toISOString(),
