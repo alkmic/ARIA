@@ -21,6 +21,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
 import { DataService } from '../services/dataService';
+import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -48,16 +49,16 @@ export default function AICoach() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Suggestions contextuelles basées sur la période
+  // Suggestions contextuelles basées sur la période - diversifiées pour montrer les capacités
   const SUGGESTION_CHIPS = [
-    `Quels sont mes KOLs non vus ${periodLabel.toLowerCase()} ?`,
-    `Comment atteindre mon objectif ${periodLabel.toLowerCase()} ?`,
-    `Qui sont les top prescripteurs ${periodLabel.toLowerCase()} ?`,
-    "Quels praticiens dois-je visiter en priorité ?",
+    `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
+    "Quel médecin prénommé Bernard a le plus de publications ?",
+    "Combien de pneumologues à Lyon ?",
+    "Quels KOLs n'ai-je pas vus depuis 60 jours ?",
+    "Top 5 prescripteurs par volume",
     "Praticiens à risque de churn",
+    "Quel est le vingtile moyen par ville ?",
     "Opportunités nouveaux prescripteurs",
-    "Qui est le plus gros prescripteur d'O2 de la région ?",
-    "Analyse de mon territoire",
   ];
 
   // Auto-scroll vers le bas
@@ -146,6 +147,7 @@ export default function AICoach() {
   };
 
   // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
+  // et moteur de requêtes intelligent
   const buildContext = (userQuestion?: string) => {
     // Calculer les métriques de la période sélectionnée
     const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
@@ -167,31 +169,55 @@ export default function AICoach() {
       return lastVisit < ninetyDaysAgo;
     });
 
-    // Détection intelligente : si la question mentionne un nom de praticien, récupérer son contexte complet
+    // NOUVEAU: Utiliser le moteur de requêtes intelligent pour analyser la question
+    let queryContext = '';
     let specificPractitionerContext = '';
+
     if (userQuestion) {
-      // Recherche floue pour trouver le praticien mentionné
+      // Exécuter la requête intelligente basée sur la question
+      const queryResult = executeQuery(userQuestion);
+
+      // Si des résultats spécifiques sont trouvés, générer le contexte de requête
+      if (queryResult.practitioners.length > 0 && queryResult.practitioners.length < practitioners.length) {
+        queryContext = generateQueryContext(userQuestion);
+      }
+
+      // Recherche floue additionnelle pour le contexte de praticien spécifique
       const matches = DataService.fuzzySearchPractitioner(userQuestion);
-
-      if (matches.length > 0) {
-        // Prendre le premier match (le plus pertinent)
-        const foundProfile = matches[0];
-
-        // Récupérer le contexte COMPLET depuis le service
-        specificPractitionerContext = DataService.getCompletePractitionerContext(foundProfile.id);
+      if (matches.length > 0 && matches.length <= 3) {
+        specificPractitionerContext = matches.map(p =>
+          DataService.getCompletePractitionerContext(p.id)
+        ).join('\n');
       }
     }
 
-    return `Tu es un assistant stratégique pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
+    // Générer le contexte complet du site pour les questions générales
+    const fullSiteContext = generateFullSiteContext();
+
+    return `Tu es un assistant stratégique expert pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
+
+Tu as accès à la BASE DE DONNÉES COMPLÈTE des praticiens et peux répondre à N'IMPORTE QUELLE question sur les données, incluant :
+- Questions sur des praticiens spécifiques (par nom, prénom, ville, spécialité)
+- Questions sur les publications, actualités, certifications
+- Questions statistiques (combien de..., qui a le plus de..., moyenne de...)
+- Questions géographiques (praticiens par ville)
+- Questions sur les KOLs, vingtiles, volumes
 
 CONTEXTE TERRITOIRE (${periodLabel}) :
 - Nombre total de praticiens : ${stats.totalPractitioners} (${stats.pneumologues} pneumologues, ${stats.generalistes} médecins généralistes)
 - KOLs identifiés : ${stats.totalKOLs}
-- Volume total annuel : ${(stats.totalVolume / 1000000).toFixed(1)}M L
+- Volume total annuel : ${(stats.totalVolume / 1000).toFixed(0)}K L
 - Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
 - Visites ${periodLabel} : ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective}
 - Praticiens à risque : ${atRiskPractitioners.length}
 - KOLs sous-visités : ${undervisitedKOLs.length}
+
+MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
+- Objectif visites : ${periodMetrics.visitsObjective}
+- Visites réalisées : ${periodMetrics.visitsCount} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
+- Nouveaux prescripteurs : ${periodMetrics.newPrescribers}
+- Volume période : ${(periodMetrics.totalVolume / 1000).toFixed(0)}K L
+- Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
 
 TOP 10 PRATICIENS (VOLUME ANNUEL) :
 ${topPractitioners.map((p, i) =>
@@ -199,37 +225,28 @@ ${topPractitioners.map((p, i) =>
    Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${p.loyaltyScore}/10 | Vingtile: ${p.vingtile}${p.isKOL ? ' | KOL ⭐' : ''}`
 ).join('\n')}
 
-PRATICIENS À RISQUE (haute priorité) :
-${atRiskPractitioners.length > 0 ? atRiskPractitioners.map(p =>
+PRATICIENS À RISQUE :
+${atRiskPractitioners.length > 0 ? atRiskPractitioners.slice(0, 5).map(p =>
   `- ${p.title} ${p.lastName} (${p.address.city}): Fidélité ${p.metrics.loyaltyScore}/10, Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.metrics.isKOL ? ', KOL' : ''}`
 ).join('\n') : '- Aucun praticien à risque critique'}
 
 KOLS SOUS-VISITÉS (>90 jours) :
-${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 8).map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
+${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 5).map(p =>
+  `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`
 ).join('\n') : '- Tous les KOLs sont à jour'}
 
-MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
-- Objectif visites : ${periodMetrics.visitsObjective}
-- Visites réalisées : ${periodMetrics.visitsCount} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
-- Nouveaux prescripteurs : ${periodMetrics.newPrescribers}
-- Volume période : ${(periodMetrics.totalVolume / 1000000).toFixed(2)}M L
-- Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
-
-BASE DE DONNÉES PRATICIENS COMPLÈTE (${practitioners.length} praticiens) :
-${practitioners.map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.city} | V: ${(p.volumeL / 1000).toFixed(0)}K L | F: ${p.loyaltyScore}/10 | V${p.vingtile}${p.isKOL ? ' | KOL' : ''}${p.lastVisitDate ? ` | DV: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ''}`
-).join('\n')}
+${queryContext}
 ${specificPractitionerContext}
+${fullSiteContext}
 
-INSTRUCTIONS :
+INSTRUCTIONS IMPORTANTES :
 - Réponds de manière concise et professionnelle avec des recommandations concrètes
-- Utilise les données contextuelles ci-dessus pour personnaliser tes réponses
-- Si on te demande des infos sur un praticien spécifique, cherche dans la base et donne TOUS ses détails (nom, spécialité, ville, volume, fidélité, vingtile, statut KOL, dernière visite)
-- Priorise toujours par impact stratégique : KOL > Volume > Urgence > Fidélité
-- Fournis des chiffres précis et des insights basés sur les données réelles
-- Sois encourageant et positif dans ton ton
-- Adapte tes recommandations à la période sélectionnée (${periodLabel})`;
+- Pour les questions sur des praticiens spécifiques, utilise les données ci-dessus pour donner des réponses PRÉCISES
+- Si on demande "quel médecin dont le prénom est X a le plus de Y", cherche dans la base complète ci-dessus
+- Priorise par impact stratégique : KOL > Volume > Urgence > Fidélité
+- Fournis des chiffres précis basés sur les données réelles
+- Sois encourageant et positif
+- Adapte tes recommandations à la période (${periodLabel})`;
   };
 
   const handleSend = async (question: string) => {

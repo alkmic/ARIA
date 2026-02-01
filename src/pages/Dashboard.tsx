@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun } from 'lucide-react';
+import { Calendar, UserPlus, Droplets, Star, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics } from '../services/metricsCalculator';
@@ -88,10 +88,15 @@ export const Dashboard: React.FC = () => {
           status = 'urgent';
         }
 
+        // Use deterministic offset based on practitioner ID to avoid random during render
+        const idHash = p.id.charCodeAt(0) + (p.id.charCodeAt(1) || 0) + (p.id.charCodeAt(2) || 0);
+        const latOffset = ((idHash % 100) - 50) / 5000;
+        const lngOffset = (((idHash * 7) % 100) - 50) / 5000;
+
         return {
           id: p.id,
-          lat: coords[0] + (Math.random() - 0.5) * 0.02,
-          lng: coords[1] + (Math.random() - 0.5) * 0.02,
+          lat: coords[0] + latOffset,
+          lng: coords[1] + lngOffset,
           status,
           name: `${p.title} ${p.lastName}`,
         };
@@ -125,33 +130,25 @@ export const Dashboard: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-4"
     >
-      {/* Header avec date/météo */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      {/* Header compact */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy">
+          <h1 className="text-lg sm:text-xl font-bold text-al-navy">
             Bonjour {currentUser.name.split(' ')[0]} 👋
           </h1>
-          <p className="text-sm sm:text-base text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-xs sm:text-sm">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1 text-xs sm:text-sm">
-              <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />
-              Lyon, 8°C
-            </span>
+          <p className="text-xs text-slate-500">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto">
-          <PeriodSelector className="flex-1 lg:flex-none" size="sm" />
-          <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap">
-            Dernière sync: il y a 5 min
-          </span>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <PeriodSelector className="flex-1 sm:flex-none" size="sm" />
         </div>
       </div>
 
-      {/* Barre d'objectif proéminente */}
+      {/* Barre d'objectif */}
       <ObjectiveProgress
         current={periodMetrics.visitsCount}
         target={periodMetrics.visitsObjective}
@@ -159,41 +156,40 @@ export const Dashboard: React.FC = () => {
         periodLabel={periodLabel}
       />
 
-      {/* 5 KPIs animés */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+      {/* 5 KPIs compacts */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         <AnimatedStatCard
           icon={Calendar}
           iconBgColor="bg-al-blue-500"
           label={`Visites ${periodLabelShort}`}
           value={periodMetrics.visitsCount}
           suffix={`/${periodMetrics.visitsObjective}`}
-          trend={15}
+          trend={Math.round(periodMetrics.visitGrowth)}
           delay={0}
         />
         <AnimatedStatCard
           icon={UserPlus}
           iconBgColor="bg-green-500"
-          label="Nouveaux prescripteurs"
+          label="Nouveaux prescr."
           value={periodMetrics.newPrescribers}
           prefix="+"
-          trend={20}
-          trendLabel="vs mois dernier"
+          trend={periodMetrics.newPrescribers > 0 ? Math.round((periodMetrics.newPrescribers / (timePeriod === 'year' ? 24 : timePeriod === 'quarter' ? 6 : 2)) * 100 - 100) : 0}
           delay={0.1}
         />
         <AnimatedStatCard
           icon={Droplets}
           iconBgColor="bg-cyan-500"
           label="Volume prescrit"
-          value={periodMetrics.totalVolume / 1000000}
-          suffix="M L"
-          decimals={1}
-          trend={12}
+          value={periodMetrics.totalVolume / 1000}
+          suffix="K L"
+          decimals={0}
+          trend={Math.round(periodMetrics.volumeGrowth)}
           delay={0.2}
         />
         <AnimatedStatCard
           icon={Star}
           iconBgColor="bg-amber-500"
-          label="Score NPS moyen"
+          label="Fidélité moy."
           value={periodMetrics.avgLoyalty}
           suffix="/10"
           decimals={1}
@@ -202,19 +198,19 @@ export const Dashboard: React.FC = () => {
         <AnimatedStatCard
           icon={AlertTriangle}
           iconBgColor="bg-red-500"
-          label="KOLs à voir urgent"
+          label="KOLs urgents"
           value={periodMetrics.undervisitedKOLs}
-          trendLabel="Non vus >90 jours"
+          trendLabel={`>${timePeriod === 'month' ? '30' : timePeriod === 'quarter' ? '60' : '90'}j`}
           delay={0.4}
         />
       </div>
 
-      {/* Ma journée + Mini carte (2 colonnes) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
-        <div className="lg:col-span-3">
+      {/* Section principale : Journée + Carte + Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="lg:col-span-2">
           <DayTimeline visits={todayVisits} />
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           <TerritoryMiniMap stats={territoryStats} points={mapPoints} />
         </div>
       </div>
@@ -222,24 +218,26 @@ export const Dashboard: React.FC = () => {
       {/* ARIA Insights */}
       <AIInsights />
 
-      {/* National Statistics */}
-      <NationalStats />
+      {/* Performance + Stats en grille */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <PerformanceChart />
+        <NationalStats />
+      </div>
 
-      {/* Specialty Breakdown */}
-      <SpecialtyBreakdown />
-
-      {/* Vingtile Distribution */}
-      <VingtileDistribution />
-
-      {/* Graphique + Réussites (2 colonnes) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <div className="lg:col-span-2">
-          <PerformanceChart />
-        </div>
-        <div className="lg:col-span-1">
+      {/* Détails spécialité + Vingtile (optionnel, en dessous) */}
+      <details className="group">
+        <summary className="flex items-center gap-2 cursor-pointer p-3 glass-card text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <span className="group-open:rotate-90 transition-transform">▶</span>
+          Voir les analyses détaillées (Spécialités, Vingtiles, Réussites)
+        </summary>
+        <div className="mt-3 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SpecialtyBreakdown />
+            <VingtileDistribution />
+          </div>
           <WeeklyWins />
         </div>
-      </div>
+      </details>
     </motion.div>
   );
 };

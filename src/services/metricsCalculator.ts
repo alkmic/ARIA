@@ -56,17 +56,15 @@ export function filterVisitsByPeriod(visits: UpcomingVisit[], period: TimePeriod
 
 /**
  * Génère des métriques cohérentes basées sur les vrais praticiens
- * mais avec des objectifs et croissance simulés de manière réaliste
+ * avec des objectifs et progression réalistes et DÉTERMINISTES
  */
 export function calculatePeriodMetrics(
   practitioners: Practitioner[],
   _visits: UpcomingVisit[],
   period: TimePeriod
 ): PeriodMetrics {
-  const { start, end } = getPeriodDates(period);
-
-  // Filtrer les visites de la période (non utilisé pour l'instant, mais pourrait servir pour des métriques futures)
-  // const periodVisits = filterVisitsByPeriod(visits, period);
+  const { start } = getPeriodDates(period);
+  const now = new Date();
 
   // Calculer les objectifs basés sur la période
   // Objectif annuel: 720 visites (60/mois * 12)
@@ -78,15 +76,40 @@ export function calculatePeriodMetrics(
     period === 'quarter' ? baseMonthlyObjective * 3 :
     baseMonthlyObjective;
 
-  // Nombre de visites réalisées (simulé basé sur la date actuelle dans la période)
-  const now = new Date();
-  const periodDuration = end.getTime() - start.getTime();
-  const elapsed = now.getTime() - start.getTime();
-  const periodProgress = Math.min(elapsed / periodDuration, 1);
+  // Calculer les jours ouvrés écoulés dans la période (lun-ven)
+  const getWorkingDays = (startDate: Date, endDate: Date): number => {
+    let count = 0;
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) count++;
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
+  };
 
-  // Visites réelles: entre 80% et 110% de l'objectif proportionnel à l'avancement
-  const expectedVisits = visitsObjective * periodProgress;
-  const visitsCount = Math.floor(expectedVisits * (0.9 + Math.random() * 0.25));
+  // Calculer le nombre total de jours ouvrés dans la période
+  const periodEnd = period === 'month'
+    ? new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    : period === 'quarter'
+    ? new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0)
+    : new Date(now.getFullYear(), 11, 31);
+
+  const totalWorkingDays = getWorkingDays(start, periodEnd);
+  const elapsedWorkingDays = getWorkingDays(start, now);
+
+  // Visites par jour ouvré (moyenne ~3 visites/jour)
+  const visitsPerDay = visitsObjective / totalWorkingDays;
+
+  // Visites réalisées = jours ouvrés écoulés × visites/jour × facteur de performance (85-95%)
+  // Utiliser une seed déterministe basée sur l'année/mois pour éviter les changements aléatoires
+  const seed = now.getFullYear() * 100 + now.getMonth();
+  const performanceFactor = 0.85 + ((seed % 10) / 100); // Entre 85% et 95%, stable dans le mois
+
+  const visitsCount = Math.min(
+    Math.floor(elapsedWorkingDays * visitsPerDay * performanceFactor),
+    visitsObjective // Ne jamais dépasser l'objectif
+  );
 
   // Volume total des praticiens (annuel)
   const totalAnnualVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
@@ -97,13 +120,17 @@ export function calculatePeriodMetrics(
     period === 'quarter' ? totalAnnualVolume * 0.25 :
     totalAnnualVolume / 12;
 
-  // Calculer les nouveaux prescripteurs
-  // Base: 5-15 par mois
-  const monthlyNewPrescribers = 8 + Math.floor(Math.random() * 7);
-  const newPrescribers =
-    period === 'year' ? monthlyNewPrescribers * 12 :
-    period === 'quarter' ? monthlyNewPrescribers * 3 :
-    monthlyNewPrescribers;
+  // Calculer les nouveaux prescripteurs (proportionnel à l'avancement dans la période)
+  // Objectif: ~2-3 nouveaux prescripteurs par mois
+  const periodProgress = elapsedWorkingDays / totalWorkingDays;
+  const baseMonthlyNewPrescribers = 2; // Plus réaliste : 2-3 par mois
+  const targetNewPrescribers =
+    period === 'year' ? baseMonthlyNewPrescribers * 12 :
+    period === 'quarter' ? baseMonthlyNewPrescribers * 3 :
+    baseMonthlyNewPrescribers;
+
+  // Nouveaux prescripteurs = objectif × avancement (déterministe)
+  const newPrescribers = Math.floor(targetNewPrescribers * periodProgress * performanceFactor);
 
   // Loyauté moyenne
   const avgLoyalty = practitioners.reduce((sum, p) => sum + p.loyaltyScore, 0) / practitioners.length;
@@ -126,9 +153,10 @@ export function calculatePeriodMetrics(
     return daysSince > daysThreshold;
   }).length;
 
-  // Praticiens à risque (fidélité faible + volume élevé)
+  // Praticiens à risque (fidélité faible + volume significatif)
+  // Seuils ajustés aux volumes réalistes
   const atRiskPractitioners = practitioners.filter(p =>
-    (p.loyaltyScore < 6 && p.volumeL > 100000) || (p.isKOL && p.loyaltyScore < 7)
+    (p.loyaltyScore < 6 && p.volumeL > 30000) || (p.isKOL && p.loyaltyScore < 7)
   ).length;
 
   // Croissance simulée (réaliste)

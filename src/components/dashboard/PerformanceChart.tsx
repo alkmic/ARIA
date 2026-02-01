@@ -45,7 +45,7 @@ export const PerformanceChart: React.FC = () => {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={200}>
         <AreaChart data={performanceData}>
           <defs>
             <linearGradient id="colorVolumes" x1="0" y1="0" x2="0" y2="1">
@@ -98,20 +98,34 @@ export const PerformanceChart: React.FC = () => {
         </AreaChart>
       </ResponsiveContainer>
 
-      <div className="mt-6 grid grid-cols-3 gap-4">
+      <div className="mt-4 grid grid-cols-3 gap-3">
         <div className="text-center">
-          <p className="text-sm text-slate-600 mb-1">Volume {timePeriod === 'month' ? 'mensuel' : timePeriod === 'quarter' ? 'trimestriel' : 'annuel'}</p>
-          <p className="text-2xl font-bold text-slate-800">
-            {(periodVolume / 1000000).toFixed(1)}M L
+          <p className="text-xs text-slate-600 mb-0.5">Volume total</p>
+          <p className="text-lg sm:text-xl font-bold text-slate-800">
+            {(periodVolume / 1000).toFixed(0)}K L
           </p>
         </div>
         <div className="text-center">
-          <p className="text-sm text-slate-600 mb-1">Vs Objectif</p>
-          <p className="text-2xl font-bold text-success">+12%</p>
+          <p className="text-xs text-slate-600 mb-0.5">Vs Objectif</p>
+          <p className="text-lg sm:text-xl font-bold text-success">
+            {(() => {
+              const objective = performanceData.reduce((acc, d) => acc + (d.objective || 0), 0);
+              if (!objective) return '+0%';
+              const diff = ((periodVolume - objective) / objective * 100).toFixed(0);
+              return `${Number(diff) >= 0 ? '+' : ''}${diff}%`;
+            })()}
+          </p>
         </div>
         <div className="text-center">
-          <p className="text-sm text-slate-600 mb-1">Vs Équipe</p>
-          <p className="text-2xl font-bold text-al-blue-500">+8%</p>
+          <p className="text-xs text-slate-600 mb-0.5">Vs Équipe</p>
+          <p className="text-lg sm:text-xl font-bold text-al-blue-500">
+            {(() => {
+              const teamAvg = performanceData.reduce((acc, d) => acc + (d.teamAverage || 0), 0);
+              if (!teamAvg) return '+0%';
+              const diff = ((periodVolume - teamAvg) / teamAvg * 100).toFixed(0);
+              return `${Number(diff) >= 0 ? '+' : ''}${diff}%`;
+            })()}
+          </p>
         </div>
       </div>
     </motion.div>
