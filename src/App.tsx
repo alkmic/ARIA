@@ -52,7 +52,7 @@ function App() {
               }>
                 <Routes>
                   {/* Landing page without Layout */}
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/" element={<Navigate to="/welcome" replace />} />
                   <Route path="/landing" element={<Landing />} />
                   <Route path="/welcome" element={<Welcome />} />
 

@@ -1,124 +1,132 @@
-import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wind, Sparkles } from 'lucide-react';
+import { Wind, Sparkles, Brain, TrendingUp, MessageSquare } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const Welcome: React.FC = () => {
+const Welcome = () => {
   const navigate = useNavigate();
-  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number; duration: number }>>([]);
 
-  useEffect(() => {
-    // Générer des particules aléatoires pour l'effet d'air
-    const newParticles = Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 5,
-      duration: 3 + Math.random() * 4,
-    }));
-    setParticles(newParticles);
-  }, []);
+  const features = [
+    {
+      icon: Brain,
+      title: 'IA Générative',
+      description: 'Pitch personnalisés et insights intelligents',
+      color: 'from-cyan-400 to-blue-500',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Analyse Prédictive',
+      description: 'Identification des opportunités prioritaires',
+      color: 'from-teal-400 to-cyan-500',
+    },
+    {
+      icon: MessageSquare,
+      title: 'Coach Virtuel',
+      description: 'Recommandations stratégiques en temps réel',
+      color: 'from-blue-400 to-indigo-500',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-al-navy via-al-blue-800 to-al-blue-600 relative overflow-hidden flex items-center justify-center">
-      {/* Effet de particules d'air */}
-      <div className="absolute inset-0 overflow-hidden">
-        {particles.map((particle) => (
-          <div
-            key={particle.id}
-            className="absolute w-2 h-2 bg-white/20 rounded-full blur-sm animate-float"
-            style={{
-              left: `${particle.x}%`,
-              top: `${particle.y}%`,
-              animationDelay: `${particle.delay}s`,
-              animationDuration: `${particle.duration}s`,
-            }}
-          />
-        ))}
+    <div className="min-h-screen bg-gradient-to-br from-[#003D5C] via-[#005A82] to-[#0066B3] relative overflow-hidden flex items-center justify-center">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden opacity-20">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-radial from-white/10 to-transparent rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-radial from-cyan-400/10 to-transparent rounded-full blur-3xl animate-pulse-slow delay-1000" />
       </div>
 
-      {/* Ondes fluides en arrière-plan */}
-      <div className="absolute inset-0 opacity-30">
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#00A3E0" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#0066B3" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
-          <g className="animate-wave">
-            <path
-              d="M0,100 Q250,50 500,100 T1000,100 T1500,100 T2000,100 V200 H0 Z"
-              fill="url(#wave-gradient)"
-            />
-          </g>
-          <g className="animate-wave-reverse">
-            <path
-              d="M0,150 Q200,120 400,150 T800,150 T1200,150 T1600,150 V200 H0 Z"
-              fill="url(#wave-gradient)"
-              opacity="0.5"
-            />
-          </g>
-        </svg>
-      </div>
-
-      {/* Contenu principal */}
-      <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-        {/* Logo et icône */}
-        <div className="mb-8 flex justify-center items-center space-x-4">
+      {/* Content */}
+      <div className="relative z-10 text-center px-6 max-w-5xl mx-auto py-12">
+        {/* Logo Icon */}
+        <motion.div
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', duration: 1, bounce: 0.5 }}
+          className="mb-12 flex justify-center"
+        >
           <div className="relative">
-            <Wind className="w-20 h-20 text-al-sky animate-pulse-slow" strokeWidth={1.5} />
-            <Sparkles className="w-8 h-8 text-white absolute -top-2 -right-2 animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 blur-2xl opacity-50 rounded-full" />
+            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+              <Wind className="w-16 h-16 text-cyan-300" strokeWidth={1.5} />
+              <Sparkles className="w-6 h-6 text-white absolute -top-1 -right-1 animate-pulse" />
+            </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Titre principal */}
-        <h1 className="text-8xl md:text-9xl font-bold mb-6 tracking-tight">
-          <span className="bg-gradient-to-r from-white via-al-sky to-al-teal bg-clip-text text-transparent animate-gradient">
+        {/* Main Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-8xl md:text-9xl font-black mb-6 tracking-tight"
+        >
+          <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
             ARIA
           </span>
-        </h1>
+        </motion.h1>
 
-        {/* Sous-titre */}
-        <p className="text-2xl md:text-3xl text-white/90 mb-4 font-light tracking-wide">
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-2xl md:text-3xl text-white/90 mb-4 font-light tracking-wide"
+        >
           Air Liquide Intelligent Assistant
-        </p>
+        </motion.p>
 
         {/* Description */}
-        <p className="text-lg text-white/70 mb-12 max-w-2xl mx-auto leading-relaxed">
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-lg text-white/70 mb-12 max-w-2xl mx-auto leading-relaxed"
+        >
           Votre assistant intelligent pour optimiser vos relations avec les praticiens
           et maximiser l'impact de vos visites médicales.
-        </p>
+        </motion.p>
 
         {/* CTA Button */}
-        <button
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => navigate('/dashboard')}
-          className="group relative inline-flex items-center justify-center px-12 py-5 text-lg font-semibold text-al-navy bg-white rounded-full overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-al-sky/50 cursor-pointer"
+          className="group relative inline-flex items-center justify-center px-12 py-5 text-lg font-semibold text-[#003D5C] bg-white rounded-full overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-400/50 mb-20"
         >
           <span className="relative z-10 flex items-center space-x-3">
             <span>Lancer l'expérience</span>
             <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
           </span>
-
-          {/* Effet de brillance au survol */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-        </button>
+        </motion.button>
 
-        {/* Points clés */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-white/80">
-          <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-al-sky mb-2">IA Générative</div>
-            <p className="text-sm">Pitch personnalisés et insights intelligents</p>
-          </div>
-
-          <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-al-teal mb-2">Analyse Prédictive</div>
-            <p className="text-sm">Identification des opportunités prioritaires</p>
-          </div>
-
-          <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-white mb-2">Coach Virtuel</div>
-            <p className="text-sm">Recommandations stratégiques en temps réel</p>
-          </div>
+        {/* Feature Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {features.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 + index * 0.1 }}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+              className="relative group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl blur-xl" />
+              <div className="relative backdrop-blur-md bg-white/10 rounded-2xl p-8 border border-white/20 hover:border-white/40 transition-all duration-300 h-full">
+                <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${feature.color} mb-4`}>
+                  <feature.icon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">
+                  {feature.title}
+                </h3>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </div>
