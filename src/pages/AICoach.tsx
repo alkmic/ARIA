@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
-import { buildAgenticContext } from '../services/agenticCoachAI';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import type { Practitioner } from '../types';
@@ -159,27 +158,26 @@ export default function AICoach() {
     setIsTyping(true);
 
     try {
-      // Essayer d'abord avec l'API Groq + système agentic
+      // Essayer avec l'API Groq (version SIMPLIFIÉE pour éviter prompts trop longs)
       let aiResponse: string | null = null;
 
       try {
-        const { systemPrompt, userPrompt } = buildAgenticContext(question, practitioners);
+        // Contexte simple et concis
+        const kolsCount = practitioners.filter(p => p.isKOL).length;
+        const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
 
-        // Construire l'historique de conversation pour le contexte
-        const conversationHistory = messages
-          .slice(-4)
-          .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
-          .join('\n\n');
+        const simplePrompt = `Tu es ARIA, coach IA pour délégué pharmaceutique Air Liquide.
 
-        // Combiner avec l'historique si disponible
-        const enhancedUserPrompt = conversationHistory
-          ? `${userPrompt}\n\n**HISTORIQUE RÉCENT** :\n${conversationHistory}`
-          : userPrompt;
+CONTEXTE TERRITOIRE :
+- ${practitioners.length} praticiens (${kolsCount} KOLs)
+- Volume total: ${(totalVolume / 1000000).toFixed(1)}M L/an
 
-        // Appel à Groq avec system/user prompts séparés
+QUESTION : ${question}
+
+Réponds de manière concise et professionnelle avec des recommandations concrètes.`;
+
         aiResponse = await complete([
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: enhancedUserPrompt }
+          { role: 'user', content: simplePrompt }
         ]);
       } catch (apiError) {
         console.warn('Erreur API Groq, passage au fallback:', apiError);

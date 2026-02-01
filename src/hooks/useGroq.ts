@@ -25,15 +25,6 @@ export function useGroq(options: UseGroqOptions = {}) {
 
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 
-  // Debug: afficher l'état de la clé API au chargement du hook
-  if (!apiKey || apiKey === 'your_groq_api_key_here') {
-    console.warn('⚠️ useGroq Hook Init: VITE_GROQ_API_KEY not configured!');
-    console.warn('   All Groq API calls will fail.');
-    console.warn('   Set VITE_GROQ_API_KEY in Vercel Environment Variables.');
-  } else {
-    console.log('✅ useGroq Hook Init: API Key loaded:', apiKey.substring(0, 10) + '...');
-  }
-
   // Vérifier si la clé API est configurée
   const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey.length > 10;
 
@@ -49,24 +40,13 @@ export function useGroq(options: UseGroqOptions = {}) {
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        const errMsg = 'Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.';
-        console.error('❌ useGroq.streamCompletion:', errMsg);
-        console.error('   API Key présente:', !!apiKey);
-        console.error('   API Key length:', apiKey?.length);
-        console.error('   import.meta.env.VITE_GROQ_API_KEY:', import.meta.env.VITE_GROQ_API_KEY);
+        const errMsg = 'Clé API Groq non configurée.';
         setError(errMsg);
         setIsLoading(false);
         return;
       }
 
       try {
-        console.log('🚀 Groq API Stream Call:', {
-          url: GROQ_API_URL,
-          model,
-          messagesCount: messages.length,
-          apiKeyPrefix: apiKey?.substring(0, 10) + '...'
-        });
-
         const response = await fetch(GROQ_API_URL, {
           method: 'POST',
           headers: {
@@ -82,16 +62,9 @@ export function useGroq(options: UseGroqOptions = {}) {
           }),
         });
 
-        console.log('📥 Groq Stream Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
-        });
-
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Groq Stream Error Response:', errorData);
-          throw new Error(errorData.error?.message || `Groq API error: ${response.status} ${response.statusText}`);
+          throw new Error(errorData.error?.message || `Groq API error: ${response.status}`);
         }
 
         const reader = response.body?.getReader();
@@ -128,16 +101,11 @@ export function useGroq(options: UseGroqOptions = {}) {
           }
         }
 
-        console.log('✅ Groq Stream Complete');
         onComplete?.();
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.error('❌ useGroq.streamCompletion ERROR:', {
-          error: err,
-          message: errorMessage,
-          stack: err instanceof Error ? err.stack : undefined
-        });
         setError(errorMessage);
+        console.error('Groq API Error:', errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -153,24 +121,13 @@ export function useGroq(options: UseGroqOptions = {}) {
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        const errMsg = 'Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.';
-        console.error('❌ useGroq.complete:', errMsg);
-        console.error('   API Key présente:', !!apiKey);
-        console.error('   API Key length:', apiKey?.length);
+        const errMsg = 'Clé API Groq non configurée.';
         setError(errMsg);
         setIsLoading(false);
         return null;
       }
 
       try {
-        console.log('🚀 Groq API Call:', {
-          url: GROQ_API_URL,
-          model,
-          messagesCount: messages.length,
-          firstMessageRole: messages[0]?.role,
-          apiKeyPrefix: apiKey?.substring(0, 10) + '...'
-        });
-
         const response = await fetch(GROQ_API_URL, {
           method: 'POST',
           headers: {
@@ -186,36 +143,17 @@ export function useGroq(options: UseGroqOptions = {}) {
           }),
         });
 
-        console.log('📥 Groq API Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
-        });
-
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Groq API Error Response:', errorData);
-          throw new Error(errorData.error?.message || `Groq API error: ${response.status} ${response.statusText}`);
+          throw new Error(errorData.error?.message || `Groq API error: ${response.status}`);
         }
 
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || null;
-
-        console.log('✅ Groq API Success:', {
-          hasContent: !!content,
-          contentLength: content?.length,
-          contentPreview: content?.substring(0, 100) + '...'
-        });
-
-        return content;
+        return data.choices?.[0]?.message?.content || null;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.error('❌ useGroq.complete ERROR:', {
-          error: err,
-          message: errorMessage,
-          stack: err instanceof Error ? err.stack : undefined
-        });
         setError(errorMessage);
+        console.error('Groq API Error:', errorMessage);
         return null;
       } finally {
         setIsLoading(false);
