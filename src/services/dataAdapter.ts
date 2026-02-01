@@ -10,7 +10,7 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
   // Déduire le trend basé sur le potentiel de croissance
   const trend: 'up' | 'down' | 'stable' =
     profile.metrics.potentialGrowth > 15 ? 'up' :
-    profile.metrics.potentialGrowth < 5 ? 'stable' : 'up';
+    profile.metrics.potentialGrowth < 5 ? 'down' : 'stable';
 
   // Générer un résumé IA basé sur les données
   const aiSummary = profile.metrics.isKOL
@@ -55,7 +55,7 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     postalCode: profile.address.postalCode,
     department: profile.address.postalCode.substring(0, 2),
     patientCount: Math.round(profile.metrics.volumeL / 50000), // Estimation: ~50L/patient/an
-    conventionSector: Math.random() > 0.8 ? 2 : 1,
+    conventionSector: profile.metrics.vingtile <= 5 ? 2 : 1, // Top praticiens en secteur 2
     activityType: 'Libéral intégral' as const,
     preferredChannel: 'Face-to-face' as const,
     visitCount: profile.visitHistory.length,

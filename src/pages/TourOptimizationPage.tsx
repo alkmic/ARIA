@@ -466,7 +466,7 @@ export const TourOptimizationPage: React.FC = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.4);
           z-index: 2000;
         ">
-          🏠
+          H
         </div>
       `,
       className: '',
@@ -873,7 +873,7 @@ export const TourOptimizationPage: React.FC = () => {
               {/* Ligne de retour */}
               <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                 <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold flex-shrink-0">
-                  🏠
+                  H
                 </div>
                 <div className="flex-1">
                   <span className="font-bold text-slate-700">Retour à la base</span>

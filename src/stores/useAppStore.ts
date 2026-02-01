@@ -46,7 +46,6 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I001',
     type: 'opportunity',
-    icon: '🎯',
     title: 'Opportunité détectée',
     message: 'Dr. Martin a augmenté ses prescriptions de 23% ce trimestre. Moment idéal pour renforcer la relation.',
     priority: 'high',
@@ -56,7 +55,6 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I002',
     type: 'alert',
-    icon: '⚠️',
     title: '3 KOLs non visités',
     message: '3 leaders d\'opinion n\'ont pas été contactés depuis plus de 90 jours.',
     priority: 'high',
@@ -65,7 +63,6 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I003',
     type: 'reminder',
-    icon: '📅',
     title: 'Visite demain',
     message: 'Rendez-vous confirmé avec Dr. Dupont demain à 10h. Documents de préparation disponibles.',
     priority: 'medium',
@@ -75,9 +72,8 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I004',
     type: 'achievement',
-    icon: '🏆',
-    title: 'Objectif atteint !',
-    message: 'Félicitations ! Vous avez visité 100% des KOLs ce mois-ci.',
+    title: 'Objectif atteint',
+    message: 'Vous avez visité 100% des KOLs ce mois-ci.',
     priority: 'low',
   },
 ];

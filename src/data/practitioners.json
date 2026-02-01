@@ -190,7 +190,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -347,7 +347,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -470,7 +470,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -791,7 +791,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -799,7 +799,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -966,7 +966,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -975,7 +975,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -1151,7 +1151,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -1296,7 +1296,7 @@
         "title": "Article dans Revue des Maladies Respiratoires",
         "content": "Publication d'un cas clinique sur la gestion de l'hypoxémie sévère en ambulatoire",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -1489,7 +1489,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -1498,7 +1498,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur les nouvelles recommandations pour l'oxygénothérapie ambulatoire",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -1612,7 +1612,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-2",
@@ -1620,7 +1620,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-5",
@@ -1628,7 +1628,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-1",
@@ -1636,7 +1636,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-3",
@@ -1644,7 +1644,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       }
     ],
     "visitHistory": [
@@ -1814,7 +1814,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -1992,7 +1992,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-3",
@@ -2000,7 +2000,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur la prise en charge des BPCO sévères au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-2",
@@ -2008,7 +2008,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-5",
@@ -2016,7 +2016,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations",
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations",
         "source": "Base bibliographique médicale"
       },
       {
@@ -2025,7 +2025,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       }
     ],
     "visitHistory": [
@@ -2137,7 +2137,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'impact de l'oxygénothérapie nocturne sur la qualité de vie",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -2146,7 +2146,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -2302,7 +2302,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur les nouvelles recommandations pour l'oxygénothérapie ambulatoire",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -2311,7 +2311,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en oncologie thoracique",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -2446,7 +2446,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-4",
@@ -2454,7 +2454,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-2",
@@ -2462,7 +2462,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-5",
@@ -2470,7 +2470,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en réhabilitation respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-3",
@@ -2478,7 +2478,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       }
     ],
     "visitHistory": [
@@ -2649,7 +2649,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -2944,7 +2944,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -2952,7 +2952,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -3102,7 +3102,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en réhabilitation respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -3273,7 +3273,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-1",
@@ -3281,7 +3281,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-2",
@@ -3289,7 +3289,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       }
     ],
     "visitHistory": [
@@ -3433,7 +3433,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -3746,7 +3746,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur la prise en charge des BPCO sévères au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -3754,7 +3754,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -3902,7 +3902,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-1",
@@ -3910,7 +3910,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-6",
@@ -3918,7 +3918,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-2",
@@ -3926,7 +3926,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-4",
@@ -3934,7 +3934,7 @@
         "title": "Article dans Revue des Maladies Respiratoires",
         "content": "Publication d'un cas clinique sur les complications de l'oxygénothérapie de longue durée",
         "type": "publication",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations",
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations",
         "source": "Base bibliographique médicale"
       },
       {
@@ -3943,7 +3943,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       }
     ],
     "visitHistory": [
@@ -4194,7 +4194,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -4202,7 +4202,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -4337,7 +4337,7 @@
         "title": "Article dans Revue des Maladies Respiratoires",
         "content": "Publication d'un cas clinique sur les complications de l'oxygénothérapie de longue durée",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -4493,7 +4493,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -4648,7 +4648,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -4656,7 +4656,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -4928,7 +4928,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -4936,7 +4936,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -5118,7 +5118,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -5126,7 +5126,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -5267,7 +5267,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-4",
@@ -5275,7 +5275,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-6",
@@ -5283,7 +5283,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-2",
@@ -5291,7 +5291,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-1",
@@ -5299,7 +5299,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
       },
       {
         "id": "news-3",
@@ -5307,7 +5307,7 @@
         "title": "Article dans Revue des Maladies Respiratoires",
         "content": "Publication d'un cas clinique sur les complications de l'oxygénothérapie de longue durée",
         "type": "publication",
-        "relevance": "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations",
+        "relevance": "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -5699,7 +5699,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -6267,7 +6267,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -6275,7 +6275,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -6393,7 +6393,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -6401,7 +6401,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -6600,7 +6600,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -6608,7 +6608,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -6760,7 +6760,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -6768,7 +6768,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -7100,7 +7100,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -7216,7 +7216,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en oncologie thoracique",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -7498,7 +7498,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -7638,7 +7638,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -7647,7 +7647,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'impact de l'oxygénothérapie nocturne sur la qualité de vie",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -7838,7 +7838,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -7954,7 +7954,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur la prise en charge des BPCO sévères au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -7962,7 +7962,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -8086,7 +8086,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -8225,7 +8225,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -8545,7 +8545,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -8985,7 +8985,7 @@
         "title": "Article dans Revue des Maladies Respiratoires",
         "content": "Publication d'un cas clinique sur l'adaptation des traitements chez les patients BPCO âgés",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -9179,7 +9179,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -9187,7 +9187,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -9370,7 +9370,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -9682,7 +9682,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -9809,7 +9809,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -9946,7 +9946,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -10247,7 +10247,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -10255,7 +10255,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur la prise en charge des BPCO sévères au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -10371,7 +10371,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en oncologie thoracique",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -10498,7 +10498,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur le sevrage tabagique chez le patient BPCO avec oxygénothérapie",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -10765,7 +10765,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -11016,7 +11016,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -11156,7 +11156,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -11312,7 +11312,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -11320,7 +11320,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -11643,7 +11643,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -11805,7 +11805,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -12121,7 +12121,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -12401,7 +12401,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -12566,7 +12566,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -12867,7 +12867,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -13048,7 +13048,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en réhabilitation respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -13196,7 +13196,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur les nouvelles recommandations pour l'oxygénothérapie ambulatoire",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       }
     ],
@@ -13470,7 +13470,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -13620,7 +13620,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en oncologie thoracique",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -13628,7 +13628,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -13799,7 +13799,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -13807,7 +13807,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -14254,7 +14254,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en réhabilitation respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -14262,7 +14262,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -14548,7 +14548,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -14703,7 +14703,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'optimisation des débits d'oxygène en fonction de l'activité physique",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -14712,7 +14712,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -14825,7 +14825,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son engagement dans l'éducation thérapeutique",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -15190,7 +15190,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur les nouvelles technologies en assistance respiratoire",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -15198,7 +15198,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -15333,7 +15333,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -15341,7 +15341,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en oncologie thoracique",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -15624,7 +15624,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Formation continue sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -15775,7 +15775,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -15914,7 +15914,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur l'impact de l'oxygénothérapie nocturne sur la qualité de vie",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -15923,7 +15923,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -16358,7 +16358,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Table ronde sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -16523,7 +16523,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -16692,7 +16692,7 @@
         "title": "Publication dans l'European Respiratory Journal",
         "content": "Co-auteur d'une étude sur les nouvelles recommandations pour l'oxygénothérapie ambulatoire",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -16701,7 +16701,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -16845,7 +16845,7 @@
         "title": "Article dans Revue des Maladies Respiratoires",
         "content": "Publication d'un cas clinique sur l'adaptation des traitements chez les patients BPCO âgés",
         "type": "publication",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise",
         "source": "Base bibliographique médicale"
       },
       {
@@ -16854,7 +16854,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -16989,7 +16989,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -17133,7 +17133,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un Master 2 en allergologie respiratoire",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -17141,7 +17141,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur la gestion de l'oxygénothérapie en ville",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -17318,7 +17318,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DIU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -17452,7 +17452,7 @@
         "title": "Organisation d'un événement médical",
         "content": "Atelier pratique sur le parcours de soins du patient BPCO",
         "type": "event",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-2",
@@ -17460,7 +17460,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Journées de Pneumologie Rhône-Alpes",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -17601,7 +17601,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur les avancées en oxygénothérapie au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -17724,7 +17724,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur l'éducation thérapeutique du patient respiratoire au Congrès ERS (European Respiratory Society)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -17732,7 +17732,7 @@
         "title": "Intervention au Congrès de Pneumologie",
         "content": "Présentation sur la prise en charge des BPCO sévères au Congrès de la SPLF (Société de Pneumologie de Langue Française)",
         "type": "conference",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -17889,7 +17889,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour son excellence dans la prise en charge des patients sous oxygénothérapie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -17897,7 +17897,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -18051,7 +18051,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en oncologie thoracique",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       },
       {
         "id": "news-1",
@@ -18059,7 +18059,7 @@
         "title": "Distinction professionnelle",
         "content": "Reconnaissance pour sa contribution à la recherche en pneumologie",
         "type": "award",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [
@@ -18183,7 +18183,7 @@
         "title": "Certification Universitaire en Pneumologie",
         "content": "Obtention d'un DU en pneumologie interventionnelle",
         "type": "certification",
-        "relevance": "💡 Pertinence : Maintenir la relation et valoriser l'expertise"
+        "relevance": "Pertinence : Maintenir la relation et valoriser l'expertise"
       }
     ],
     "visitHistory": [

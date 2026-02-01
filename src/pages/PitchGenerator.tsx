@@ -78,10 +78,10 @@ export function PitchGenerator() {
     let match;
 
     const sectionMap: Record<string, { id: 'hook' | 'proposition' | 'competition' | 'cta'; title: string; icon: string }> = {
-      ACCROCHE: { id: 'hook', title: 'Accroche', icon: '🎯' },
-      PROPOSITION: { id: 'proposition', title: 'Proposition de valeur', icon: '💡' },
-      CONCURRENCE: { id: 'competition', title: 'Différenciation', icon: '⚡' },
-      CALL_TO_ACTION: { id: 'cta', title: 'Call to Action', icon: '🚀' },
+      ACCROCHE: { id: 'hook', title: 'Accroche', icon: '1' },
+      PROPOSITION: { id: 'proposition', title: 'Proposition de valeur', icon: '2' },
+      CONCURRENCE: { id: 'competition', title: 'Différenciation', icon: '3' },
+      CALL_TO_ACTION: { id: 'cta', title: 'Call to Action', icon: '4' },
     };
 
     while ((match = sectionRegex.exec(text)) !== null) {
@@ -529,7 +529,7 @@ export function PitchGenerator() {
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <span className="text-3xl">{section.icon}</span>
+                          <span className="w-8 h-8 rounded-full bg-gradient-to-br from-al-blue-500 to-purple-500 text-white flex items-center justify-center font-bold text-sm">{section.icon}</span>
                           <h3 className="text-xl font-bold text-gray-900">{section.title}</h3>
                         </div>
                         <button

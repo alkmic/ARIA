@@ -25,9 +25,8 @@ export const PerformanceChart: React.FC = () => {
       className="glass-card p-6"
     >
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
-          <span>📈</span>
-          <span>Performance {periodLabelShort}</span>
+        <h2 className="text-lg font-bold text-slate-800">
+          Performance {periodLabelShort}
         </h2>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">

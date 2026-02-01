@@ -34,8 +34,8 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
   return (
     <div className="glass-card p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <h3 className="font-bold text-base sm:text-lg flex items-center gap-2">
-          📅 Ma journée
+        <h3 className="font-bold text-base sm:text-lg">
+          Ma journée
         </h3>
         <span className="text-xs sm:text-sm text-slate-500">
           {visits.filter(v => v.status === 'completed').length}/{visits.length} terminées

@@ -47,7 +47,7 @@ export const NationalStats: React.FC = () => {
         {/* National Stats */}
         <div className="space-y-3 sm:space-y-4">
           <h3 className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide border-b border-slate-200 pb-2">
-            📊 France Entière
+            France Entière
           </h3>
 
           <div className="space-y-2 sm:space-y-3">
@@ -84,7 +84,7 @@ export const NationalStats: React.FC = () => {
         {/* Territory Stats */}
         <div className="space-y-3 sm:space-y-4">
           <h3 className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide border-b border-slate-200 pb-2">
-            🎯 Votre Territoire
+            Votre Territoire
           </h3>
 
           <div className="space-y-2 sm:space-y-3">

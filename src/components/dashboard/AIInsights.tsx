@@ -16,11 +16,11 @@ export const AIInsights: React.FC = () => {
     low: 'info' as const,
   };
 
-  const typeIcons = {
-    opportunity: '🎯',
-    alert: '⚠️',
-    reminder: '📅',
-    achievement: '🏆',
+  const typeLabels = {
+    opportunity: 'Opportunité',
+    alert: 'Alerte',
+    reminder: 'Rappel',
+    achievement: 'Succès',
   };
 
   const handleAction = (insight: typeof insights[0]) => {
@@ -39,9 +39,8 @@ export const AIInsights: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800 flex items-center space-x-2">
-          <span>🤖</span>
-          <span>ARIA recommande aujourd'hui</span>
+        <h2 className="text-xl font-bold text-slate-800">
+          ARIA recommande aujourd'hui
         </h2>
       </div>
 
@@ -55,7 +54,7 @@ export const AIInsights: React.FC = () => {
             className="min-w-[320px] glass-card p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-default"
           >
             <div className="flex items-start justify-between mb-3">
-              <span className="text-3xl">{typeIcons[insight.type]}</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{typeLabels[insight.type]}</span>
               <Badge variant={priorityColors[insight.priority]} size="sm">
                 {insight.priority}
               </Badge>

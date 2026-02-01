@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, User, Filter, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
-import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { format, addDays, isSameDay, startOfWeek, addWeeks } from 'date-fns';
@@ -80,7 +79,7 @@ export const Visits: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold gradient-text mb-2">
-          📅 Mes Visites
+          Mes Visites
         </h1>
         <p className="text-slate-600">
           Gérez et planifiez vos visites médicales
@@ -225,11 +224,13 @@ export const Visits: React.FC = () => {
                         className="glass-card p-4 hover:shadow-xl transition-all cursor-pointer group"
                       >
                         <div className="flex items-center gap-4">
-                          <Avatar
-                            src={visit.practitioner.avatarUrl}
-                            alt={`${visit.practitioner.firstName} ${visit.practitioner.lastName}`}
-                            size="lg"
-                          />
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${
+                            visit.practitioner.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                            visit.practitioner.specialty === 'Pneumologue' ? 'bg-gradient-to-br from-al-blue-500 to-al-blue-600' :
+                            'bg-gradient-to-br from-slate-500 to-slate-600'
+                          }`}>
+                            {visit.practitioner.firstName[0]}{visit.practitioner.lastName[0]}
+                          </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">

@@ -62,7 +62,7 @@ export function NewsTab({ practitioner }: NewsTabProps) {
               <p className="text-sm text-slate-500 mt-1">{item.summary}</p>
               <div className="mt-2 p-2 bg-amber-50 rounded-lg">
                 <p className="text-xs text-amber-700">
-                  💡 <strong>Pertinence :</strong> {item.relevance}
+                  <strong>Pertinence :</strong> {item.relevance}
                 </p>
               </div>
               <p className="text-xs text-slate-400 mt-2">{item.date}</p>

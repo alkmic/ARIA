@@ -230,8 +230,8 @@ function generateNews(
       content,
       type,
       relevance: isKOL
-        ? "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
-        : "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        ? "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        : "Pertinence : Maintenir la relation et valoriser l'expertise",
       source: type === 'publication' ? 'Base bibliographique médicale' : undefined,
     });
   }

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun } from 'lucide-react';
+import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Clock } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics } from '../services/metricsCalculator';
@@ -109,21 +109,27 @@ export const Dashboard: React.FC = () => {
     let endDate: Date;
 
     if (timePeriod === 'month') {
-      // Fin du mois actuel
       endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     } else if (timePeriod === 'quarter') {
-      // Fin du trimestre actuel
       const currentQuarter = Math.floor(today.getMonth() / 3);
       const quarterEndMonth = (currentQuarter + 1) * 3 - 1;
       endDate = new Date(today.getFullYear(), quarterEndMonth + 1, 0);
     } else {
-      // Fin de l'année
       endDate = new Date(today.getFullYear(), 11, 31);
     }
 
     const diffTime = endDate.getTime() - today.getTime();
     return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   }, [timePeriod]);
+
+  // Dynamic last sync time (based on current time)
+  const lastSyncText = useMemo(() => {
+    const minutes = today.getMinutes() % 15;
+    if (minutes < 5) return 'à l\'instant';
+    return `il y a ${minutes} min`;
+  }, []);
+
+  const firstName = currentUser.name.split(' ')[0];
 
   return (
     <motion.div
@@ -132,26 +138,24 @@ export const Dashboard: React.FC = () => {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      {/* Header avec date/météo */}
+      {/* Header avec date */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy">
-            Bonjour {currentUser.name.split(' ')[0]} 👋
+            Bonjour {firstName}
           </h1>
           <p className="text-sm sm:text-base text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-xs sm:text-sm">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1 text-xs sm:text-sm">
-              <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />
-              Lyon, 8°C
+            <span className="text-xs sm:text-sm">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </span>
           </p>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto">
           <PeriodSelector className="flex-1 lg:flex-none" size="sm" />
-          <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap">
-            Dernière sync: il y a 5 min
+          <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Sync: {lastSyncText}
           </span>
         </div>
       </div>

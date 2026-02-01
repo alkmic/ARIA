@@ -26,7 +26,6 @@ import { DataService } from '../services/dataService';
 import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
-import { Avatar } from '../components/ui/Avatar';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 
 interface Message {
@@ -234,7 +233,7 @@ MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
 TOP 10 PRATICIENS (VOLUME ANNUEL) :
 ${topPractitioners.map((p, i) =>
   `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} - ${p.specialty}, ${p.city}
-   Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${p.loyaltyScore}/10 | Vingtile: ${p.vingtile}${p.isKOL ? ' | KOL ⭐' : ''}`
+   Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${p.loyaltyScore}/10 | Vingtile: ${p.vingtile}${p.isKOL ? ' | KOL' : ''}`
 ).join('\n')}
 
 PRATICIENS À RISQUE :
@@ -446,7 +445,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
           )}
 
           <span className="text-xs text-slate-500 px-2 hidden sm:inline">
-            💡 Posez n'importe quelle question sur vos praticiens !
+            Posez n'importe quelle question sur vos praticiens
           </span>
         </div>
       </div>
@@ -522,7 +521,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                                 ? 'bg-purple-100 text-purple-600'
                                 : 'bg-blue-100 text-blue-600'
                             }`}>
-                              {message.source === 'llm' ? '🤖 Groq AI' : '⚡ Intelligence locale'}
+                              {message.source === 'llm' ? 'Groq AI' : 'Intelligence locale'}
                             </span>
                             <button
                               onClick={() => speak(message.content)}
@@ -558,12 +557,9 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                           }`}>
                             {i + 1}
                           </div>
-                          <Avatar
-                            src={p.avatarUrl}
-                            alt={p.lastName}
-                            size="md"
-                            className="hidden sm:block"
-                          />
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-al-blue-500 to-al-blue-600 flex items-center justify-center text-white font-bold text-sm hidden sm:flex">
+                            {p.firstName[0]}{p.lastName[0]}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <p className="font-semibold text-sm sm:text-base text-slate-800 truncate">
@@ -599,9 +595,9 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                         <InsightBox
                           key={i}
                           variant={
-                            insight.includes('🔴') || insight.includes('⚠️') ? 'warning' :
-                            insight.includes('✅') ? 'success' :
-                            insight.includes('💰') ? 'warning' :
+                            insight.toLowerCase().includes('urgent') || insight.toLowerCase().includes('risque') ? 'warning' :
+                            insight.toLowerCase().includes('objectif atteint') ? 'success' :
+                            insight.toLowerCase().includes('volume') || insight.toLowerCase().includes('opportunité') ? 'warning' :
                             'info'
                           }
                         >

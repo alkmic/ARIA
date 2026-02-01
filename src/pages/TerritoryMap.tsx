@@ -83,7 +83,7 @@ const createCustomIcon = (vingtile: number, isKOL: boolean) => {
         font-weight: bold;
         font-size: ${isKOL ? '14px' : '12px'};
       ">
-        ${isKOL ? '⭐' : vingtile}
+        ${isKOL ? 'KOL' : vingtile}
       </div>
     `,
     iconSize: [size, size],
@@ -334,7 +334,7 @@ export default function TerritoryMap() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800 truncate">
                         {p.title} {p.lastName}
-                        {p.isKOL && ' ⭐'}
+                        {p.isKOL && ' KOL'}
                       </p>
                       <p className="text-xs text-slate-500">{p.city} • {(p.volumeL / 1000).toFixed(0)}K L</p>
                     </div>
@@ -448,7 +448,7 @@ export default function TerritoryMap() {
               {/* Comparaison avant/après */}
               {nonOptimizedDistance > 0 && (
                 <div className="mb-4 p-3 bg-white rounded-lg border-2 border-green-300">
-                  <p className="font-semibold text-sm text-green-900 mb-2">💡 Bénéfices de l'optimisation</p>
+                  <p className="font-semibold text-sm text-green-900 mb-2">Bénéfices de l'optimisation</p>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Distance sans optimisation</span>
@@ -507,7 +507,7 @@ export default function TerritoryMap() {
                               <span className="font-medium text-al-blue-600">{orderIdx + 1}.</span>
                               <span className="truncate">
                                 {p.lastName} ({p.city})
-                                {p.isKOL && ' ⭐'}
+                                {p.isKOL && ' KOL'}
                               </span>
                             </li>
                           );
@@ -541,7 +541,7 @@ export default function TerritoryMap() {
                 <span>Vingtile 11+</span>
               </div>
               <div className="flex items-center gap-2">
-                <span>⭐</span>
+                <span>KOL</span>
                 <span>Key Opinion Leader</span>
               </div>
             </div>

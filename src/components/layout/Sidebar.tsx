@@ -1,42 +1,61 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Sparkles, MessageCircle, Settings, Calendar, Map, BarChart3 } from 'lucide-react';
-import { Avatar } from '../ui/Avatar';
+import { Home, Users, Sparkles, MessageCircle, Settings, Calendar, Map, BarChart3, Route, X, Brain } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
 const menuItems = [
   { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
   { id: 'practitioners', icon: Users, label: 'Praticiens', path: '/practitioners' },
   { id: 'visits', icon: Calendar, label: 'Visites', path: '/visits' },
   { id: 'map', icon: Map, label: 'Territoire', path: '/map' },
+  { id: 'tour', icon: Route, label: 'Optimisation', path: '/tour-optimization' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
   { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach' },
 ];
 
 const managerItems = [
   { id: 'manager', icon: BarChart3, label: 'Vue équipe', path: '/manager' },
+  { id: 'kol', icon: Brain, label: 'Planning KOL', path: '/kol-planning' },
 ];
 
-export const Sidebar = () => {
+export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const { currentUser } = useAppStore();
 
   return (
-    <div className="w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 text-white flex flex-col fixed left-0 top-0 z-20">
+    <div
+      className={`
+        w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 text-white flex flex-col fixed left-0 top-0 z-40
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+      `}
+    >
       {/* Logo */}
-      <div className="p-6 border-b border-white/10">
-        <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+      <div className="p-6 border-b border-white/10 flex items-center justify-between">
+        <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" onClick={onClose}>
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-            <span className="text-2xl">🤖</span>
+            <Brain className="w-6 h-6 text-al-navy" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">ARIA</h1>
             <p className="text-xs text-al-blue-200">AI Assistant</p>
           </div>
         </Link>
+        <button
+          onClick={onClose}
+          className="lg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+      <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -45,23 +64,24 @@ export const Sidebar = () => {
             <Link
               key={item.id}
               to={item.path}
+              onClick={onClose}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'bg-white text-al-navy shadow-lg'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02]'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
               }`}
             >
               <Icon className="w-5 h-5" />
               <span className="font-medium">{item.label}</span>
               {isActive && (
-                <div className="ml-auto w-2 h-2 bg-al-teal rounded-full animate-pulse" />
+                <div className="ml-auto w-2 h-2 bg-al-teal rounded-full" />
               )}
             </Link>
           );
         })}
 
         {/* Section Manager */}
-        <div className="pt-6 mt-6 border-t border-white/10">
+        <div className="pt-6 mt-4 border-t border-white/10">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4">Manager</p>
           {managerItems.map((item) => {
             const Icon = item.icon;
@@ -71,16 +91,17 @@ export const Sidebar = () => {
               <Link
                 key={item.id}
                 to={item.path}
+                onClick={onClose}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-white text-al-navy shadow-lg'
-                    : 'text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02]'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-2 h-2 bg-al-teal rounded-full animate-pulse" />
+                  <div className="ml-auto w-2 h-2 bg-al-teal rounded-full" />
                 )}
               </Link>
             );
@@ -92,7 +113,8 @@ export const Sidebar = () => {
       <div className="p-3 border-t border-white/10">
         <Link
           to="/settings"
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+          onClick={onClose}
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 cursor-pointer"
         >
           <Settings className="w-5 h-5" />
           <span className="font-medium">Paramètres</span>
@@ -102,7 +124,9 @@ export const Sidebar = () => {
       {/* User Profile */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center space-x-3">
-          <Avatar src={currentUser.avatarUrl} alt={currentUser.name} size="md" />
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm">
+            {currentUser.name.split(' ').map(n => n[0]).join('')}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{currentUser.name}</p>
             <p className="text-xs text-al-blue-200 truncate">{currentUser.role}</p>
