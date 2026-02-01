@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
@@ -6,6 +6,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import { CommandPalette } from './components/CommandPalette';
 
 // Lazy loading pour optimiser les performances
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
@@ -23,12 +24,27 @@ const KOLPlanningPage = lazy(() => import('./pages/KOLPlanningPage'));
 const TourOptimizationPage = lazy(() => import('./pages/TourOptimizationPage'));
 
 function App() {
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Raccourci clavier Cmd+K / Ctrl+K
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
           <TimePeriodProvider>
             <BrowserRouter>
+              <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
               <Suspense fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-900">
                   <LoadingSpinner size="lg" />

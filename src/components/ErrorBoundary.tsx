@@ -1,4 +1,5 @@
-import React, { Component, ReactNode } from 'react';
+import React, { Component } from 'react';
+import type { ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -69,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <pre className="text-xs text-red-700 overflow-x-auto">
                   {this.state.error.message}
                 </pre>
-                {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+                {import.meta.env.MODE === 'development' && this.state.errorInfo && (
                   <details className="mt-3">
                     <summary className="text-xs text-red-600 cursor-pointer hover:underline">
                       Stack trace (développement)

@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 interface GroqMessage {
   role: 'system' | 'user' | 'assistant';
@@ -13,13 +11,6 @@ interface UseGroqOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
-}
-
-/**
- * Délai exponentiel entre les tentatives
- */
-async function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export function useGroq(options: UseGroqOptions = {}) {
@@ -49,7 +40,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        setError('🔑 Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setError('Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
         setIsLoading(false);
         return;
       }
@@ -129,7 +120,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        setError('🔑 Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setError('Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
         setIsLoading(false);
         return null;
       }
