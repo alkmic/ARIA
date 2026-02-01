@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { AnimatedNumber } from '../shared/AnimatedNumber';
@@ -16,7 +16,7 @@ interface StatCardProps {
   delay?: number;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({
+export const StatCard = memo<StatCardProps>(function StatCard({
   icon: Icon,
   label,
   value,
@@ -24,7 +24,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   trend,
   suffix = '',
   delay = 0,
-}) => {
+}) {
   const percentage = total ? Math.round((value / total) * 100) : null;
 
   return (
@@ -75,4 +75,4 @@ export const StatCard: React.FC<StatCardProps> = ({
       </div>
     </motion.div>
   );
-};
+});

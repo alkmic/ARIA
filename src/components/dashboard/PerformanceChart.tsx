@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTimePeriod } from '../../contexts/TimePeriodContext';
 import { getPerformanceDataForPeriod } from '../../services/metricsCalculator';
 
-export const PerformanceChart: React.FC = () => {
+export const PerformanceChart = memo(function PerformanceChart() {
   const { timePeriod, periodLabelShort } = useTimePeriod();
 
   // Get performance data for the selected period
@@ -116,4 +116,4 @@ export const PerformanceChart: React.FC = () => {
       </div>
     </motion.div>
   );
-};
+});

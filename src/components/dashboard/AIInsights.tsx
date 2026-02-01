@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 
-export const AIInsights: React.FC = () => {
+export const AIInsights = memo(function AIInsights() {
   const { insights } = useAppStore();
   const navigate = useNavigate();
 
@@ -80,4 +80,4 @@ export const AIInsights: React.FC = () => {
       </div>
     </div>
   );
-};
+});

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -16,7 +16,7 @@ interface AnimatedStatCardProps {
   delay?: number;
 }
 
-export function AnimatedStatCard({
+export const AnimatedStatCard = memo(function AnimatedStatCard({
   icon: Icon,
   iconBgColor,
   label,
@@ -95,4 +95,4 @@ export function AnimatedStatCard({
       )}
     </motion.div>
   );
-}
+});
