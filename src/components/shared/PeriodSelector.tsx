@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTimePeriod } from '../../contexts/TimePeriodContext';
+import { useTimePeriod, TimePeriod } from '../../contexts/TimePeriodContext';
 
 interface PeriodSelectorProps {
   className?: string;
@@ -18,10 +18,14 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
     lg: 'px-4 py-2.5 text-base',
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTimePeriod(e.target.value as TimePeriod);
+  };
+
   return (
     <select
       value={timePeriod}
-      onChange={(e) => setTimePeriod(e.target.value as any)}
+      onChange={handleChange}
       className={`
         border border-slate-200 rounded-lg
         focus:outline-none focus:ring-2 focus:ring-al-blue-500
@@ -29,6 +33,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
         ${sizeClasses[size]}
         ${className}
       `}
+      aria-label="Sélectionner la période"
     >
       <option value="month">Ce mois</option>
       <option value="quarter">Ce trimestre</option>

@@ -123,3 +123,94 @@ export function SkeletonPitchSection() {
     </div>
   );
 }
+
+export function SkeletonStatCard() {
+  return (
+    <div className="glass-card p-6">
+      <Skeleton width="50%" height={16} className="mb-3" />
+      <Skeleton width="70%" height={32} className="mb-2" />
+      <Skeleton width="40%" height={14} />
+    </div>
+  );
+}
+
+export function SkeletonChart() {
+  return (
+    <div className="glass-card p-6">
+      <Skeleton width="40%" height={24} className="mb-6" />
+      <div className="h-64 flex items-end justify-between gap-2">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <Skeleton
+            key={i}
+            variant="rectangular"
+            className="flex-1"
+            height={Math.random() * 200 + 50}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonList({ items = 5 }: { items?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: items }).map((_, i) => (
+        <div key={i} className="glass-card p-4 flex items-center gap-4">
+          <Skeleton variant="circular" width={48} height={48} />
+          <div className="flex-1 space-y-2">
+            <Skeleton width="70%" height={16} />
+            <Skeleton width="40%" height={14} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SkeletonProfilePage() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left Column */}
+      <div className="space-y-6">
+        <div className="glass-card p-6">
+          <Skeleton variant="circular" width={96} height={96} className="mx-auto mb-4" />
+          <Skeleton width="80%" height={24} className="mx-auto mb-2" />
+          <Skeleton width="60%" height={16} className="mx-auto mb-6" />
+
+          <div className="space-y-3">
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+          </div>
+        </div>
+
+        <div className="glass-card p-6">
+          <Skeleton variant="rectangular" width="100%" height={120} className="mb-4" />
+          <div className="space-y-3">
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Tabs */}
+        <div className="glass-card p-2 flex gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} variant="rectangular" className="flex-1" height={48} />
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4">
+          <Skeleton variant="rectangular" width="100%" height={200} />
+          <Skeleton variant="rectangular" width="100%" height={150} />
+          <Skeleton variant="rectangular" width="100%" height={150} />
+        </div>
+      </div>
+    </div>
+  );
+}
