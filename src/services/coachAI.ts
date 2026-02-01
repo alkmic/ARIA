@@ -1,4 +1,5 @@
 import type { Practitioner } from '../types';
+import { detectIntent as detectAgenticIntent } from './agenticCoachAI';
 
 export interface CoachResponse {
   message: string;
@@ -15,26 +16,24 @@ function daysSince(dateStr: string | null): number {
   return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// Détection d'intention par mots-clés
+// Détection d'intention améliorée en utilisant le système agentic
 function detectIntent(question: string): string {
-  const q = question.toLowerCase();
+  const agenticIntent = detectAgenticIntent(question);
 
-  if (q.includes('priorité') || q.includes('voir') || q.includes('semaine') || q.includes('aujourd')) {
-    return 'priority';
-  }
-  if (q.includes('kol') || q.includes('leader') || q.includes('opinion')) {
-    return 'kol';
-  }
-  if (q.includes('objectif') || q.includes('atteindre') || q.includes('mois') || q.includes('sauver')) {
-    return 'objective';
-  }
-  if (q.includes('risque') || q.includes('perdre') || q.includes('churn') || q.includes('baisse')) {
-    return 'risk';
-  }
-  if (q.includes('nouveau') || q.includes('potentiel') || q.includes('opportunité')) {
-    return 'opportunities';
-  }
-  return 'general';
+  // Mapper les intents agentic vers les intents du fallback
+  const intentMap: Record<string, string> = {
+    'kol_management': 'kol',
+    'visit_priority': 'priority',
+    'objective_strategy': 'objective',
+    'risk_assessment': 'risk',
+    'opportunity_detection': 'opportunities',
+    'practitioner_info': 'practitioner',
+    'top_performers': 'top',
+    'territory_analysis': 'territory',
+    'analytics': 'analytics'
+  };
+
+  return intentMap[agenticIntent] || agenticIntent;
 }
 
 // Génération de réponse
@@ -149,15 +148,117 @@ export function generateCoachResponse(
       };
     }
 
-    default: {
+    case 'practitioner': {
+      // Recherche du praticien mentionné dans la question
+      const searchTerms = question.toLowerCase().split(' ').filter(w => w.length > 3);
+      const mentioned = practitioners.find(p =>
+        searchTerms.some(term =>
+          p.lastName.toLowerCase().includes(term) ||
+          p.firstName.toLowerCase().includes(term)
+        )
+      );
+
+      if (mentioned) {
+        return {
+          message: `Voici les informations sur ${mentioned.title} ${mentioned.firstName} ${mentioned.lastName} :`,
+          practitioners: [{ ...mentioned, daysSinceVisit: daysSince(mentioned.lastVisitDate) }],
+          insights: [
+            `📍 ${mentioned.specialty} à ${mentioned.city}`,
+            `📊 Volume annuel : ${(mentioned.volumeL / 1000).toFixed(0)}K L/an (Vingtile ${mentioned.vingtile})`,
+            `❤️ Fidélité : ${mentioned.loyaltyScore}/10${mentioned.isKOL ? ' • Statut KOL ⭐' : ''}`,
+            mentioned.lastVisitDate
+              ? `🗓️ Dernière visite : ${new Date(mentioned.lastVisitDate).toLocaleDateString('fr-FR')} (il y a ${daysSince(mentioned.lastVisitDate)} jours)`
+              : `⚠️ Jamais visité - opportunité à saisir !`
+          ]
+        };
+      }
+
       return {
-        message: `Je peux vous aider avec plusieurs types de questions :`,
+        message: `Je n'ai pas trouvé le praticien mentionné dans ma base de données. Essayez avec le nom de famille complet.`,
+        insights: [`💡 Utilisez la recherche pour trouver un praticien spécifique.`]
+      };
+    }
+
+    case 'top': {
+      const topPerformers = [...practitioners]
+        .sort((a, b) => b.volumeL - a.volumeL)
+        .slice(0, 10)
+        .map(p => ({ ...p, daysSinceVisit: daysSince(p.lastVisitDate) }));
+
+      const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
+      const topVolume = topPerformers.reduce((sum, p) => sum + p.volumeL, 0);
+      const concentration = (topVolume / totalVolume) * 100;
+
+      return {
+        message: `Voici vos 10 meilleurs prescripteurs (par volume annuel) :`,
+        practitioners: topPerformers,
         insights: [
-          `• "Qui dois-je voir en priorité cette semaine ?"`,
-          `• "Quels KOLs n'ai-je pas vus récemment ?"`,
-          `• "Comment atteindre mon objectif mensuel ?"`,
-          `• "Quels praticiens sont à risque de churn ?"`,
-          `• "Quelles sont mes opportunités de nouveaux prescripteurs ?"`
+          `📊 Ces praticiens représentent ${concentration.toFixed(0)}% de votre volume total`,
+          `⭐ ${topPerformers.filter(p => p.isKOL).length} KOLs dans le Top 10`,
+          `🎯 Fidélité moyenne : ${(topPerformers.reduce((s, p) => s + p.loyaltyScore, 0) / topPerformers.length).toFixed(1)}/10`,
+          topPerformers.some(p => p.daysSinceVisit > 60)
+            ? `⚠️ ${topPerformers.filter(p => p.daysSinceVisit > 60).length} top performer(s) non vu(s) depuis 60+ jours !`
+            : `✅ Tous vos top performers sont régulièrement visités`
+        ]
+      };
+    }
+
+    case 'territory':
+    case 'analytics': {
+      const stats = {
+        total: practitioners.length,
+        kols: practitioners.filter(p => p.isKOL).length,
+        pneumologues: practitioners.filter(p => p.specialty === 'Pneumologue').length,
+        generalistes: practitioners.filter(p => p.specialty === 'Médecin généraliste').length,
+        highRisk: practitioners.filter(p => p.trend === 'down' || p.loyaltyScore < 5).length,
+        totalVolume: practitioners.reduce((sum, p) => sum + p.volumeL, 0),
+        avgLoyalty: practitioners.reduce((sum, p) => sum + p.loyaltyScore, 0) / practitioners.length
+      };
+
+      const cityDistribution = practitioners.reduce((acc, p) => {
+        acc[p.city] = (acc[p.city] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const topCities = Object.entries(cityDistribution)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([city, count]) => `${city} (${count} praticiens)`);
+
+      return {
+        message: `Analyse de votre territoire Rhône-Alpes :`,
+        insights: [
+          `👥 ${stats.total} praticiens (${stats.pneumologues} pneumologues, ${stats.generalistes} généralistes)`,
+          `⭐ ${stats.kols} KOLs identifiés (${((stats.kols / stats.total) * 100).toFixed(0)}% de votre portefeuille)`,
+          `💰 Volume total : ${(stats.totalVolume / 1000000).toFixed(1)}M L/an`,
+          `❤️ Fidélité moyenne : ${stats.avgLoyalty.toFixed(1)}/10`,
+          `⚠️ ${stats.highRisk} praticiens à risque nécessitent une attention`,
+          `📍 Villes principales : ${topCities.join(', ')}`
+        ]
+      };
+    }
+
+    default: {
+      // Mode dégradé : afficher le contexte pertinent même sans intent spécifique
+      const urgentPractitioners = [...practitioners]
+        .map(p => ({
+          ...p,
+          priorityScore: p.vingtile + daysSince(p.lastVisitDate) / 30,
+          daysSinceVisit: daysSince(p.lastVisitDate)
+        }))
+        .sort((a, b) => a.priorityScore - b.priorityScore)
+        .slice(0, 3);
+
+      return {
+        message: `⚠️ API IA non configurée - Mode réponse structurée activé.\n\nJe détecte que vous avez ${practitioners.length} praticiens dans votre base. Voici vos 3 priorités immédiates :`,
+        practitioners: urgentPractitioners,
+        insights: [
+          `💡 Pour des réponses plus détaillées, configurez votre clé API Groq (voir CONFIGURATION_IA.md)`,
+          `📝 Exemples de questions :`,
+          `  • "Qui dois-je voir en priorité cette semaine ?"`,
+          `  • "Quels KOLs n'ai-je pas vus récemment ?"`,
+          `  • "Quels sont mes top prescripteurs ?"`,
+          `  • "Analyse de mon territoire"`
         ]
       };
     }
