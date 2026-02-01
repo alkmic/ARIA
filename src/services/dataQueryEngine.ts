@@ -288,10 +288,11 @@ RÉSULTATS DE RECHERCHE POUR : "${question}"
 
       context += `${idx + 1}. ${p.title} ${p.firstName} ${p.lastName}\n`;
       context += `   • Spécialité : ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}\n`;
-      context += `   • Localisation : ${p.address.city} (${p.address.postalCode})\n`;
+      context += `   • Adresse complète : ${p.address.street}, ${p.address.postalCode} ${p.address.city}\n`;
       context += `   • Volume annuel : ${(p.metrics.volumeL / 1000).toFixed(1)}K L/an\n`;
       context += `   • Fidélité : ${p.metrics.loyaltyScore}/10 | Vingtile : ${p.metrics.vingtile}\n`;
       context += `   • Statut : ${p.metrics.isKOL ? '⭐ KOL' : 'Praticien standard'}\n`;
+      context += `   • Contact : ${p.contact.email} | ${p.contact.phone}\n`;
 
       if (publicationCount > 0 || conferenceCount > 0 || certificationCount > 0) {
         context += `   • Actualités : ${publicationCount} publication(s), ${conferenceCount} conférence(s), ${certificationCount} certification(s)\n`;
@@ -305,7 +306,6 @@ RÉSULTATS DE RECHERCHE POUR : "${question}"
         });
       }
 
-      context += `   • Contact : ${p.contact.email} | ${p.contact.phone}\n`;
       context += `   • Dernière visite : ${p.lastVisitDate ? new Date(p.lastVisitDate).toLocaleDateString('fr-FR') : 'Jamais'}\n`;
       context += '\n';
     });
@@ -407,7 +407,7 @@ BASE DE DONNÉES COMPLÈTE (${allPractitioners.length} praticiens) :
 ═══════════════════════════════════════════════════════════════════════════════
 ${allPractitioners.map(p => {
   const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
-  return `• ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}${pubCount > 0 ? ` | ${pubCount} pub` : ''}`;
+  return `• ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.street}, ${p.address.postalCode} ${p.address.city} | Tel: ${p.contact.phone} | Email: ${p.contact.email} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}${pubCount > 0 ? ` | ${pubCount} pub` : ''}`;
 }).join('\n')}
 
 `;

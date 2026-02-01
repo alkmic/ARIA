@@ -3,7 +3,7 @@ import type { Practitioner, UpcomingVisit } from '../types';
 
 /**
  * Calcule les métriques pour une période donnée de manière cohérente
- * Les données mensuelles < trimestrielles < annuelles
+ * GARANTIE : visites mensuelles ≤ visites trimestrielles ≤ visites annuelles
  */
 
 export interface PeriodMetrics {
@@ -56,84 +56,100 @@ export function filterVisitsByPeriod(visits: UpcomingVisit[], period: TimePeriod
 
 /**
  * Génère des métriques cohérentes basées sur les vrais praticiens
- * avec des objectifs et progression réalistes et DÉTERMINISTES
+ * Utilise une approche déterministe et cohérente entre les périodes
  */
 export function calculatePeriodMetrics(
   practitioners: Practitioner[],
   _visits: UpcomingVisit[],
   period: TimePeriod
 ): PeriodMetrics {
-  const { start } = getPeriodDates(period);
   const now = new Date();
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+  const dayOfMonth = now.getDate();
+  const currentMonth = now.getMonth();
+  const currentQuarter = Math.floor(currentMonth / 3);
 
-  // Calculer les objectifs basés sur la période
-  // Objectif annuel: 720 visites (60/mois * 12)
-  // Objectif trimestriel: 180 visites (60/mois * 3)
-  // Objectif mensuel: 60 visites
+  // Objectifs par période
   const baseMonthlyObjective = 60;
   const visitsObjective =
     period === 'year' ? baseMonthlyObjective * 12 :
     period === 'quarter' ? baseMonthlyObjective * 3 :
     baseMonthlyObjective;
 
-  // Calculer les jours ouvrés écoulés dans la période (lun-ven)
-  const getWorkingDays = (startDate: Date, endDate: Date): number => {
+  // Calculer les visites de manière COHÉRENTE entre les périodes
+  // Principe : on simule des visites passées réalistes
+
+  // Performance factor stable pour l'année (basé sur l'année courante)
+  const yearSeed = now.getFullYear();
+  const performanceFactor = 0.88 + ((yearSeed % 10) / 100); // 88% à 97%
+
+  // Visites par jour ouvré moyen
+  const avgVisitsPerWorkday = 3; // ~3 visites/jour
+
+  // Calculer les jours ouvrés écoulés pour chaque période
+  const getWorkingDaysInMonth = (year: number, month: number, upToDay?: number): number => {
+    const lastDay = upToDay || new Date(year, month + 1, 0).getDate();
     let count = 0;
-    const current = new Date(startDate);
-    while (current <= endDate) {
-      const day = current.getDay();
+    for (let d = 1; d <= lastDay; d++) {
+      const date = new Date(year, month, d);
+      const day = date.getDay();
       if (day !== 0 && day !== 6) count++;
-      current.setDate(current.getDate() + 1);
     }
     return count;
   };
 
-  // Calculer le nombre total de jours ouvrés dans la période
-  const periodEnd = period === 'month'
-    ? new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    : period === 'quarter'
-    ? new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0)
-    : new Date(now.getFullYear(), 11, 31);
+  // Visites du mois en cours (jusqu'à aujourd'hui)
+  const workingDaysThisMonth = getWorkingDaysInMonth(now.getFullYear(), currentMonth, dayOfMonth);
+  const monthVisits = Math.floor(workingDaysThisMonth * avgVisitsPerWorkday * performanceFactor);
 
-  const totalWorkingDays = getWorkingDays(start, periodEnd);
-  const elapsedWorkingDays = getWorkingDays(start, now);
+  // Visites des mois passés ce trimestre (mois complets)
+  let quarterVisits = monthVisits;
+  const quarterStartMonth = currentQuarter * 3;
+  for (let m = quarterStartMonth; m < currentMonth; m++) {
+    const fullMonthWorkdays = getWorkingDaysInMonth(now.getFullYear(), m);
+    quarterVisits += Math.floor(fullMonthWorkdays * avgVisitsPerWorkday * performanceFactor);
+  }
 
-  // Visites par jour ouvré (moyenne ~3 visites/jour)
-  const visitsPerDay = visitsObjective / totalWorkingDays;
+  // Visites des mois passés cette année (mois complets)
+  let yearVisits = monthVisits;
+  for (let m = 0; m < currentMonth; m++) {
+    const fullMonthWorkdays = getWorkingDaysInMonth(now.getFullYear(), m);
+    yearVisits += Math.floor(fullMonthWorkdays * avgVisitsPerWorkday * performanceFactor);
+  }
 
-  // Visites réalisées = jours ouvrés écoulés × visites/jour × facteur de performance (85-95%)
-  // Utiliser une seed déterministe basée sur l'année/mois pour éviter les changements aléatoires
-  const seed = now.getFullYear() * 100 + now.getMonth();
-  const performanceFactor = 0.85 + ((seed % 10) / 100); // Entre 85% et 95%, stable dans le mois
-
-  const visitsCount = Math.min(
-    Math.floor(elapsedWorkingDays * visitsPerDay * performanceFactor),
-    visitsObjective // Ne jamais dépasser l'objectif
-  );
+  // Sélectionner les visites selon la période
+  const visitsCount =
+    period === 'year' ? yearVisits :
+    period === 'quarter' ? quarterVisits :
+    monthVisits;
 
   // Volume total des praticiens (annuel)
   const totalAnnualVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
 
-  // Volume pour la période
+  // Volume pour la période (proportionnel au temps écoulé)
+  const yearProgress = dayOfYear / 365;
+  const quarterProgress = (dayOfYear - (currentQuarter * 91)) / 91;
+  const monthProgress = dayOfMonth / new Date(now.getFullYear(), currentMonth + 1, 0).getDate();
+
   const totalVolume =
-    period === 'year' ? totalAnnualVolume :
-    period === 'quarter' ? totalAnnualVolume * 0.25 :
-    totalAnnualVolume / 12;
+    period === 'year' ? Math.round(totalAnnualVolume * yearProgress) :
+    period === 'quarter' ? Math.round(totalAnnualVolume * 0.25 * Math.max(0.1, quarterProgress)) :
+    Math.round(totalAnnualVolume / 12 * Math.max(0.1, monthProgress));
 
-  // Calculer les nouveaux prescripteurs (proportionnel à l'avancement dans la période)
-  // Objectif: ~2-3 nouveaux prescripteurs par mois
-  const periodProgress = elapsedWorkingDays / totalWorkingDays;
-  const baseMonthlyNewPrescribers = 2; // Plus réaliste : 2-3 par mois
-  const targetNewPrescribers =
-    period === 'year' ? baseMonthlyNewPrescribers * 12 :
-    period === 'quarter' ? baseMonthlyNewPrescribers * 3 :
-    baseMonthlyNewPrescribers;
+  // Nouveaux prescripteurs (cohérents entre périodes)
+  const monthlyNewPrescribers = Math.max(1, Math.floor(2 * monthProgress * performanceFactor));
+  const quarterlyNewPrescribers = monthlyNewPrescribers + (currentMonth > quarterStartMonth ? Math.floor(2 * (currentMonth - quarterStartMonth)) : 0);
+  const yearlyNewPrescribers = monthlyNewPrescribers + Math.floor(2 * currentMonth * performanceFactor);
 
-  // Nouveaux prescripteurs = objectif × avancement (déterministe)
-  const newPrescribers = Math.floor(targetNewPrescribers * periodProgress * performanceFactor);
+  const newPrescribers =
+    period === 'year' ? yearlyNewPrescribers :
+    period === 'quarter' ? quarterlyNewPrescribers :
+    monthlyNewPrescribers;
 
   // Loyauté moyenne
-  const avgLoyalty = practitioners.reduce((sum, p) => sum + p.loyaltyScore, 0) / practitioners.length;
+  const avgLoyalty = practitioners.length > 0
+    ? practitioners.reduce((sum, p) => sum + p.loyaltyScore, 0) / practitioners.length
+    : 0;
 
   // KOLs dans le réseau
   const kolCount = practitioners.filter(p => p.isKOL).length;
@@ -154,25 +170,22 @@ export function calculatePeriodMetrics(
   }).length;
 
   // Praticiens à risque (fidélité faible + volume significatif)
-  // Seuils ajustés aux volumes réalistes
   const atRiskPractitioners = practitioners.filter(p =>
     (p.loyaltyScore < 6 && p.volumeL > 30000) || (p.isKOL && p.loyaltyScore < 7)
   ).length;
 
-  // Croissance simulée (réaliste)
-  // Volume: +12% à +20% annuel, proportionnel pour périodes courtes
+  // Croissance simulée (réaliste et cohérente)
   const baseVolumeGrowth = 15; // 15% annuel
   const volumeGrowth =
     period === 'year' ? baseVolumeGrowth :
-    period === 'quarter' ? baseVolumeGrowth / 4 :
-    baseVolumeGrowth / 12;
+    period === 'quarter' ? Math.round(baseVolumeGrowth / 4) :
+    Math.round(baseVolumeGrowth / 12);
 
-  // Croissance des visites: +8% à +15%
   const baseVisitGrowth = 12;
   const visitGrowth =
     period === 'year' ? baseVisitGrowth :
-    period === 'quarter' ? baseVisitGrowth / 4 :
-    baseVisitGrowth / 12;
+    period === 'quarter' ? Math.round(baseVisitGrowth / 4) :
+    Math.round(baseVisitGrowth / 12);
 
   return {
     visitsCount,
@@ -195,8 +208,6 @@ export function filterPractitionersByPeriod(
   practitioners: Practitioner[],
   _period: TimePeriod
 ): Practitioner[] {
-  // Pour l'instant, retourne tous les praticiens
-  // Mais on pourrait filtrer ceux qui ont été actifs dans la période
   return practitioners;
 }
 
@@ -208,8 +219,6 @@ export function getTopPractitioners(
   _period: TimePeriod,
   limit: number = 10
 ): Practitioner[] {
-  // Pour une vraie implémentation, on filtrerait par volume de la période
-  // Pour l'instant, on utilise le volume annuel
   return [...practitioners]
     .sort((a, b) => b.volumeL - a.volumeL)
     .slice(0, limit);
@@ -223,15 +232,22 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
   const now = new Date();
   const currentMonth = now.getMonth();
 
+  // Utiliser une seed déterministe pour des valeurs stables
+  const seed = now.getFullYear();
+  const seededRandom = (index: number) => {
+    const x = Math.sin(seed + index * 9999) * 10000;
+    return x - Math.floor(x);
+  };
+
   if (period === 'month') {
     // Pour le mois, afficher les 4 dernières semaines
     return Array.from({ length: 4 }, (_, i) => ({
       month: `S${i + 1}`,
-      actual: 12 + Math.floor(Math.random() * 8),
+      actual: 12 + Math.floor(seededRandom(i) * 8),
       objective: 15,
-      previousYear: 10 + Math.floor(Math.random() * 5),
-      yourVolume: 150000 + Math.floor(Math.random() * 50000),
-      teamAverage: 140000 + Math.floor(Math.random() * 40000),
+      previousYear: 10 + Math.floor(seededRandom(i + 100) * 5),
+      yourVolume: 40000 + Math.floor(seededRandom(i + 200) * 20000),
+      teamAverage: 35000 + Math.floor(seededRandom(i + 300) * 15000),
     }));
   } else if (period === 'quarter') {
     // Pour le trimestre, afficher les 3 mois
@@ -240,22 +256,22 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
       const monthIndex = quarterStart + i;
       return {
         month: months[monthIndex],
-        actual: 45 + Math.floor(Math.random() * 20),
+        actual: 45 + Math.floor(seededRandom(monthIndex) * 20),
         objective: 60,
-        previousYear: 40 + Math.floor(Math.random() * 15),
-        yourVolume: 450000 + Math.floor(Math.random() * 150000),
-        teamAverage: 420000 + Math.floor(Math.random() * 120000),
+        previousYear: 40 + Math.floor(seededRandom(monthIndex + 100) * 15),
+        yourVolume: 120000 + Math.floor(seededRandom(monthIndex + 200) * 50000),
+        teamAverage: 110000 + Math.floor(seededRandom(monthIndex + 300) * 40000),
       };
     });
   } else {
     // Pour l'année, afficher tous les mois jusqu'au mois actuel
     return Array.from({ length: currentMonth + 1 }, (_, i) => ({
       month: months[i],
-      actual: 45 + Math.floor(Math.random() * 20),
+      actual: 45 + Math.floor(seededRandom(i) * 20),
       objective: 60,
-      previousYear: 40 + Math.floor(Math.random() * 15),
-      yourVolume: 450000 + Math.floor(Math.random() * 150000),
-      teamAverage: 420000 + Math.floor(Math.random() * 120000),
+      previousYear: 40 + Math.floor(seededRandom(i + 100) * 15),
+      yourVolume: 120000 + Math.floor(seededRandom(i + 200) * 50000),
+      teamAverage: 110000 + Math.floor(seededRandom(i + 300) * 40000),
     }));
   }
 }
