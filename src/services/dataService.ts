@@ -1,9 +1,11 @@
 import { practitionersDB } from '../data/practitionersDatabase';
 import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitRecord } from '../types/database';
+import { StorageService } from './storageService';
 
 /**
  * Service centralisé pour accéder aux données
  * Utilisé par le frontend ET le LLM pour garantir la cohérence
+ * Les notes personnelles sont persistées dans localStorage
  */
 
 export class DataService {
@@ -209,20 +211,47 @@ export class DataService {
 
   /**
    * Met à jour les notes personnelles d'un praticien
+   * Les notes sont persistées dans localStorage
    */
   static updatePersonalNotes(practitionerId: string, personalNotes: string): boolean {
     const practitioner = this.getPractitionerById(practitionerId);
     if (!practitioner) return false;
 
+    // Mettre à jour en mémoire
     practitioner.personalNotes = personalNotes;
-    return true;
+
+    // Persister dans localStorage
+    return StorageService.savePersonalNotes(practitionerId, personalNotes);
   }
 
   /**
    * Récupère les notes personnelles d'un praticien
+   * Charge depuis localStorage pour garantir la persistence
    */
   static getPersonalNotes(practitionerId: string): string {
+    // Charger depuis localStorage (source de vérité)
+    const storedNotes = StorageService.getPersonalNotes(practitionerId);
+
+    // Synchroniser avec l'objet en mémoire
     const practitioner = this.getPractitionerById(practitionerId);
-    return practitioner?.personalNotes || '';
+    if (practitioner && storedNotes) {
+      practitioner.personalNotes = storedNotes;
+    }
+
+    return storedNotes;
+  }
+
+  /**
+   * Initialise les notes personnelles depuis localStorage au chargement
+   * À appeler au démarrage de l'application
+   */
+  static loadPersistedNotes(): void {
+    const allNotes = StorageService.getAllPersonalNotes();
+    Object.entries(allNotes).forEach(([practitionerId, notes]) => {
+      const practitioner = this.getPractitionerById(practitionerId);
+      if (practitioner) {
+        practitioner.personalNotes = notes;
+      }
+    });
   }
 }

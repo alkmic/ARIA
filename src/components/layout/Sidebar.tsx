@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, Sparkles, MessageCircle, Settings, Calendar, Map, BarChart3 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
@@ -16,12 +17,28 @@ const managerItems = [
   { id: 'manager', icon: BarChart3, label: 'Vue équipe', path: '/manager' },
 ];
 
-export const Sidebar = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const location = useLocation();
   const { currentUser } = useAppStore();
 
+  const handleLinkClick = () => {
+    // Close mobile menu when a link is clicked
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 text-white flex flex-col fixed left-0 top-0 z-20">
+    <div
+      className={`w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 text-white flex flex-col fixed left-0 top-0 z-40 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
         <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
@@ -45,6 +62,7 @@ export const Sidebar = () => {
             <Link
               key={item.id}
               to={item.path}
+              onClick={handleLinkClick}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'bg-white text-al-navy shadow-lg'
@@ -71,6 +89,7 @@ export const Sidebar = () => {
               <Link
                 key={item.id}
                 to={item.path}
+                onClick={handleLinkClick}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-white text-al-navy shadow-lg'
@@ -92,6 +111,7 @@ export const Sidebar = () => {
       <div className="p-3 border-t border-white/10">
         <Link
           to="/settings"
+          onClick={handleLinkClick}
           className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white hover:scale-[1.02] transition-all duration-200 cursor-pointer"
         >
           <Settings className="w-5 h-5" />

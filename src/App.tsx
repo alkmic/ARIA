@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Landing } from './pages/Landing';
@@ -14,8 +15,14 @@ import ManagerDashboard from './pages/ManagerDashboard';
 import KOLPlanningPage from './pages/KOLPlanningPage';
 import TourOptimizationPage from './pages/TourOptimizationPage';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
+import { DataService } from './services/dataService';
 
 function App() {
+  // Load persisted data on app startup
+  useEffect(() => {
+    DataService.loadPersistedNotes();
+  }, []);
+
   return (
     <TimePeriodProvider>
       <BrowserRouter>
