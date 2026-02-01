@@ -36,8 +36,8 @@ const mockUser: User = {
   avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=MarieDupont&backgroundColor=0066B3',
   objectives: {
     visitsMonthly: 60,
-    visitsCompleted: 47,
-    newPrescribers: 12,
+    visitsCompleted: 2, // Début du mois = seulement 2 visites effectuées
+    newPrescribers: 1, // 1 nouveau prescripteur en début de mois
   },
 };
 
@@ -157,20 +157,21 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
   return visits;
 }
 
-// Mock performance data
+// Mock performance data (année 2025 en cours)
 const mockPerformanceData: PerformanceData[] = [
-  { month: 'Jan', yourVolume: 420000, objective: 500000, teamAverage: 450000 },
-  { month: 'Fév', yourVolume: 480000, objective: 500000, teamAverage: 460000 },
-  { month: 'Mar', yourVolume: 520000, objective: 500000, teamAverage: 470000 },
-  { month: 'Avr', yourVolume: 510000, objective: 500000, teamAverage: 480000 },
-  { month: 'Mai', yourVolume: 550000, objective: 500000, teamAverage: 490000 },
-  { month: 'Jun', yourVolume: 580000, objective: 500000, teamAverage: 500000 },
-  { month: 'Jul', yourVolume: 620000, objective: 600000, teamAverage: 520000 },
-  { month: 'Aoû', yourVolume: 640000, objective: 600000, teamAverage: 530000 },
-  { month: 'Sep', yourVolume: 680000, objective: 600000, teamAverage: 550000 },
-  { month: 'Oct', yourVolume: 720000, objective: 650000, teamAverage: 580000 },
-  { month: 'Nov', yourVolume: 750000, objective: 650000, teamAverage: 600000 },
-  { month: 'Déc', yourVolume: 780000, objective: 700000, teamAverage: 620000 },
+  { month: 'Fév 2024', yourVolume: 420000, objective: 500000, teamAverage: 450000 },
+  { month: 'Mar 2024', yourVolume: 480000, objective: 500000, teamAverage: 460000 },
+  { month: 'Avr 2024', yourVolume: 520000, objective: 500000, teamAverage: 470000 },
+  { month: 'Mai 2024', yourVolume: 510000, objective: 500000, teamAverage: 480000 },
+  { month: 'Jun 2024', yourVolume: 550000, objective: 500000, teamAverage: 490000 },
+  { month: 'Jul 2024', yourVolume: 580000, objective: 500000, teamAverage: 500000 },
+  { month: 'Aoû 2024', yourVolume: 620000, objective: 600000, teamAverage: 520000 },
+  { month: 'Sep 2024', yourVolume: 640000, objective: 600000, teamAverage: 530000 },
+  { month: 'Oct 2024', yourVolume: 680000, objective: 600000, teamAverage: 550000 },
+  { month: 'Nov 2024', yourVolume: 720000, objective: 650000, teamAverage: 580000 },
+  { month: 'Déc 2024', yourVolume: 750000, objective: 650000, teamAverage: 600000 },
+  { month: 'Jan 2025', yourVolume: 530000, objective: 500000, teamAverage: 480000 }, // Mois passé
+  // { month: 'Fév 2025', yourVolume: 15000, objective: 500000, teamAverage: 12000 }, // Mois en cours - très faible
 ];
 
 // Charger les praticiens depuis le nouveau service de données

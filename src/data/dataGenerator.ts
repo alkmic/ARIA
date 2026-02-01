@@ -333,7 +333,6 @@ export function generatePractitioner(index: number): PractitionerProfile {
     lastName,
     specialty,
     subSpecialty: specialty === 'Pneumologue' ? randomChoice(['Allergologie', 'Oncologie thoracique', 'Réhabilitation respiratoire', undefined, undefined]) : undefined,
-    avatarUrl: `https://i.pravatar.cc/150?img=${index + 1}`,
 
     address: {
       street: `${streetNumber} ${streetName}`,
