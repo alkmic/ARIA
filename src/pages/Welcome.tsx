@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wind, Sparkles } from 'lucide-react';
 
-const Welcome: React.FC = () => {
+export const Welcome: React.FC = () => {
   const navigate = useNavigate();
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number; duration: number }>>([]);
 
@@ -124,5 +124,3 @@ const Welcome: React.FC = () => {
     </div>
   );
 };
-
-export default Welcome;

@@ -91,7 +91,7 @@ const createCustomIcon = (vingtile: number, isKOL: boolean) => {
   });
 };
 
-export default function TerritoryMap() {
+export function TerritoryMap() {
   const { practitioners } = useAppStore();
   const navigate = useNavigate();
   const { timePeriod, periodLabel } = useTimePeriod();

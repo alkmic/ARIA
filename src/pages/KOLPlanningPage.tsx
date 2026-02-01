@@ -387,5 +387,3 @@ export const KOLPlanningPage: React.FC = () => {
     </div>
   );
 };
-
-export default KOLPlanningPage;

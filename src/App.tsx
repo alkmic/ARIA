@@ -4,22 +4,22 @@ import { Layout } from './components/layout/Layout';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ToastContainer } from './components/ui/Toast';
 import { Landing } from './pages/Landing';
-import Welcome from './pages/Welcome';
+import { Welcome } from './pages/Welcome';
 import { Dashboard } from './pages/Dashboard';
 import { HCPProfile } from './pages/HCPProfile';
-import PractitionerProfile from './pages/PractitionerProfile';
+import { PractitionerProfile } from './pages/PractitionerProfile';
 import { PitchGenerator } from './pages/PitchGenerator';
-import AICoach from './pages/AICoach';
+import { AICoach } from './pages/AICoach';
 import { Settings } from './pages/Settings';
 import { Visits } from './pages/Visits';
-import TerritoryMap from './pages/TerritoryMap';
-import ManagerDashboard from './pages/ManagerDashboard';
-import KOLPlanningPage from './pages/KOLPlanningPage';
-import TourOptimizationPage from './pages/TourOptimizationPage';
+import { TerritoryMap } from './pages/TerritoryMap';
+import { ManagerDashboard } from './pages/ManagerDashboard';
+import { KOLPlanningPage } from './pages/KOLPlanningPage';
+import { TourOptimizationPage } from './pages/TourOptimizationPage';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
 import { DataService } from './services/dataService';
 
-function App() {
+export function App() {
   // Load persisted data on app startup
   useEffect(() => {
     DataService.loadPersistedNotes();
@@ -57,5 +57,3 @@ function App() {
     </ErrorBoundary>
   );
 }
-
-export default App;

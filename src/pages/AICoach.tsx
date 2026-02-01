@@ -35,7 +35,7 @@ interface Message {
   timestamp: Date;
 }
 
-export default function AICoach() {
+export function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);

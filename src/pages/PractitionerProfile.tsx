@@ -18,7 +18,7 @@ import { PeriodSelector } from '../components/shared/PeriodSelector';
 
 type TabType = 'synthesis' | 'history' | 'metrics' | 'news' | 'notes';
 
-export default function PractitionerProfile() {
+export function PractitionerProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getPractitionerById } = useAppStore();

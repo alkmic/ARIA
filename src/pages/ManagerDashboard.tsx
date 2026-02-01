@@ -41,7 +41,7 @@ const projectionData = [
   { month: 'Déc', forecast: 245, objective: 230 },
 ];
 
-export default function ManagerDashboard() {
+export function ManagerDashboard() {
   const { practitioners, upcomingVisits } = useAppStore();
   const { timePeriod } = useTimePeriod();
 

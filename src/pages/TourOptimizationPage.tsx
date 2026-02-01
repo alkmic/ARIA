@@ -931,5 +931,3 @@ export const TourOptimizationPage: React.FC = () => {
     </div>
   );
 };
-
-export default TourOptimizationPage;
