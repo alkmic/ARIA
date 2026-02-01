@@ -130,8 +130,8 @@ export const Dashboard: React.FC = () => {
       {/* Header avec date/météo */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy">
-            Bonjour {currentUser.name.split(' ')[0]} 👋
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy dark:text-white">
+            Bonjour {currentUser.name.split(' ')[0]}
           </h1>
           <p className="text-sm sm:text-base text-slate-500 flex flex-wrap items-center gap-2 mt-1">
             <span className="text-xs sm:text-sm">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>

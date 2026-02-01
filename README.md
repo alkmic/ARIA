@@ -170,16 +170,16 @@ ARIA/
 
 ## 📊 Données
 
-### Praticiens (150 profils réalistes)
-- **100 Médecins Généralistes**
-  - Vingtiles : 1-10 (segmentation par potentiel)
-  - Volumes : 1,000 - 10,000 L O₂/an
-  - Répartition : Ain (01), Rhône (69), Isère (38)
+### Praticiens (120 profils réalistes avec génération déterministe)
+- **84 Pneumologues (70%)**
+  - Vingtiles : 1-20 (segmentation par potentiel)
+  - Volumes : 20K - 1.5M L O₂/an
+  - Répartition : 10 villes Rhône-Alpes
 
-- **50 Pneumologues**
-  - Vingtiles : 1-5 (plus haut potentiel)
-  - Volumes : 200,000 - 537,000 L O₂/an
-  - 15 KOLs (10% des praticiens)
+- **36 Médecins Généralistes (30%)**
+  - Vingtiles : 1-20
+  - Volumes : 5K - 400K L O₂/an
+  - ~18 KOLs (15% des praticiens, principalement vingtile 1-5)
 
 ### Données Mockées
 - Historique des 200+ visites

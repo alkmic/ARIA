@@ -21,7 +21,7 @@ export const Sidebar = () => {
   const { currentUser } = useAppStore();
 
   return (
-    <div className="w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 text-white flex flex-col fixed left-0 top-0 z-20">
+    <div className="hidden lg:flex w-64 h-screen bg-gradient-to-b from-al-navy to-al-blue-800 dark:from-gray-900 dark:to-gray-800 text-white flex-col fixed left-0 top-0 z-20">
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
         <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
