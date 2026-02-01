@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
-  Bot,
   User,
   ChevronRight,
   Sparkles,
@@ -13,7 +12,10 @@ import {
   VolumeX,
   Download,
   Trash2,
-  MessageSquare
+  MessageSquare,
+  Zap,
+  Brain,
+  AlertCircle
 } from 'lucide-react';
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
@@ -25,6 +27,7 @@ import { generateQueryContext, generateFullSiteContext, executeQuery } from '../
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
+import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 
 interface Message {
   id: string;
@@ -33,6 +36,8 @@ interface Message {
   practitioners?: (Practitioner & { daysSinceVisit?: number })[];
   insights?: string[];
   timestamp: Date;
+  isMarkdown?: boolean;
+  source?: 'llm' | 'local';
 }
 
 export default function AICoach() {
@@ -45,7 +50,7 @@ export default function AICoach() {
   const { practitioners, currentUser, upcomingVisits } = useAppStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
-  const { complete } = useGroq();
+  const { complete, error: groqError } = useGroq();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -117,10 +122,17 @@ export default function AICoach() {
       return;
     }
 
+    // Remove markdown for speech
+    const cleanText = text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/_/g, '')
+      .replace(/`/g, '');
+
     // Arrêter toute synthèse en cours
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'fr-FR';
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
@@ -241,6 +253,7 @@ ${fullSiteContext}
 
 INSTRUCTIONS IMPORTANTES :
 - Réponds de manière concise et professionnelle avec des recommandations concrètes
+- Utilise le format Markdown pour mettre en valeur les informations importantes (**gras**, *italique*)
 - Pour les questions sur des praticiens spécifiques, utilise les données ci-dessus pour donner des réponses PRÉCISES
 - Si on demande "quel médecin dont le prénom est X a le plus de Y", cherche dans la base complète ci-dessus
 - Priorise par impact stratégique : KOL > Volume > Urgence > Fidélité
@@ -279,7 +292,7 @@ ${conversationHistory}
 QUESTION ACTUELLE :
 ${question}
 
-Réponds de manière précise et professionnelle. Si la question concerne des praticiens spécifiques, utilise les données fournies ci-dessus.`;
+Réponds de manière précise et professionnelle en utilisant le format Markdown pour mettre en valeur les informations importantes. Si la question concerne des praticiens spécifiques, utilise les données fournies ci-dessus.`;
 
       const aiResponse = await complete([{ role: 'user', content: prompt }]);
 
@@ -289,7 +302,9 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: aiResponse,
-          timestamp: new Date()
+          timestamp: new Date(),
+          isMarkdown: true,
+          source: 'llm'
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -302,10 +317,10 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
         throw new Error('Pas de réponse de l\'IA');
       }
     } catch (error) {
-      console.error('Erreur IA, utilisation du fallback:', error);
+      console.log('Mode local activé (Groq non configuré)');
 
-      // Fallback sur l'ancien système basé sur des règles
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Utiliser le système intelligent local
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const response = generateCoachResponse(
         question,
@@ -319,7 +334,9 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
         content: response.message,
         practitioners: response.practitioners,
         insights: response.insights,
-        timestamp: new Date()
+        timestamp: new Date(),
+        isMarkdown: response.isMarkdown,
+        source: 'local'
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -360,13 +377,16 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center shadow-lg">
-                <Bot className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 via-purple-500 to-al-sky flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <Brain className="w-7 h-7 text-white" />
               </div>
-              Coach IA Avancé
+              <span className="bg-gradient-to-r from-al-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Coach IA Avancé
+              </span>
             </h1>
-            <p className="text-slate-600 text-sm sm:text-base">
-              Assistant stratégique avec dialogue libre et commandes vocales
+            <p className="text-slate-600 text-sm sm:text-base flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              Assistant stratégique intelligent avec accès complet aux données
             </p>
           </div>
 
@@ -418,17 +438,24 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
             </button>
           )}
 
-          <span className="text-xs text-slate-500 px-2">
-            💡 Cliquez sur 🎤 pour dicter votre question
+          {groqError && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs border border-amber-200">
+              <AlertCircle className="w-4 h-4" />
+              <span>Mode local (LLM non configuré)</span>
+            </div>
+          )}
+
+          <span className="text-xs text-slate-500 px-2 hidden sm:inline">
+            💡 Posez n'importe quelle question sur vos praticiens !
           </span>
         </div>
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 glass-card flex flex-col overflow-hidden">
+      <div className="flex-1 glass-card flex flex-col overflow-hidden border-2 border-slate-200/50">
         {/* Suggestions (si pas de messages) */}
         {messages.length === 0 && (
-          <div className="p-4 sm:p-6 border-b border-slate-200">
+          <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-purple-50/50 to-blue-50/50">
             <div className="flex items-center gap-2 mb-3">
               <MessageSquare className="w-5 h-5 text-purple-500" />
               <p className="text-sm font-semibold text-slate-700">
@@ -441,8 +468,9 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
                 <button
                   key={i}
                   onClick={() => setInput(chip)}
-                  className="px-3 py-2 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 rounded-full text-xs sm:text-sm font-medium
-                           hover:from-purple-100 hover:to-blue-100 transition-all hover:shadow-md border border-purple-200"
+                  className="px-3 py-2 bg-white text-slate-700 rounded-full text-xs sm:text-sm font-medium
+                           hover:bg-gradient-to-r hover:from-purple-100 hover:to-blue-100 hover:text-purple-700
+                           transition-all hover:shadow-md border border-slate-200 hover:border-purple-300"
                 >
                   {chip}
                 </button>
@@ -462,45 +490,71 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
                 className={`flex gap-2 sm:gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
               >
                 {message.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 via-purple-500 to-al-sky flex items-center justify-center flex-shrink-0 shadow-md">
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                 )}
 
                 <div className={`max-w-[85%] sm:max-w-[80%] ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-r from-al-blue-500 to-al-sky text-white rounded-2xl rounded-tr-md px-3 sm:px-4 py-2 sm:py-3'
-                    : 'space-y-4'
+                    ? 'bg-gradient-to-r from-al-blue-500 to-purple-500 text-white rounded-2xl rounded-tr-md px-3 sm:px-4 py-2 sm:py-3 shadow-md'
+                    : 'space-y-3'
                 }`}>
+                  {/* Message content */}
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`${message.role === 'assistant' ? 'text-slate-700 leading-relaxed' : ''} text-sm sm:text-base whitespace-pre-wrap`}>
-                      {message.content}
-                    </p>
-                    {message.role === 'assistant' && (
-                      <button
-                        onClick={() => speak(message.content)}
-                        className="flex-shrink-0 p-1 hover:bg-slate-100 rounded transition-colors"
-                        title="Lire à voix haute"
-                      >
-                        <Volume2 className="w-4 h-4 text-slate-400" />
-                      </button>
+                    {message.role === 'assistant' ? (
+                      <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-slate-100">
+                        {message.isMarkdown ? (
+                          <MarkdownText className="text-sm sm:text-base text-slate-700 leading-relaxed">
+                            {message.content}
+                          </MarkdownText>
+                        ) : (
+                          <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
+                            {message.content}
+                          </p>
+                        )}
+
+                        {/* Source indicator */}
+                        {message.source && (
+                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                              message.source === 'llm'
+                                ? 'bg-purple-100 text-purple-600'
+                                : 'bg-blue-100 text-blue-600'
+                            }`}>
+                              {message.source === 'llm' ? '🤖 Groq AI' : '⚡ Intelligence locale'}
+                            </span>
+                            <button
+                              onClick={() => speak(message.content)}
+                              className="p-1 hover:bg-slate-100 rounded transition-colors"
+                              title="Lire à voix haute"
+                            >
+                              <Volume2 className="w-3.5 h-3.5 text-slate-400" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm sm:text-base whitespace-pre-wrap">{message.content}</p>
                     )}
                   </div>
 
                   {/* Cartes praticiens dans la réponse */}
                   {message.practitioners && message.practitioners.length > 0 && (
-                    <div className="space-y-2 mt-4">
+                    <div className="space-y-2 mt-3">
                       {message.practitioners.map((p, i) => (
                         <motion.div
                           key={p.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.1 }}
-                          className="glass-card p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer hover:scale-[1.01] hover:shadow-lg transition-all"
+                          className="bg-white rounded-xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer hover:scale-[1.01] hover:shadow-lg transition-all border border-slate-100 shadow-sm"
                           onClick={() => navigate(`/practitioner/${p.id}`)}
                         >
                           <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                            i === 0 ? 'bg-red-500' : i < 3 ? 'bg-orange-500' : 'bg-amber-500'
+                            i === 0 ? 'bg-gradient-to-br from-red-500 to-rose-500' :
+                            i < 3 ? 'bg-gradient-to-br from-orange-500 to-amber-500' :
+                            'bg-gradient-to-br from-amber-400 to-yellow-400'
                           }`}>
                             {i + 1}
                           </div>
@@ -524,7 +578,11 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
                             </p>
                           </div>
                           {p.daysSinceVisit !== undefined && p.daysSinceVisit < 999 && (
-                            <span className="text-xs sm:text-sm text-red-500 font-medium whitespace-nowrap">
+                            <span className={`text-xs sm:text-sm font-medium whitespace-nowrap px-2 py-1 rounded-lg ${
+                              p.daysSinceVisit > 90 ? 'bg-red-100 text-red-600' :
+                              p.daysSinceVisit > 60 ? 'bg-orange-100 text-orange-600' :
+                              'bg-green-100 text-green-600'
+                            }`}>
                               {p.daysSinceVisit}j
                             </span>
                           )}
@@ -536,20 +594,30 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
 
                   {/* Insights */}
                   {message.insights && message.insights.length > 0 && (
-                    <div className="mt-4 p-3 sm:p-4 bg-al-blue-50 rounded-xl space-y-2">
+                    <div className="mt-3 space-y-2">
                       {message.insights.map((insight, i) => (
-                        <p key={i} className="text-xs sm:text-sm text-al-navy leading-relaxed">{insight}</p>
+                        <InsightBox
+                          key={i}
+                          variant={
+                            insight.includes('🔴') || insight.includes('⚠️') ? 'warning' :
+                            insight.includes('✅') ? 'success' :
+                            insight.includes('💰') ? 'warning' :
+                            'info'
+                          }
+                        >
+                          {insight}
+                        </InsightBox>
                       ))}
                     </div>
                   )}
 
-                  <div className="text-xs text-slate-400 mt-2">
-                    {message.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  <div className="text-[10px] text-slate-400 mt-2 flex items-center gap-2">
+                    <span>{message.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
 
                 {message.role === 'user' && (
-                  <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center flex-shrink-0">
                     <User className="w-4 h-4 text-slate-600" />
                   </div>
                 )}
@@ -564,14 +632,15 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
               animate={{ opacity: 1 }}
               className="flex gap-3"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 via-purple-500 to-al-sky flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <div className="glass-card px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-slate-100">
+                <div className="flex gap-1.5 items-center">
+                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="ml-2 text-xs text-slate-400">Analyse en cours...</span>
                 </div>
               </div>
             </motion.div>
@@ -581,14 +650,14 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
         </div>
 
         {/* Input */}
-        <div className="p-3 sm:p-4 border-t border-slate-200 bg-white rounded-b-2xl">
+        <div className="p-3 sm:p-4 border-t border-slate-200 bg-white/80 backdrop-blur-sm rounded-b-2xl">
           <div className="flex gap-2 sm:gap-3">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend(input)}
-              placeholder="Posez votre question... (ou utilisez 🎤)"
+              placeholder="Posez votre question sur vos praticiens..."
               className="input-field flex-1 text-sm sm:text-base"
               disabled={isTyping}
             />
@@ -597,7 +666,7 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
               disabled={isTyping}
               className={`p-2 sm:px-4 sm:py-2 rounded-lg transition-all flex items-center gap-2 ${
                 isListening
-                  ? 'bg-red-500 text-white animate-pulse'
+                  ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
                   : 'btn-secondary'
               } disabled:opacity-50`}
               title={isListening ? 'Arrêter l\'écoute' : 'Dicter la question'}
@@ -607,15 +676,16 @@ Réponds de manière précise et professionnelle. Si la question concerne des pr
             <button
               onClick={() => handleSend(input)}
               disabled={!input.trim() || isTyping}
-              className="btn-primary px-4 sm:px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary px-4 sm:px-6 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-al-blue-500 to-purple-500 hover:from-al-blue-600 hover:to-purple-600 shadow-lg shadow-purple-500/20"
             >
               <Send className="w-5 h-5" />
             </button>
           </div>
 
           {isListening && (
-            <p className="text-xs text-red-600 mt-2 animate-pulse font-medium">
-              🎤 Écoute en cours... Parlez maintenant
+            <p className="text-xs text-red-600 mt-2 animate-pulse font-medium flex items-center gap-2">
+              <Mic className="w-3 h-3" />
+              Écoute en cours... Parlez maintenant
             </p>
           )}
         </div>
