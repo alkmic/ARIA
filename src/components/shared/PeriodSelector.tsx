@@ -1,5 +1,6 @@
 import React from 'react';
-import { useTimePeriod, TimePeriod } from '../../contexts/TimePeriodContext';
+import { useTimePeriod } from '../../contexts/TimePeriodContext';
+import type { TimePeriod } from '../../contexts/TimePeriodContext';
 
 interface PeriodSelectorProps {
   className?: string;

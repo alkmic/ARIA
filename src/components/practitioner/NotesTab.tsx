@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import type { Practitioner } from '../../types';
 import { DataService } from '../../services/dataService';
+import { useToast } from '../ui/Toast';
 
 interface NotesTabProps {
   practitioner: Practitioner;
@@ -10,6 +11,7 @@ interface NotesTabProps {
 export function NotesTab({ practitioner }: NotesTabProps) {
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
   // Charger les notes personnelles depuis la base de données
   useEffect(() => {
@@ -19,10 +21,22 @@ export function NotesTab({ practitioner }: NotesTabProps) {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Sauvegarder dans la base de données
-    DataService.updatePersonalNotes(practitioner.id, notes);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setIsSaving(false);
+    try {
+      // Sauvegarder dans la base de données
+      const success = DataService.updatePersonalNotes(practitioner.id, notes);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (success) {
+        toast.success('Notes sauvegardées avec succès');
+      } else {
+        toast.error('Erreur lors de la sauvegarde des notes');
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la sauvegarde');
+      console.error('Error saving notes:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
