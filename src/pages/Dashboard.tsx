@@ -15,6 +15,7 @@ import { WeeklyWins } from '../components/dashboard/WeeklyWins';
 import { NationalStats } from '../components/dashboard/NationalStats';
 import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
 import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
+import { QuickActions } from '../components/dashboard/QuickActions';
 
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
@@ -168,7 +169,7 @@ export const Dashboard: React.FC = () => {
         periodLabel={periodLabel}
       />
 
-      {/* 5 KPIs animés */}
+      {/* 5 KPIs animés - clickable */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
         <AnimatedStatCard
           icon={Calendar}
@@ -178,6 +179,7 @@ export const Dashboard: React.FC = () => {
           suffix={`/${periodMetrics.visitsObjective}`}
           trend={Math.round(periodMetrics.visitGrowth)}
           delay={0}
+          linkTo="/visits"
         />
         <AnimatedStatCard
           icon={UserPlus}
@@ -188,6 +190,7 @@ export const Dashboard: React.FC = () => {
           trend={12}
           trendLabel="vs période préc."
           delay={0.1}
+          linkTo="/practitioners"
         />
         <AnimatedStatCard
           icon={Droplets}
@@ -198,6 +201,7 @@ export const Dashboard: React.FC = () => {
           decimals={0}
           trend={Math.round(periodMetrics.volumeGrowth)}
           delay={0.2}
+          linkTo="/practitioners"
         />
         <AnimatedStatCard
           icon={Star}
@@ -207,6 +211,7 @@ export const Dashboard: React.FC = () => {
           suffix="/10"
           decimals={1}
           delay={0.3}
+          linkTo="/practitioners"
         />
         <AnimatedStatCard
           icon={AlertTriangle}
@@ -215,6 +220,7 @@ export const Dashboard: React.FC = () => {
           value={periodMetrics.undervisitedKOLs}
           trendLabel={`Non vus >${timePeriod === 'month' ? '30' : timePeriod === 'quarter' ? '60' : '90'}j`}
           delay={0.4}
+          linkTo="/kol-planning"
         />
       </div>
 
@@ -227,6 +233,9 @@ export const Dashboard: React.FC = () => {
           <TerritoryMiniMap stats={territoryStats} points={mapPoints} />
         </div>
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions />
 
       {/* ARIA Insights */}
       <AIInsights />
