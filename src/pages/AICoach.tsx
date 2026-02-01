@@ -159,25 +159,32 @@ export default function AICoach() {
     setIsTyping(true);
 
     try {
-      // Utiliser le nouveau système agentic avec intent detection
-      const { systemPrompt, userPrompt } = buildAgenticContext(question, practitioners);
+      // Essayer d'abord avec l'API Groq + système agentic
+      let aiResponse: string | null = null;
 
-      // Construire l'historique de conversation pour le contexte
-      const conversationHistory = messages
-        .slice(-4) // Garder les 4 derniers échanges pour le contexte
-        .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
-        .join('\n\n');
+      try {
+        const { systemPrompt, userPrompt } = buildAgenticContext(question, practitioners);
 
-      // Combiner avec l'historique si disponible
-      const enhancedUserPrompt = conversationHistory
-        ? `${userPrompt}\n\n**HISTORIQUE RÉCENT** :\n${conversationHistory}`
-        : userPrompt;
+        // Construire l'historique de conversation pour le contexte
+        const conversationHistory = messages
+          .slice(-4)
+          .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
+          .join('\n\n');
 
-      // Appel à Groq avec system/user prompts séparés (approche agentic)
-      const aiResponse = await complete([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: enhancedUserPrompt }
-      ]);
+        // Combiner avec l'historique si disponible
+        const enhancedUserPrompt = conversationHistory
+          ? `${userPrompt}\n\n**HISTORIQUE RÉCENT** :\n${conversationHistory}`
+          : userPrompt;
+
+        // Appel à Groq avec system/user prompts séparés
+        aiResponse = await complete([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: enhancedUserPrompt }
+        ]);
+      } catch (apiError) {
+        console.warn('Erreur API Groq, passage au fallback:', apiError);
+        aiResponse = null;
+      }
 
       if (aiResponse) {
         // Réponse IA réussie
@@ -190,15 +197,15 @@ export default function AICoach() {
 
         setMessages(prev => [...prev, assistantMessage]);
 
-        // Text-to-speech si activé
         if (autoSpeak) {
           speak(aiResponse);
         }
       } else {
-        throw new Error('Pas de réponse de l\'IA');
+        // API non disponible ou erreur, utiliser le système de fallback structuré
+        throw new Error('API non disponible, passage au fallback');
       }
     } catch (error) {
-      console.error('Erreur IA, utilisation du fallback:', error);
+      console.log('Utilisation du système de réponse structurée:', error);
 
       // Fallback sur l'ancien système basé sur des règles
       await new Promise(resolve => setTimeout(resolve, 800));
