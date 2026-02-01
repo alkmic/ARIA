@@ -17,10 +17,9 @@ import {
 } from 'lucide-react';
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
+import { buildAgenticContext } from '../services/agenticCoachAI';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
-import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
-import { DataService } from '../services/dataService';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -41,7 +40,7 @@ export default function AICoach() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
-  const { practitioners, currentUser, upcomingVisits } = useAppStore();
+  const { practitioners, currentUser } = useAppStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
   const { complete } = useGroq();
@@ -145,93 +144,6 @@ export default function AICoach() {
     setAutoSpeak(!autoSpeak);
   };
 
-  // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
-  const buildContext = (userQuestion?: string) => {
-    // Calculer les métriques de la période sélectionnée
-    const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
-
-    // Utiliser le nouveau service de données pour les statistiques
-    const stats = DataService.getGlobalStats();
-    const kols = DataService.getKOLs();
-    const atRiskPractitioners = DataService.getAtRiskPractitioners().slice(0, 10);
-
-    // Top praticiens par volume
-    const topPractitioners = getTopPractitioners(practitioners, 'year', 10);
-
-    // KOLs non vus depuis longtemps
-    const today = new Date();
-    const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-    const undervisitedKOLs = kols.filter(p => {
-      if (!p.lastVisitDate) return true;
-      const lastVisit = new Date(p.lastVisitDate);
-      return lastVisit < ninetyDaysAgo;
-    });
-
-    // Détection intelligente : si la question mentionne un nom de praticien, récupérer son contexte complet
-    let specificPractitionerContext = '';
-    if (userQuestion) {
-      // Recherche floue pour trouver le praticien mentionné
-      const matches = DataService.fuzzySearchPractitioner(userQuestion);
-
-      if (matches.length > 0) {
-        // Prendre le premier match (le plus pertinent)
-        const foundProfile = matches[0];
-
-        // Récupérer le contexte COMPLET depuis le service
-        specificPractitionerContext = DataService.getCompletePractitionerContext(foundProfile.id);
-      }
-    }
-
-    return `Tu es un assistant stratégique pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
-
-CONTEXTE TERRITOIRE (${periodLabel}) :
-- Nombre total de praticiens : ${stats.totalPractitioners} (${stats.pneumologues} pneumologues, ${stats.generalistes} médecins généralistes)
-- KOLs identifiés : ${stats.totalKOLs}
-- Volume total annuel : ${(stats.totalVolume / 1000000).toFixed(1)}M L
-- Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
-- Visites ${periodLabel} : ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective}
-- Praticiens à risque : ${atRiskPractitioners.length}
-- KOLs sous-visités : ${undervisitedKOLs.length}
-
-TOP 10 PRATICIENS (VOLUME ANNUEL) :
-${topPractitioners.map((p, i) =>
-  `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} - ${p.specialty}, ${p.city}
-   Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${p.loyaltyScore}/10 | Vingtile: ${p.vingtile}${p.isKOL ? ' | KOL ⭐' : ''}`
-).join('\n')}
-
-PRATICIENS À RISQUE (haute priorité) :
-${atRiskPractitioners.length > 0 ? atRiskPractitioners.map(p =>
-  `- ${p.title} ${p.lastName} (${p.address.city}): Fidélité ${p.metrics.loyaltyScore}/10, Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.metrics.isKOL ? ', KOL' : ''}`
-).join('\n') : '- Aucun praticien à risque critique'}
-
-KOLS SOUS-VISITÉS (>90 jours) :
-${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 8).map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.lastVisitDate ? `, dernière visite: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ', jamais visité'}`
-).join('\n') : '- Tous les KOLs sont à jour'}
-
-MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
-- Objectif visites : ${periodMetrics.visitsObjective}
-- Visites réalisées : ${periodMetrics.visitsCount} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
-- Nouveaux prescripteurs : ${periodMetrics.newPrescribers}
-- Volume période : ${(periodMetrics.totalVolume / 1000000).toFixed(2)}M L
-- Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
-
-BASE DE DONNÉES PRATICIENS COMPLÈTE (${practitioners.length} praticiens) :
-${practitioners.map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.city} | V: ${(p.volumeL / 1000).toFixed(0)}K L | F: ${p.loyaltyScore}/10 | V${p.vingtile}${p.isKOL ? ' | KOL' : ''}${p.lastVisitDate ? ` | DV: ${new Date(p.lastVisitDate).toLocaleDateString('fr-FR')}` : ''}`
-).join('\n')}
-${specificPractitionerContext}
-
-INSTRUCTIONS :
-- Réponds de manière concise et professionnelle avec des recommandations concrètes
-- Utilise les données contextuelles ci-dessus pour personnaliser tes réponses
-- Si on te demande des infos sur un praticien spécifique, cherche dans la base et donne TOUS ses détails (nom, spécialité, ville, volume, fidélité, vingtile, statut KOL, dernière visite)
-- Priorise toujours par impact stratégique : KOL > Volume > Urgence > Fidélité
-- Fournis des chiffres précis et des insights basés sur les données réelles
-- Sois encourageant et positif dans ton ton
-- Adapte tes recommandations à la période sélectionnée (${periodLabel})`;
-  };
-
   const handleSend = async (question: string) => {
     if (!question.trim()) return;
 
@@ -247,24 +159,25 @@ INSTRUCTIONS :
     setIsTyping(true);
 
     try {
-      // D'abord essayer avec Groq AI pour une vraie conversation
-      const context = buildContext(question);
+      // Utiliser le nouveau système agentic avec intent detection
+      const { systemPrompt, userPrompt } = buildAgenticContext(question, practitioners);
+
+      // Construire l'historique de conversation pour le contexte
       const conversationHistory = messages
         .slice(-4) // Garder les 4 derniers échanges pour le contexte
         .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
         .join('\n\n');
 
-      const prompt = `${context}
+      // Combiner avec l'historique si disponible
+      const enhancedUserPrompt = conversationHistory
+        ? `${userPrompt}\n\n**HISTORIQUE RÉCENT** :\n${conversationHistory}`
+        : userPrompt;
 
-HISTORIQUE DE CONVERSATION :
-${conversationHistory}
-
-QUESTION ACTUELLE :
-${question}
-
-Réponds de manière précise et professionnelle. Si la question concerne des praticiens spécifiques, utilise les données fournies ci-dessus.`;
-
-      const aiResponse = await complete([{ role: 'user', content: prompt }]);
+      // Appel à Groq avec system/user prompts séparés (approche agentic)
+      const aiResponse = await complete([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: enhancedUserPrompt }
+      ]);
 
       if (aiResponse) {
         // Réponse IA réussie

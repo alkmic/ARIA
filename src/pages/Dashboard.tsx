@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun } from 'lucide-react';
+import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Sun, Cloud, CloudRain, CloudSnow } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics } from '../services/metricsCalculator';
+import { useWeather } from '../services/weatherService';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { ObjectiveProgress } from '../components/dashboard/ObjectiveProgress';
 import { AnimatedStatCard } from '../components/dashboard/AnimatedStatCard';
@@ -19,11 +20,27 @@ import { VingtileDistribution } from '../components/dashboard/VingtileDistributi
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
   const { timePeriod, periodLabel, periodLabelShort } = useTimePeriod();
+  const { weather, loading: weatherLoading } = useWeather();
 
   // Calculer les métriques pour la période sélectionnée
   const periodMetrics = useMemo(() => {
     return calculatePeriodMetrics(practitioners, upcomingVisits, timePeriod);
   }, [practitioners, upcomingVisits, timePeriod]);
+
+  // Icône météo dynamique
+  const getWeatherIcon = (iconCode?: string) => {
+    if (!iconCode) return <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />;
+
+    // Codes OpenWeather: 01 = clear, 02-04 = clouds, 09-10 = rain, 13 = snow
+    if (iconCode.startsWith('01')) return <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />;
+    if (iconCode.startsWith('02') || iconCode.startsWith('03') || iconCode.startsWith('04'))
+      return <Cloud className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" />;
+    if (iconCode.startsWith('09') || iconCode.startsWith('10'))
+      return <CloudRain className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />;
+    if (iconCode.startsWith('13'))
+      return <CloudSnow className="w-3 h-3 sm:w-4 sm:h-4 text-blue-300" />;
+    return <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />;
+  };
 
   // Get today's visits
   const todayVisits = useMemo(() => {
@@ -133,12 +150,12 @@ export const Dashboard: React.FC = () => {
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy dark:text-white">
             Bonjour {currentUser.name.split(' ')[0]}
           </h1>
-          <p className="text-sm sm:text-base text-slate-500 flex flex-wrap items-center gap-2 mt-1">
+          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-1">
             <span className="text-xs sm:text-sm">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
             <span className="hidden sm:inline">•</span>
             <span className="flex items-center gap-1 text-xs sm:text-sm">
-              <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />
-              Lyon, 8°C
+              {weather ? getWeatherIcon(weather.icon) : <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />}
+              {weatherLoading ? 'Chargement...' : weather ? `${weather.city}, ${weather.temp}°C • ${weather.description}` : 'Lyon, 8°C'}
             </span>
           </p>
         </div>
