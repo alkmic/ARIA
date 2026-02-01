@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Groq API</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+    .log { margin: 5px 0; padding: 5px; background: #000; border-left: 3px solid #0f0; }
+    .error { border-left-color: #f00; color: #f00; }
+    .success { border-left-color: #0f0; color: #0f0; }
+    .info { border-left-color: #0ff; color: #0ff; }
+    button { padding: 10px 20px; background: #0f0; border: none; cursor: pointer; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test API Groq - Diagnostic</h1>
+  <button onclick="testAPI()">▶ Lancer le test</button>
+  <button onclick="clearLogs()">🗑 Effacer</button>
+  <div id="logs"></div>
+
+  <script>
+    const API_KEY = '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';
+    const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      document.getElementById('logs').appendChild(div);
+    }
+
+    function clearLogs() {
+      document.getElementById('logs').innerHTML = '';
+    }
+
+    async function testAPI() {
+      clearLogs();
+      log('🚀 Démarrage du test...', 'info');
+      log(`🔑 Clé API: ${API_KEY.substring(0, 15)}...`, 'info');
+
+      // Test 1: Validation de la clé
+      log('✓ Test 1: Validation clé API', 'info');
+      const isValid = API_KEY && API_KEY !== 'your_groq_api_key_here' && API_KEY.length > 10;
+      log(`  Clé valide: ${isValid}`, isValid ? 'success' : 'error');
+
+      if (!isValid) {
+        log('❌ ÉCHEC: Clé API invalide', 'error');
+        return;
+      }
+
+      // Test 2: Appel API simple (non-streaming)
+      log('✓ Test 2: Appel API non-streaming', 'info');
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'user', content: 'Réponds juste "OK"' }
+            ],
+            temperature: 0.7,
+            max_tokens: 50,
+            stream: false
+          }),
+        });
+
+        log(`  Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          log(`  Erreur API: ${JSON.stringify(errorData)}`, 'error');
+          log('❌ ÉCHEC: API retourne une erreur', 'error');
+          return;
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        log(`  Réponse: "${content}"`, 'success');
+        log(`  Tokens: ${data.usage?.total_tokens || 'N/A'}`, 'info');
+        log('✅ SUCCÈS: API fonctionne!', 'success');
+
+      } catch (error) {
+        log(`❌ Exception: ${error.message}`, 'error');
+        log('❌ ÉCHEC: Erreur réseau ou fetch', 'error');
+        return;
+      }
+
+      // Test 3: Appel API streaming
+      log('✓ Test 3: Appel API streaming', 'info');
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'user', content: 'Compte de 1 à 3' }
+            ],
+            temperature: 0.7,
+            max_tokens: 50,
+            stream: true
+          }),
+        });
+
+        if (!response.ok) {
+          log(`  Erreur streaming: ${response.status}`, 'error');
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamedContent = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  streamedContent += content;
+                }
+              } catch (e) {
+                // Ignore
+              }
+            }
+          }
+        }
+
+        log(`  Contenu streamé: "${streamedContent}"`, 'success');
+        log('✅ SUCCÈS: Streaming fonctionne!', 'success');
+
+      } catch (error) {
+        log(`❌ Streaming error: ${error.message}`, 'error');
+      }
+
+      log('', 'info');
+      log('🎉 DIAGNOSTIC TERMINÉ', 'success');
+    }
+  </script>
+</body>
+</html>

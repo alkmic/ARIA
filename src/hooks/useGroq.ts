@@ -25,8 +25,17 @@ export function useGroq(options: UseGroqOptions = {}) {
 
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 
+  console.log('🔵 [useGroq] Hook initialisé:', {
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey?.length,
+    apiKeyPrefix: apiKey?.substring(0, 10),
+    isDefault: apiKey === 'your_groq_api_key_here'
+  });
+
   // Vérifier si la clé API est configurée
   const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey.length > 10;
+
+  console.log('🔵 [useGroq] Validation:', { isApiKeyValid });
 
   // Streaming completion - LE PLUS IMPORTANT POUR L'EFFET WOW
   const streamCompletion = useCallback(
@@ -116,47 +125,90 @@ export function useGroq(options: UseGroqOptions = {}) {
   // Non-streaming completion (pour régénération de section)
   const complete = useCallback(
     async (messages: GroqMessage[]): Promise<string | null> => {
+      console.log('🔵 [useGroq.complete] Début appel');
+      console.log('🔵 [useGroq.complete] Messages:', {
+        count: messages.length,
+        roles: messages.map(m => m.role),
+        contentLengths: messages.map(m => m.content.length)
+      });
+
       setIsLoading(true);
       setError(null);
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
         const errMsg = 'Clé API Groq non configurée.';
+        console.error('🔴 [useGroq.complete] Clé API invalide!', {
+          hasApiKey: !!apiKey,
+          apiKeyLength: apiKey?.length
+        });
         setError(errMsg);
         setIsLoading(false);
         return null;
       }
 
+      console.log('🔵 [useGroq.complete] Clé API validée, envoi fetch...');
+
       try {
+        const requestBody = {
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+          stream: false,
+        };
+
+        console.log('🔵 [useGroq.complete] Requête:', {
+          url: GROQ_API_URL,
+          model,
+          bodySize: JSON.stringify(requestBody).length
+        });
+
         const response = await fetch(GROQ_API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model,
-            messages,
-            temperature,
-            max_tokens: maxTokens,
-            stream: false,
-          }),
+          body: JSON.stringify(requestBody),
+        });
+
+        console.log('🔵 [useGroq.complete] Réponse fetch:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
+          console.error('🔴 [useGroq.complete] Erreur API:', errorData);
           throw new Error(errorData.error?.message || `Groq API error: ${response.status}`);
         }
 
         const data = await response.json();
-        return data.choices?.[0]?.message?.content || null;
+        const content = data.choices?.[0]?.message?.content || null;
+
+        console.log('✅ [useGroq.complete] Succès:', {
+          hasContent: !!content,
+          contentLength: content?.length,
+          model: data.model,
+          tokens: data.usage?.total_tokens
+        });
+
+        return content;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error('🔴 [useGroq.complete] Exception:', {
+          error: err,
+          message: errorMessage,
+          name: err instanceof Error ? err.name : 'unknown'
+        });
         setError(errorMessage);
         console.error('Groq API Error:', errorMessage);
         return null;
       } finally {
         setIsLoading(false);
+        console.log('🔵 [useGroq.complete] Fin appel');
       }
     },
     [model, temperature, maxTokens, apiKey, isApiKeyValid]

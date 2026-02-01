@@ -146,6 +146,8 @@ export default function AICoach() {
   const handleSend = async (question: string) => {
     if (!question.trim()) return;
 
+    console.log('🟦 [AICoach] handleSend appelé avec:', question);
+
     // Ajouter message utilisateur
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -162,6 +164,8 @@ export default function AICoach() {
       let aiResponse: string | null = null;
 
       try {
+        console.log('🟦 [AICoach] Préparation appel API Groq...');
+
         // Contexte simple et concis
         const kolsCount = practitioners.filter(p => p.isKOL).length;
         const totalVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
@@ -176,15 +180,30 @@ QUESTION : ${question}
 
 Réponds de manière concise et professionnelle avec des recommandations concrètes.`;
 
+        console.log('🟦 [AICoach] Prompt construit:', {
+          length: simplePrompt.length,
+          preview: simplePrompt.substring(0, 100) + '...'
+        });
+
+        console.log('🟦 [AICoach] Appel complete()...');
         aiResponse = await complete([
           { role: 'user', content: simplePrompt }
         ]);
+
+        console.log('🟦 [AICoach] Réponse API reçue:', {
+          hasResponse: !!aiResponse,
+          length: aiResponse?.length,
+          preview: aiResponse?.substring(0, 100) + '...'
+        });
+
       } catch (apiError) {
+        console.error('🔴 [AICoach] Erreur API Groq:', apiError);
         console.warn('Erreur API Groq, passage au fallback:', apiError);
         aiResponse = null;
       }
 
       if (aiResponse) {
+        console.log('✅ [AICoach] Utilisation réponse API');
         // Réponse IA réussie
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -199,11 +218,12 @@ Réponds de manière concise et professionnelle avec des recommandations concrè
           speak(aiResponse);
         }
       } else {
+        console.log('⚠️ [AICoach] Pas de réponse API, passage au fallback');
         // API non disponible ou erreur, utiliser le système de fallback structuré
         throw new Error('API non disponible, passage au fallback');
       }
     } catch (error) {
-      console.log('Utilisation du système de réponse structurée:', error);
+      console.log('🟡 [AICoach] Utilisation du système de réponse structurée:', error);
 
       // Fallback sur l'ancien système basé sur des règles
       await new Promise(resolve => setTimeout(resolve, 800));
