@@ -15,8 +15,26 @@ import {
   MessageSquare,
   Zap,
   Brain,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  PieChart as PieChartIcon,
+  TrendingUp
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Legend
+} from 'recharts';
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
 import { useAppStore } from '../stores/useAppStore';
@@ -29,16 +47,42 @@ import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 
+// Types pour les graphiques
+type ChartType = 'bar' | 'pie' | 'line';
+
+interface ChartDataPoint {
+  name: string;
+  value: number;
+  secondaryValue?: number;
+  color?: string;
+}
+
+interface ChartConfig {
+  type: ChartType;
+  title: string;
+  data: ChartDataPoint[];
+  xLabel?: string;
+  yLabel?: string;
+  secondaryLabel?: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   practitioners?: (Practitioner & { daysSinceVisit?: number })[];
   insights?: string[];
+  chart?: ChartConfig;
   timestamp: Date;
   isMarkdown?: boolean;
   source?: 'llm' | 'local';
 }
+
+// Couleurs pour les graphiques
+const CHART_COLORS = [
+  '#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444',
+  '#06B6D4', '#EC4899', '#6366F1', '#14B8A6', '#F97316'
+];
 
 export default function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,16 +98,16 @@ export default function AICoach() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Suggestions contextuelles basées sur la période - diversifiées pour montrer les capacités
+  // Suggestions contextuelles - avec exemples de graphiques pour Talk to My Data
   const SUGGESTION_CHIPS = [
     `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
-    "Quel médecin prénommé Bernard a le plus de publications ?",
-    "Combien de pneumologues à Lyon ?",
+    "📊 Graphique des volumes par ville",
+    "📈 Évolution de la fidélité par spécialité",
+    "🥧 Répartition des praticiens par vingtile",
     "Quels KOLs n'ai-je pas vus depuis 60 jours ?",
-    "Top 5 prescripteurs par volume",
+    "📊 Top 10 prescripteurs en barres",
     "Praticiens à risque de churn",
-    "Quel est le vingtile moyen par ville ?",
-    "Opportunités nouveaux prescripteurs",
+    "📈 Comparaison volumes/fidélité par ville",
   ];
 
   // Auto-scroll vers le bas
@@ -157,6 +201,213 @@ export default function AICoach() {
     }
     setAutoSpeak(!autoSpeak);
   };
+
+  // ============================================
+  // TALK TO MY DATA - Détection et génération de graphiques
+  // ============================================
+
+  // Détecter si l'utilisateur demande un graphique
+  const detectChartRequest = (question: string): { wantsChart: boolean; chartType: ChartType; topic: string } => {
+    const q = question.toLowerCase();
+
+    // Mots-clés pour les graphiques
+    const chartKeywords = ['graphique', 'graphe', 'chart', 'diagramme', 'visualis', 'courbe', 'barres', 'camembert', '📊', '📈', '🥧'];
+    const pieKeywords = ['camembert', 'pie', 'répartition', 'distribution', 'proportion', '🥧'];
+    const lineKeywords = ['évolution', 'tendance', 'courbe', 'progression', 'ligne', 'temps'];
+
+    const wantsChart = chartKeywords.some(k => q.includes(k));
+
+    // Déterminer le type de graphique (bar par défaut)
+    let chartType: ChartType = 'bar';
+    if (pieKeywords.some(k => q.includes(k))) {
+      chartType = 'pie';
+    } else if (lineKeywords.some(k => q.includes(k))) {
+      chartType = 'line';
+    }
+
+    // Déterminer le sujet du graphique
+    let topic = 'volume';
+    if (q.includes('fidélité') || q.includes('loyalty')) topic = 'loyalty';
+    else if (q.includes('vingtile') || q.includes('segment')) topic = 'vingtile';
+    else if (q.includes('spécialité') || q.includes('specialite')) topic = 'specialty';
+    else if (q.includes('ville') || q.includes('city') || q.includes('géograph')) topic = 'city';
+    else if (q.includes('kol')) topic = 'kol';
+    else if (q.includes('visite') || q.includes('contact')) topic = 'visits';
+
+    return { wantsChart, chartType, topic };
+  };
+
+  // Générer les données du graphique basées sur le topic
+  const generateChartData = (chartType: ChartType, topic: string): ChartConfig | null => {
+    const allPractitioners = DataService.getAllPractitioners();
+
+    switch (topic) {
+      case 'city': {
+        // Volume par ville
+        const cityData = allPractitioners.reduce((acc, p) => {
+          const city = p.address.city || 'Autre';
+          if (!acc[city]) acc[city] = { volume: 0, count: 0, loyalty: 0 };
+          acc[city].volume += p.metrics.volumeL;
+          acc[city].count += 1;
+          acc[city].loyalty += p.metrics.loyaltyScore;
+          return acc;
+        }, {} as Record<string, { volume: number; count: number; loyalty: number }>);
+
+        const data = Object.entries(cityData)
+          .map(([city, stats]) => ({
+            name: city.length > 12 ? city.substring(0, 10) + '...' : city,
+            value: Math.round(stats.volume / 1000),
+            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 10);
+
+        return {
+          type: chartType === 'pie' ? 'pie' : 'bar',
+          title: 'Volume par ville (K L/an)',
+          data,
+          xLabel: 'Ville',
+          yLabel: 'Volume (K L)',
+          secondaryLabel: 'Fidélité moy.'
+        };
+      }
+
+      case 'specialty': {
+        // Répartition par spécialité
+        const specialtyData = allPractitioners.reduce((acc, p) => {
+          const specialty = p.specialty || 'Autre';
+          if (!acc[specialty]) acc[specialty] = { count: 0, volume: 0, loyalty: 0 };
+          acc[specialty].count += 1;
+          acc[specialty].volume += p.metrics.volumeL;
+          acc[specialty].loyalty += p.metrics.loyaltyScore;
+          return acc;
+        }, {} as Record<string, { count: number; volume: number; loyalty: number }>);
+
+        const data = Object.entries(specialtyData)
+          .map(([specialty, stats]) => ({
+            name: specialty.length > 15 ? specialty.substring(0, 12) + '...' : specialty,
+            value: chartType === 'pie' ? stats.count : Math.round(stats.volume / 1000),
+            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10
+          }))
+          .sort((a, b) => b.value - a.value);
+
+        return {
+          type: chartType,
+          title: chartType === 'pie' ? 'Répartition par spécialité' : 'Volume par spécialité (K L/an)',
+          data,
+          xLabel: 'Spécialité',
+          yLabel: chartType === 'pie' ? 'Nombre' : 'Volume (K L)',
+          secondaryLabel: 'Fidélité moy.'
+        };
+      }
+
+      case 'vingtile': {
+        // Répartition par vingtile
+        const vingtileData = allPractitioners.reduce((acc, p) => {
+          const vingtile = `V${p.metrics.vingtile}`;
+          if (!acc[vingtile]) acc[vingtile] = { count: 0, volume: 0 };
+          acc[vingtile].count += 1;
+          acc[vingtile].volume += p.metrics.volumeL;
+          return acc;
+        }, {} as Record<string, { count: number; volume: number }>);
+
+        const data = Object.entries(vingtileData)
+          .map(([vingtile, stats]) => ({
+            name: vingtile,
+            value: stats.count,
+            secondaryValue: Math.round(stats.volume / 1000)
+          }))
+          .sort((a, b) => parseInt(a.name.slice(1)) - parseInt(b.name.slice(1)));
+
+        return {
+          type: chartType === 'pie' ? 'pie' : 'bar',
+          title: 'Répartition par vingtile',
+          data,
+          xLabel: 'Vingtile',
+          yLabel: 'Nombre de praticiens',
+          secondaryLabel: 'Volume (K L)'
+        };
+      }
+
+      case 'loyalty': {
+        // Distribution de la fidélité
+        const loyaltyBuckets = ['0-2', '3-4', '5-6', '7-8', '9-10'];
+        const loyaltyData = loyaltyBuckets.map(bucket => {
+          const [min, max] = bucket.split('-').map(Number);
+          const filtered = allPractitioners.filter(p =>
+            p.metrics.loyaltyScore >= min && p.metrics.loyaltyScore <= max
+          );
+          return {
+            name: bucket,
+            value: filtered.length,
+            secondaryValue: Math.round(filtered.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
+          };
+        });
+
+        return {
+          type: chartType === 'pie' ? 'pie' : 'bar',
+          title: 'Distribution par niveau de fidélité',
+          data: loyaltyData,
+          xLabel: 'Score de fidélité',
+          yLabel: 'Nombre de praticiens',
+          secondaryLabel: 'Volume (K L)'
+        };
+      }
+
+      case 'kol': {
+        // KOLs vs non-KOLs
+        const kols = allPractitioners.filter(p => p.metrics.isKOL);
+        const nonKols = allPractitioners.filter(p => !p.metrics.isKOL);
+
+        const data = [
+          {
+            name: 'KOLs',
+            value: kols.length,
+            secondaryValue: Math.round(kols.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
+          },
+          {
+            name: 'Non-KOLs',
+            value: nonKols.length,
+            secondaryValue: Math.round(nonKols.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
+          }
+        ];
+
+        return {
+          type: 'pie',
+          title: 'Répartition KOLs vs Non-KOLs',
+          data,
+          yLabel: 'Nombre',
+          secondaryLabel: 'Volume total (K L)'
+        };
+      }
+
+      default: {
+        // Top prescripteurs par volume (défaut)
+        const topPractitioners = [...allPractitioners]
+          .sort((a, b) => b.metrics.volumeL - a.metrics.volumeL)
+          .slice(0, 10);
+
+        const data = topPractitioners.map(p => ({
+          name: `${p.lastName.substring(0, 8)}`,
+          value: Math.round(p.metrics.volumeL / 1000),
+          secondaryValue: p.metrics.loyaltyScore
+        }));
+
+        return {
+          type: 'bar',
+          title: 'Top 10 prescripteurs par volume (K L/an)',
+          data,
+          xLabel: 'Praticien',
+          yLabel: 'Volume (K L)',
+          secondaryLabel: 'Fidélité'
+        };
+      }
+    }
+  };
+
+  // ============================================
+  // FIN TALK TO MY DATA
+  // ============================================
 
   // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
   // et moteur de requêtes intelligent
@@ -284,6 +535,14 @@ INSTRUCTIONS IMPORTANTES :
     setInput('');
     setIsTyping(true);
 
+    // TALK TO MY DATA: Détecter si l'utilisateur demande un graphique
+    const { wantsChart, chartType, topic } = detectChartRequest(question);
+    let chartConfig: ChartConfig | null = null;
+
+    if (wantsChart) {
+      chartConfig = generateChartData(chartType, topic);
+    }
+
     try {
       // D'abord essayer avec Groq AI pour une vraie conversation
       const context = buildContext(question);
@@ -292,11 +551,17 @@ INSTRUCTIONS IMPORTANTES :
         .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
         .join('\n\n');
 
+      // Ajouter contexte spécifique pour les graphiques
+      const chartContext = wantsChart ? `
+L'utilisateur demande un graphique. Un graphique de type "${chartType}" sur le thème "${topic}" sera généré automatiquement et affiché.
+Fournis une brève analyse textuelle des données qui accompagnera le graphique. Ne décris pas le graphique lui-même, mais donne des insights sur les données.
+` : '';
+
       const prompt = `${context}
 
 HISTORIQUE DE CONVERSATION :
 ${conversationHistory}
-
+${chartContext}
 QUESTION ACTUELLE :
 ${question}
 
@@ -310,6 +575,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: aiResponse,
+          chart: chartConfig || undefined,
           timestamp: new Date(),
           isMarkdown: true,
           source: 'llm'
@@ -330,11 +596,24 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
       // Utiliser le système intelligent local
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const response = generateCoachResponse(
-        question,
-        practitioners,
-        currentUser.objectives
-      );
+      // Si un graphique est demandé, générer une réponse adaptée
+      let response;
+      if (wantsChart && chartConfig) {
+        const dataPoints = chartConfig.data.slice(0, 3);
+        const topItem = dataPoints[0];
+        response = {
+          message: `Voici le graphique demandé.\n\n**Points clés :**\n- **${topItem.name}** arrive en tête avec ${topItem.value} ${chartConfig.yLabel || 'unités'}\n- ${dataPoints.length > 1 ? `Suivi par **${dataPoints[1].name}** (${dataPoints[1].value})` : ''}\n- Total de ${chartConfig.data.length} éléments analysés`,
+          practitioners: undefined,
+          insights: [`📊 Graphique "${chartConfig.title}" généré avec succès`],
+          isMarkdown: true
+        };
+      } else {
+        response = generateCoachResponse(
+          question,
+          practitioners,
+          currentUser.objectives
+        );
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -342,6 +621,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
         content: response.message,
         practitioners: response.practitioners,
         insights: response.insights,
+        chart: chartConfig || undefined,
         timestamp: new Date(),
         isMarkdown: response.isMarkdown,
         source: 'local'
@@ -597,6 +877,121 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                     </div>
                   )}
 
+                  {/* TALK TO MY DATA: Graphique interactif */}
+                  {message.chart && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-slate-200"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        {message.chart.type === 'pie' ? (
+                          <PieChartIcon className="w-5 h-5 text-purple-500" />
+                        ) : message.chart.type === 'line' ? (
+                          <TrendingUp className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <BarChart3 className="w-5 h-5 text-blue-500" />
+                        )}
+                        <h4 className="font-semibold text-slate-800">{message.chart.title}</h4>
+                      </div>
+
+                      <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          {message.chart.type === 'pie' ? (
+                            <PieChart>
+                              <Pie
+                                data={message.chart.data}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {message.chart.data.map((_, index) => (
+                                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                              <Legend />
+                            </PieChart>
+                          ) : message.chart.type === 'line' ? (
+                            <LineChart data={message.chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                              <Legend />
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke="#8B5CF6"
+                                strokeWidth={2}
+                                dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
+                                name={message.chart.yLabel || 'Valeur'}
+                              />
+                              {message.chart.data[0]?.secondaryValue !== undefined && (
+                                <Line
+                                  type="monotone"
+                                  dataKey="secondaryValue"
+                                  stroke="#10B981"
+                                  strokeWidth={2}
+                                  dot={{ fill: '#10B981', strokeWidth: 2 }}
+                                  name={message.chart.secondaryLabel || 'Secondaire'}
+                                />
+                              )}
+                            </LineChart>
+                          ) : (
+                            <BarChart data={message.chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
+                              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                              <Legend />
+                              <Bar
+                                dataKey="value"
+                                fill="#3B82F6"
+                                radius={[4, 4, 0, 0]}
+                                name={message.chart.yLabel || 'Valeur'}
+                              >
+                                {message.chart.data.map((_, index) => (
+                                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                ))}
+                              </Bar>
+                              {message.chart.data[0]?.secondaryValue !== undefined && (
+                                <Bar
+                                  dataKey="secondaryValue"
+                                  fill="#10B981"
+                                  radius={[4, 4, 0, 0]}
+                                  name={message.chart.secondaryLabel || 'Secondaire'}
+                                />
+                              )}
+                            </BarChart>
+                          )}
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Légende des données */}
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                          {message.chart.data.slice(0, 5).map((d, i) => (
+                            <span key={i} className="flex items-center gap-1">
+                              <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                              />
+                              {d.name}: {d.value}
+                            </span>
+                          ))}
+                          {message.chart.data.length > 5 && (
+                            <span className="text-slate-400">+{message.chart.data.length - 5} autres</span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* Insights */}
                   {message.insights && message.insights.length > 0 && (
                     <div className="mt-3 space-y-2">
@@ -607,6 +1002,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                             insight.toLowerCase().includes('urgent') || insight.toLowerCase().includes('risque') ? 'warning' :
                             insight.toLowerCase().includes('objectif atteint') ? 'success' :
                             insight.toLowerCase().includes('volume') || insight.toLowerCase().includes('opportunité') ? 'warning' :
+                            insight.toLowerCase().includes('graphique') ? 'success' :
                             'info'
                           }
                         >
