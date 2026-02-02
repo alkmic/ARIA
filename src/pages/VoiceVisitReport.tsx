@@ -29,6 +29,7 @@ import { useGroq } from '../hooks/useGroq';
 import { quickSearch } from '../services/universalSearch';
 import { DataService } from '../services/dataService';
 import { useAppStore } from '../stores/useAppStore';
+import { useUserDataStore } from '../stores/useUserDataStore';
 import type { PractitionerProfile } from '../types/database';
 
 interface ExtractedInfo {
@@ -45,18 +46,6 @@ interface ExtractedInfo {
   competitorsMentioned: string[];
   objections: string[];
   opportunities: string[];
-}
-
-interface VisitReport {
-  id: string;
-  practitionerId: string;
-  practitionerName: string;
-  date: string;
-  time: string;
-  transcript: string;
-  extractedInfo: ExtractedInfo;
-  notes: string;
-  status: 'draft' | 'saved';
 }
 
 export default function VoiceVisitReport() {
@@ -274,24 +263,60 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
     }
   };
 
-  // Save report
+  // Get store methods
+  const { addVisitReport, addUserNote } = useUserDataStore();
+
+  // Save report - persist to store
   const saveReport = () => {
     if (!selectedPractitioner || !extractedInfo) return;
 
-    // In a real app, this would save to a database
-    const report: VisitReport = {
-      id: `VR-${Date.now()}`,
+    // Save the visit report to the persistent store
+    const savedReport = addVisitReport({
       practitionerId: selectedPractitioner.id,
       practitionerName: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       transcript: editedNotes,
-      extractedInfo,
-      notes: editedNotes,
-      status: 'saved'
-    };
+      extractedInfo: {
+        topics: extractedInfo.topics,
+        sentiment: extractedInfo.sentiment,
+        nextActions: extractedInfo.nextActions,
+        keyPoints: extractedInfo.keyPoints,
+        productsDiscussed: extractedInfo.productsDiscussed,
+        competitorsMentioned: extractedInfo.competitorsMentioned,
+        objections: extractedInfo.objections,
+        opportunities: extractedInfo.opportunities
+      }
+    });
 
-    console.log('Saved report:', report);
+    // If there are key points, save them as strategic notes
+    if (extractedInfo.keyPoints.length > 0) {
+      addUserNote({
+        practitionerId: selectedPractitioner.id,
+        content: `Points clés de la visite du ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.keyPoints.map(p => `• ${p}`).join('\n')}`,
+        type: 'observation'
+      });
+    }
+
+    // If there are opportunities, save them as strategy notes
+    if (extractedInfo.opportunities.length > 0) {
+      addUserNote({
+        practitionerId: selectedPractitioner.id,
+        content: `Opportunités détectées le ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.opportunities.map(o => `• ${o}`).join('\n')}`,
+        type: 'strategy'
+      });
+    }
+
+    // If competitors were mentioned, save as competitive intelligence
+    if (extractedInfo.competitorsMentioned.length > 0) {
+      addUserNote({
+        practitionerId: selectedPractitioner.id,
+        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\nConcurrents mentionnés: ${extractedInfo.competitorsMentioned.join(', ')}`,
+        type: 'competitive'
+      });
+    }
+
+    console.log('Saved report to store:', savedReport.id);
     setIsSaved(true);
     setStep('saved');
   };
