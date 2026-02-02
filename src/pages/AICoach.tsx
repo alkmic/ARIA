@@ -51,6 +51,7 @@ import {
   getDataContextForLLM,
   parseLLMChartResponse,
   generateChartFromSpec,
+  generateChartLocally,
   DEFAULT_CHART_COLORS,
   addToChartHistory,
   getChartHistory,
@@ -64,20 +65,7 @@ import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 
-// Types pour les graphiques (supportant l'approche agentique)
-type ChartType = 'bar' | 'pie' | 'line' | 'composed';
-
-// Type pour le fallback local (compatibilité)
-interface ChartConfig {
-  type: ChartType;
-  title: string;
-  data: Array<{ name: string; value: number; secondaryValue?: number }>;
-  xLabel?: string;
-  yLabel?: string;
-  secondaryLabel?: string;
-  query?: { metrics?: Array<{ name: string }> };
-}
-
+// Types pour les graphiques agentiques
 interface AgenticChartData {
   spec: ChartSpec;
   data: Array<{ name: string; [key: string]: string | number }>;
@@ -220,449 +208,8 @@ export default function AICoach() {
     setAutoSpeak(!autoSpeak);
   };
 
-  // ============================================
-  // TALK TO MY DATA - Système intelligent de visualisation
-  // ============================================
-
-  // Analyse sémantique de la question pour détecter les demandes de données
-  const analyzeDataRequest = (question: string): {
-    wantsChart: boolean;
-    wantsData: boolean;
-    chartType: ChartType;
-    topic: string;
-    metric: 'count' | 'volume' | 'loyalty' | 'mixed';
-    filters?: { key: string; value: string }[];
-  } => {
-    const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    // Patterns de demande de visualisation (plus naturel)
-    const visualPatterns = [
-      /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme/,
-      /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
-      /📊|📈|🥧|📉/,
-      /quel(?:le)?s? (?:sont|est) (?:la|le|les) (?:repartition|distribution|top|classement)/,
-      /combien (?:de|d')|nombre de|total de/
-    ];
-
-    // Patterns de demande de données sans graphique
-    const dataPatterns = [
-      /analyse|statistiques?|chiffres?|donnees?|metriques?/,
-      /compare|comparaison|versus|vs|par rapport/
-    ];
-
-    const wantsChart = visualPatterns.some(p => p.test(q));
-    const wantsData = dataPatterns.some(p => p.test(q)) || wantsChart;
-
-    // Déterminer le type de graphique
-    let chartType: ChartType = 'bar';
-    if (/camembert|pie|repartition|distribution|proportion|🥧|pourcentage/.test(q)) {
-      chartType = 'pie';
-    } else if (/evolution|tendance|courbe|progression|historique|temps|📈|mois|semaine/.test(q)) {
-      chartType = 'line';
-    }
-
-    // Déterminer le sujet principal avec priorité
-    let topic = 'volume'; // défaut
-    const topicPatterns: { pattern: RegExp; topic: string }[] = [
-      { pattern: /par ville|par cite|geograph|localisation|ou sont/, topic: 'city' },
-      { pattern: /par specialite|pneumo|generaliste|medecin/, topic: 'specialty' },
-      { pattern: /vingtile|segment|potentiel|decile/, topic: 'vingtile' },
-      { pattern: /fidelite|loyalty|fidel/, topic: 'loyalty' },
-      { pattern: /kol|leader|opinion|influence/, topic: 'kol' },
-      { pattern: /visite|contact|vu|rencontre|derniere/, topic: 'visits' },
-      { pattern: /risque|churn|perte|danger|alerte/, topic: 'risk' },
-      { pattern: /croissance|opportunite|potentiel|growth/, topic: 'growth' },
-      { pattern: /top|meilleur|prescripteur|volume/, topic: 'volume' },
-      { pattern: /publication|article|recherche|scientifique/, topic: 'publications' }
-    ];
-
-    for (const { pattern, topic: t } of topicPatterns) {
-      if (pattern.test(q)) {
-        topic = t;
-        break;
-      }
-    }
-
-    // Déterminer la métrique à afficher
-    let metric: 'count' | 'volume' | 'loyalty' | 'mixed' = 'mixed';
-    if (/combien|nombre|count|total de praticiens/.test(q)) metric = 'count';
-    else if (/volume|litre|l\/an|prescription/.test(q)) metric = 'volume';
-    else if (/fidelite|score|note/.test(q)) metric = 'loyalty';
-
-    return { wantsChart, wantsData, chartType, topic, metric };
-  };
-
-  // Générer les données du graphique avec insights
-  const generateChartData = (
-    chartType: ChartType,
-    topic: string,
-    metric: 'count' | 'volume' | 'loyalty' | 'mixed' = 'mixed'
-  ): { chart: ChartConfig; insights: string[]; followUp: string[] } | null => {
-    const allPractitioners = DataService.getAllPractitioners();
-    const today = new Date();
-    let chart: ChartConfig;
-    let insights: string[] = [];
-    let followUp: string[] = [];
-
-    switch (topic) {
-      case 'city': {
-        const cityData = allPractitioners.reduce((acc, p) => {
-          const city = p.address.city || 'Autre';
-          if (!acc[city]) acc[city] = { volume: 0, count: 0, loyalty: 0 };
-          acc[city].volume += p.metrics.volumeL;
-          acc[city].count += 1;
-          acc[city].loyalty += p.metrics.loyaltyScore;
-          return acc;
-        }, {} as Record<string, { volume: number; count: number; loyalty: number }>);
-
-        const sortedCities = Object.entries(cityData)
-          .map(([city, stats]) => ({
-            name: city.length > 12 ? city.substring(0, 10) + '...' : city,
-            fullName: city,
-            value: metric === 'count' ? stats.count : Math.round(stats.volume / 1000),
-            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10,
-            count: stats.count,
-            volume: stats.volume
-          }))
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 10);
-
-        const topCity = sortedCities[0];
-        const totalVolume = sortedCities.reduce((sum, c) => sum + c.volume, 0);
-
-        chart = {
-          type: chartType === 'pie' ? 'pie' : 'bar',
-          title: metric === 'count' ? 'Praticiens par ville' : 'Volume par ville (K L/an)',
-          data: sortedCities,
-          xLabel: 'Ville',
-          yLabel: metric === 'count' ? 'Praticiens' : 'Volume (K L)',
-          secondaryLabel: 'Fidélité moy.'
-        };
-
-        insights = [
-          `**${topCity.fullName}** concentre ${Math.round(topCity.volume / totalVolume * 100)}% du volume total`,
-          `Fidélité moyenne la plus haute : ${sortedCities.reduce((max, c) => c.secondaryValue > max.secondaryValue ? c : max).fullName} (${sortedCities.reduce((max, c) => c.secondaryValue > max.secondaryValue ? c : max).secondaryValue}/10)`
-        ];
-        followUp = [
-          `📊 Répartition des KOLs par ville`,
-          `📈 Praticiens à risque par ville`,
-          `🥧 Spécialités présentes à ${topCity.fullName}`
-        ];
-        break;
-      }
-
-      case 'specialty': {
-        const specialtyData = allPractitioners.reduce((acc, p) => {
-          const specialty = p.specialty || 'Autre';
-          if (!acc[specialty]) acc[specialty] = { count: 0, volume: 0, loyalty: 0, kols: 0 };
-          acc[specialty].count += 1;
-          acc[specialty].volume += p.metrics.volumeL;
-          acc[specialty].loyalty += p.metrics.loyaltyScore;
-          if (p.metrics.isKOL) acc[specialty].kols += 1;
-          return acc;
-        }, {} as Record<string, { count: number; volume: number; loyalty: number; kols: number }>);
-
-        const data = Object.entries(specialtyData)
-          .map(([specialty, stats]) => ({
-            name: specialty,
-            value: metric === 'count' ? stats.count : Math.round(stats.volume / 1000),
-            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10,
-            kols: stats.kols
-          }))
-          .sort((a, b) => b.value - a.value);
-
-        chart = {
-          type: chartType,
-          title: metric === 'count' ? 'Répartition par spécialité' : 'Volume par spécialité (K L/an)',
-          data,
-          xLabel: 'Spécialité',
-          yLabel: metric === 'count' ? 'Nombre' : 'Volume (K L)',
-          secondaryLabel: 'Fidélité moy.'
-        };
-
-        const pneumos = data.find(d => d.name.toLowerCase().includes('pneumo'));
-        insights = [
-          pneumos ? `Les **pneumologues** représentent ${Math.round(pneumos.value / data.reduce((s, d) => s + d.value, 0) * 100)}% ${metric === 'count' ? 'des praticiens' : 'du volume'}` : '',
-          `**${data[0].name}** : fidélité moyenne de ${data[0].secondaryValue}/10`
-        ].filter(Boolean);
-        followUp = [
-          `📊 Top 10 pneumologues par volume`,
-          `📈 Évolution fidélité par spécialité`,
-          `🥧 KOLs par spécialité`
-        ];
-        break;
-      }
-
-      case 'vingtile': {
-        const vingtileData = allPractitioners.reduce((acc, p) => {
-          const v = p.metrics.vingtile;
-          const label = v <= 2 ? 'V1-2 (Top)' : v <= 5 ? 'V3-5 (Haut)' : v <= 10 ? 'V6-10 (Moyen)' : 'V11+ (Bas)';
-          if (!acc[label]) acc[label] = { count: 0, volume: 0, order: v <= 2 ? 1 : v <= 5 ? 2 : v <= 10 ? 3 : 4 };
-          acc[label].count += 1;
-          acc[label].volume += p.metrics.volumeL;
-          return acc;
-        }, {} as Record<string, { count: number; volume: number; order: number }>);
-
-        const data = Object.entries(vingtileData)
-          .map(([vingtile, stats]) => ({
-            name: vingtile,
-            value: metric === 'volume' ? Math.round(stats.volume / 1000) : stats.count,
-            secondaryValue: Math.round(stats.volume / 1000),
-            order: stats.order
-          }))
-          .sort((a, b) => a.order - b.order);
-
-        const topSegment = data[0];
-        const totalVolume = data.reduce((s, d) => s + d.secondaryValue, 0);
-
-        chart = {
-          type: chartType === 'pie' ? 'pie' : 'bar',
-          title: 'Répartition par segment (vingtile)',
-          data,
-          xLabel: 'Segment',
-          yLabel: metric === 'volume' ? 'Volume (K L)' : 'Praticiens',
-          secondaryLabel: 'Volume (K L)'
-        };
-
-        insights = [
-          `Le segment **${topSegment.name}** représente ${Math.round(topSegment.secondaryValue / totalVolume * 100)}% du volume total`,
-          `${data[0].value} praticiens dans le top segment (V1-2)`
-        ];
-        followUp = [
-          `📊 Détail des praticiens V1-2`,
-          `📈 Fidélité par segment`,
-          `🥧 KOLs par vingtile`
-        ];
-        break;
-      }
-
-      case 'loyalty': {
-        const loyaltyBuckets = [
-          { label: 'Très faible (0-2)', min: 0, max: 2 },
-          { label: 'Faible (3-4)', min: 3, max: 4 },
-          { label: 'Moyenne (5-6)', min: 5, max: 6 },
-          { label: 'Bonne (7-8)', min: 7, max: 8 },
-          { label: 'Excellente (9-10)', min: 9, max: 10 }
-        ];
-
-        const data = loyaltyBuckets.map(bucket => {
-          const filtered = allPractitioners.filter(p =>
-            p.metrics.loyaltyScore >= bucket.min && p.metrics.loyaltyScore <= bucket.max
-          );
-          return {
-            name: bucket.label.split(' ')[0],
-            fullLabel: bucket.label,
-            value: filtered.length,
-            secondaryValue: Math.round(filtered.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
-          };
-        });
-
-        const atRisk = data[0].value + data[1].value;
-        const loyal = data[3].value + data[4].value;
-
-        chart = {
-          type: chartType === 'pie' ? 'pie' : 'bar',
-          title: 'Distribution par niveau de fidélité',
-          data,
-          xLabel: 'Niveau',
-          yLabel: 'Praticiens',
-          secondaryLabel: 'Volume (K L)'
-        };
-
-        insights = [
-          `**${atRisk} praticiens** avec fidélité faible (≤4) - à surveiller`,
-          `**${loyal} praticiens** très fidèles (≥7) - à maintenir`,
-          `Volume moyen par fidèle (≥7) : ${Math.round((data[3].secondaryValue + data[4].secondaryValue) / (data[3].value + data[4].value))}K L/an`
-        ];
-        followUp = [
-          `📊 Liste des praticiens à fidélité faible`,
-          `📈 Top praticiens les plus fidèles`,
-          `🥧 Fidélité par ville`
-        ];
-        break;
-      }
-
-      case 'risk': {
-        const riskCategories = allPractitioners.reduce((acc, p) => {
-          const lastVisit = p.lastVisitDate ? new Date(p.lastVisitDate) : null;
-          const daysSince = lastVisit ? Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-          const loyalty = p.metrics.loyaltyScore;
-
-          let risk = 'Faible';
-          if (daysSince > 90 || loyalty < 4) risk = 'Élevé';
-          else if (daysSince > 60 || loyalty < 6) risk = 'Moyen';
-
-          if (!acc[risk]) acc[risk] = { count: 0, volume: 0, order: risk === 'Élevé' ? 1 : risk === 'Moyen' ? 2 : 3 };
-          acc[risk].count += 1;
-          acc[risk].volume += p.metrics.volumeL;
-          return acc;
-        }, {} as Record<string, { count: number; volume: number; order: number }>);
-
-        const data = Object.entries(riskCategories)
-          .map(([risk, stats]) => ({
-            name: risk,
-            value: stats.count,
-            secondaryValue: Math.round(stats.volume / 1000),
-            order: stats.order
-          }))
-          .sort((a, b) => a.order - b.order);
-
-        const highRisk = data.find(d => d.name === 'Élevé');
-
-        chart = {
-          type: 'pie',
-          title: 'Répartition par niveau de risque',
-          data,
-          yLabel: 'Praticiens',
-          secondaryLabel: 'Volume (K L)'
-        };
-
-        insights = [
-          highRisk ? `⚠️ **${highRisk.value} praticiens** à risque élevé (${highRisk.secondaryValue}K L de volume)` : '',
-          `Critères de risque : >90j sans visite OU fidélité <4`
-        ].filter(Boolean);
-        followUp = [
-          `📊 Liste des praticiens à risque élevé`,
-          `📈 Évolution des visites par risque`,
-          `🥧 Risque par ville`
-        ];
-        break;
-      }
-
-      case 'kol': {
-        const kols = allPractitioners.filter(p => p.metrics.isKOL);
-        const nonKols = allPractitioners.filter(p => !p.metrics.isKOL);
-
-        const kolVolume = kols.reduce((sum, p) => sum + p.metrics.volumeL, 0);
-        const nonKolVolume = nonKols.reduce((sum, p) => sum + p.metrics.volumeL, 0);
-
-        const data = [
-          {
-            name: 'KOLs',
-            value: kols.length,
-            secondaryValue: Math.round(kolVolume / 1000)
-          },
-          {
-            name: 'Autres',
-            value: nonKols.length,
-            secondaryValue: Math.round(nonKolVolume / 1000)
-          }
-        ];
-
-        chart = {
-          type: 'pie',
-          title: 'Répartition KOLs vs Autres praticiens',
-          data,
-          yLabel: 'Nombre',
-          secondaryLabel: 'Volume (K L)'
-        };
-
-        const avgKolVolume = kolVolume / kols.length / 1000;
-        const avgOtherVolume = nonKolVolume / nonKols.length / 1000;
-
-        insights = [
-          `**${kols.length} KOLs** représentent ${Math.round(kolVolume / (kolVolume + nonKolVolume) * 100)}% du volume total`,
-          `Volume moyen KOL : **${Math.round(avgKolVolume)}K L/an** vs ${Math.round(avgOtherVolume)}K L pour les autres`
-        ];
-        followUp = [
-          `📊 Top KOLs par volume`,
-          `📈 KOLs non visités depuis 60j`,
-          `🥧 KOLs par spécialité`
-        ];
-        break;
-      }
-
-      case 'visits': {
-        const visitBuckets = [
-          { label: '<30j', min: 0, max: 30 },
-          { label: '30-60j', min: 30, max: 60 },
-          { label: '60-90j', min: 60, max: 90 },
-          { label: '>90j', min: 90, max: 999 },
-          { label: 'Jamais', min: 1000, max: 9999 }
-        ];
-
-        const data = visitBuckets.map(bucket => {
-          const filtered = allPractitioners.filter(p => {
-            if (!p.lastVisitDate && bucket.min === 1000) return true;
-            if (!p.lastVisitDate) return false;
-            const days = Math.floor((today.getTime() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24));
-            return days >= bucket.min && days < bucket.max;
-          });
-          return {
-            name: bucket.label,
-            value: filtered.length,
-            secondaryValue: Math.round(filtered.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
-          };
-        });
-
-        const needVisit = data[2].value + data[3].value;
-
-        chart = {
-          type: chartType === 'pie' ? 'pie' : 'bar',
-          title: 'Praticiens par ancienneté de visite',
-          data,
-          xLabel: 'Dernière visite',
-          yLabel: 'Praticiens',
-          secondaryLabel: 'Volume (K L)'
-        };
-
-        insights = [
-          `**${needVisit} praticiens** à recontacter (>60j sans visite)`,
-          `Volume à risque (>90j) : **${data[3].secondaryValue}K L/an**`
-        ];
-        followUp = [
-          `📊 Praticiens prioritaires à visiter`,
-          `📈 Planning de visites suggéré`,
-          `🥧 Visites par ville`
-        ];
-        break;
-      }
-
-      default: {
-        // Top prescripteurs par volume
-        const topPractitioners = [...allPractitioners]
-          .sort((a, b) => b.metrics.volumeL - a.metrics.volumeL)
-          .slice(0, 10);
-
-        const data = topPractitioners.map(p => ({
-          name: `${p.lastName.substring(0, 8)}`,
-          value: Math.round(p.metrics.volumeL / 1000),
-          secondaryValue: p.metrics.loyaltyScore,
-          isKOL: p.metrics.isKOL
-        }));
-
-        const kolCount = data.filter(d => d.isKOL).length;
-        const topVolume = data.reduce((sum, d) => sum + d.value, 0);
-        const totalVolume = allPractitioners.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000;
-
-        chart = {
-          type: 'bar',
-          title: 'Top 10 prescripteurs par volume (K L/an)',
-          data,
-          xLabel: 'Praticien',
-          yLabel: 'Volume (K L)',
-          secondaryLabel: 'Fidélité'
-        };
-
-        insights = [
-          `Le **Top 10** représente ${Math.round(topVolume / totalVolume * 100)}% du volume total`,
-          `**${kolCount} KOLs** dans le Top 10`
-        ];
-        followUp = [
-          `📊 Répartition par ville`,
-          `📈 Top 10 par fidélité`,
-          `🥧 Répartition des volumes globale`
-        ];
-        break;
-      }
-    }
-
-    return { chart, insights, followUp };
-  };
-
-  // ============================================
-  // FIN TALK TO MY DATA
-  // ============================================
+  // NOTE: La génération de graphiques est maintenant gérée par agenticChartEngine.ts
+  // avec les fonctions generateChartLocally() et interpretQuestionLocally()
 
   // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
   // et moteur de requêtes intelligent
@@ -1001,60 +548,41 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
       console.log('Mode local activé (LLM non disponible)', error);
 
       // ============================================
-      // FALLBACK LOCAL : Utiliser le système intelligent local
+      // FALLBACK LOCAL : Utiliser le moteur de génération intelligent
       // ============================================
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Extraire les paramètres même en mode fallback
-      const extractedParams = extractQueryParameters(question);
-
       if (wantsVisualization) {
-        // Fallback avec le système de détection locale
-        const analysis = analyzeDataRequest(question);
-        const chartResult = generateChartData(analysis.chartType, analysis.topic, analysis.metric);
+        // Utiliser le nouveau système d'interprétation locale intelligent
+        const chartResult = generateChartLocally(question);
 
-        if (chartResult) {
-          // Respecter le limit demandé par l'utilisateur
-          const requestedLimit = extractedParams.limit || 10;
-          const limitedData = chartResult.chart.data.slice(0, requestedLimit);
-          const topItems = limitedData.slice(0, 3);
-          const firstMetric = chartResult.chart.query?.metrics?.[0]?.name || 'value';
+        if (chartResult && chartResult.data.length > 0) {
+          const firstMetric = chartResult.spec.query.metrics[0]?.name || 'value';
+          const topItems = chartResult.data.slice(0, 3);
 
-          // Convertir au format agentique
+          // Convertir au format agentique pour l'affichage
           const agenticData: AgenticChartData = {
-            spec: {
-              chartType: chartResult.chart.type as ChartType,
-              title: chartResult.chart.title,
-              description: 'Généré localement',
-              query: {
-                source: 'practitioners',
-                metrics: [{ name: firstMetric, field: 'value', aggregation: 'sum' }],
-                limit: requestedLimit
-              }
-            },
-            data: limitedData.map(d => ({
-              name: d.name,
-              [firstMetric]: d.value,
-              ...(d.secondaryValue !== undefined ? { secondary: d.secondaryValue } : {})
-            })),
+            spec: chartResult.spec,
+            data: chartResult.data,
             insights: chartResult.insights,
-            suggestions: chartResult.followUp,
+            suggestions: chartResult.suggestions,
             generatedByLLM: false
           };
 
           // Sauvegarder dans l'historique pour les questions de suivi
           addToChartHistory({
             question,
-            spec: agenticData.spec,
-            data: agenticData.data,
+            spec: chartResult.spec,
+            data: chartResult.data,
             insights: chartResult.insights,
             timestamp: new Date()
           });
 
+          // Générer un message descriptif
           const response = {
-            message: `**📊 ${chartResult.chart.title}**\n\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top ${Math.min(3, topItems.length)} :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item.value}`).join('\n')}`,
+            message: `**${chartResult.spec.title}**\n\n${chartResult.spec.description}\n\n**Résumé :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top ${Math.min(3, topItems.length)} :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item[firstMetric]}`).join('\n')}`,
             insights: chartResult.insights,
-            suggestions: chartResult.followUp
+            suggestions: chartResult.suggestions
           };
 
           const assistantMessage: Message = {
