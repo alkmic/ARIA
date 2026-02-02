@@ -98,16 +98,16 @@ export default function AICoach() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Suggestions contextuelles - avec exemples de graphiques pour Talk to My Data
+  // Suggestions contextuelles - Talk to My Data avec questions naturelles
   const SUGGESTION_CHIPS = [
     `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
-    "📊 Graphique des volumes par ville",
-    "📈 Évolution de la fidélité par spécialité",
-    "🥧 Répartition des praticiens par vingtile",
-    "Quels KOLs n'ai-je pas vus depuis 60 jours ?",
-    "📊 Top 10 prescripteurs en barres",
-    "Praticiens à risque de churn",
-    "📈 Comparaison volumes/fidélité par ville",
+    "Montre-moi les volumes par ville",
+    "Quelle est la répartition par vingtile ?",
+    "Combien de praticiens à risque ?",
+    "Analyse des KOLs",
+    "Distribution de fidélité",
+    "Top 10 prescripteurs",
+    "Praticiens non vus depuis 60 jours",
   ];
 
   // Auto-scroll vers le bas
@@ -203,47 +203,91 @@ export default function AICoach() {
   };
 
   // ============================================
-  // TALK TO MY DATA - Détection et génération de graphiques
+  // TALK TO MY DATA - Système intelligent de visualisation
   // ============================================
 
-  // Détecter si l'utilisateur demande un graphique
-  const detectChartRequest = (question: string): { wantsChart: boolean; chartType: ChartType; topic: string } => {
-    const q = question.toLowerCase();
+  // Analyse sémantique de la question pour détecter les demandes de données
+  const analyzeDataRequest = (question: string): {
+    wantsChart: boolean;
+    wantsData: boolean;
+    chartType: ChartType;
+    topic: string;
+    metric: 'count' | 'volume' | 'loyalty' | 'mixed';
+    filters?: { key: string; value: string }[];
+  } => {
+    const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-    // Mots-clés pour les graphiques
-    const chartKeywords = ['graphique', 'graphe', 'chart', 'diagramme', 'visualis', 'courbe', 'barres', 'camembert', '📊', '📈', '🥧'];
-    const pieKeywords = ['camembert', 'pie', 'répartition', 'distribution', 'proportion', '🥧'];
-    const lineKeywords = ['évolution', 'tendance', 'courbe', 'progression', 'ligne', 'temps'];
+    // Patterns de demande de visualisation (plus naturel)
+    const visualPatterns = [
+      /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme/,
+      /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
+      /📊|📈|🥧|📉/,
+      /quel(?:le)?s? (?:sont|est) (?:la|le|les) (?:repartition|distribution|top|classement)/,
+      /combien (?:de|d')|nombre de|total de/
+    ];
 
-    const wantsChart = chartKeywords.some(k => q.includes(k));
+    // Patterns de demande de données sans graphique
+    const dataPatterns = [
+      /analyse|statistiques?|chiffres?|donnees?|metriques?/,
+      /compare|comparaison|versus|vs|par rapport/
+    ];
 
-    // Déterminer le type de graphique (bar par défaut)
+    const wantsChart = visualPatterns.some(p => p.test(q));
+    const wantsData = dataPatterns.some(p => p.test(q)) || wantsChart;
+
+    // Déterminer le type de graphique
     let chartType: ChartType = 'bar';
-    if (pieKeywords.some(k => q.includes(k))) {
+    if (/camembert|pie|repartition|distribution|proportion|🥧|pourcentage/.test(q)) {
       chartType = 'pie';
-    } else if (lineKeywords.some(k => q.includes(k))) {
+    } else if (/evolution|tendance|courbe|progression|historique|temps|📈|mois|semaine/.test(q)) {
       chartType = 'line';
     }
 
-    // Déterminer le sujet du graphique
-    let topic = 'volume';
-    if (q.includes('fidélité') || q.includes('loyalty')) topic = 'loyalty';
-    else if (q.includes('vingtile') || q.includes('segment')) topic = 'vingtile';
-    else if (q.includes('spécialité') || q.includes('specialite')) topic = 'specialty';
-    else if (q.includes('ville') || q.includes('city') || q.includes('géograph')) topic = 'city';
-    else if (q.includes('kol')) topic = 'kol';
-    else if (q.includes('visite') || q.includes('contact')) topic = 'visits';
+    // Déterminer le sujet principal avec priorité
+    let topic = 'volume'; // défaut
+    const topicPatterns: { pattern: RegExp; topic: string }[] = [
+      { pattern: /par ville|par cite|geograph|localisation|ou sont/, topic: 'city' },
+      { pattern: /par specialite|pneumo|generaliste|medecin/, topic: 'specialty' },
+      { pattern: /vingtile|segment|potentiel|decile/, topic: 'vingtile' },
+      { pattern: /fidelite|loyalty|fidel/, topic: 'loyalty' },
+      { pattern: /kol|leader|opinion|influence/, topic: 'kol' },
+      { pattern: /visite|contact|vu|rencontre|derniere/, topic: 'visits' },
+      { pattern: /risque|churn|perte|danger|alerte/, topic: 'risk' },
+      { pattern: /croissance|opportunite|potentiel|growth/, topic: 'growth' },
+      { pattern: /top|meilleur|prescripteur|volume/, topic: 'volume' },
+      { pattern: /publication|article|recherche|scientifique/, topic: 'publications' }
+    ];
 
-    return { wantsChart, chartType, topic };
+    for (const { pattern, topic: t } of topicPatterns) {
+      if (pattern.test(q)) {
+        topic = t;
+        break;
+      }
+    }
+
+    // Déterminer la métrique à afficher
+    let metric: 'count' | 'volume' | 'loyalty' | 'mixed' = 'mixed';
+    if (/combien|nombre|count|total de praticiens/.test(q)) metric = 'count';
+    else if (/volume|litre|l\/an|prescription/.test(q)) metric = 'volume';
+    else if (/fidelite|score|note/.test(q)) metric = 'loyalty';
+
+    return { wantsChart, wantsData, chartType, topic, metric };
   };
 
-  // Générer les données du graphique basées sur le topic
-  const generateChartData = (chartType: ChartType, topic: string): ChartConfig | null => {
+  // Générer les données du graphique avec insights
+  const generateChartData = (
+    chartType: ChartType,
+    topic: string,
+    metric: 'count' | 'volume' | 'loyalty' | 'mixed' = 'mixed'
+  ): { chart: ChartConfig; insights: string[]; followUp: string[] } | null => {
     const allPractitioners = DataService.getAllPractitioners();
+    const today = new Date();
+    let chart: ChartConfig;
+    let insights: string[] = [];
+    let followUp: string[] = [];
 
     switch (topic) {
       case 'city': {
-        // Volume par ville
         const cityData = allPractitioners.reduce((acc, p) => {
           const city = p.address.city || 'Autre';
           if (!acc[city]) acc[city] = { volume: 0, count: 0, loyalty: 0 };
@@ -253,136 +297,311 @@ export default function AICoach() {
           return acc;
         }, {} as Record<string, { volume: number; count: number; loyalty: number }>);
 
-        const data = Object.entries(cityData)
+        const sortedCities = Object.entries(cityData)
           .map(([city, stats]) => ({
             name: city.length > 12 ? city.substring(0, 10) + '...' : city,
-            value: Math.round(stats.volume / 1000),
-            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10
+            fullName: city,
+            value: metric === 'count' ? stats.count : Math.round(stats.volume / 1000),
+            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10,
+            count: stats.count,
+            volume: stats.volume
           }))
           .sort((a, b) => b.value - a.value)
           .slice(0, 10);
 
-        return {
+        const topCity = sortedCities[0];
+        const totalVolume = sortedCities.reduce((sum, c) => sum + c.volume, 0);
+
+        chart = {
           type: chartType === 'pie' ? 'pie' : 'bar',
-          title: 'Volume par ville (K L/an)',
-          data,
+          title: metric === 'count' ? 'Praticiens par ville' : 'Volume par ville (K L/an)',
+          data: sortedCities,
           xLabel: 'Ville',
-          yLabel: 'Volume (K L)',
+          yLabel: metric === 'count' ? 'Praticiens' : 'Volume (K L)',
           secondaryLabel: 'Fidélité moy.'
         };
+
+        insights = [
+          `**${topCity.fullName}** concentre ${Math.round(topCity.volume / totalVolume * 100)}% du volume total`,
+          `Fidélité moyenne la plus haute : ${sortedCities.reduce((max, c) => c.secondaryValue > max.secondaryValue ? c : max).fullName} (${sortedCities.reduce((max, c) => c.secondaryValue > max.secondaryValue ? c : max).secondaryValue}/10)`
+        ];
+        followUp = [
+          `📊 Répartition des KOLs par ville`,
+          `📈 Praticiens à risque par ville`,
+          `🥧 Spécialités présentes à ${topCity.fullName}`
+        ];
+        break;
       }
 
       case 'specialty': {
-        // Répartition par spécialité
         const specialtyData = allPractitioners.reduce((acc, p) => {
           const specialty = p.specialty || 'Autre';
-          if (!acc[specialty]) acc[specialty] = { count: 0, volume: 0, loyalty: 0 };
+          if (!acc[specialty]) acc[specialty] = { count: 0, volume: 0, loyalty: 0, kols: 0 };
           acc[specialty].count += 1;
           acc[specialty].volume += p.metrics.volumeL;
           acc[specialty].loyalty += p.metrics.loyaltyScore;
+          if (p.metrics.isKOL) acc[specialty].kols += 1;
           return acc;
-        }, {} as Record<string, { count: number; volume: number; loyalty: number }>);
+        }, {} as Record<string, { count: number; volume: number; loyalty: number; kols: number }>);
 
         const data = Object.entries(specialtyData)
           .map(([specialty, stats]) => ({
-            name: specialty.length > 15 ? specialty.substring(0, 12) + '...' : specialty,
-            value: chartType === 'pie' ? stats.count : Math.round(stats.volume / 1000),
-            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10
+            name: specialty,
+            value: metric === 'count' ? stats.count : Math.round(stats.volume / 1000),
+            secondaryValue: Math.round(stats.loyalty / stats.count * 10) / 10,
+            kols: stats.kols
           }))
           .sort((a, b) => b.value - a.value);
 
-        return {
+        chart = {
           type: chartType,
-          title: chartType === 'pie' ? 'Répartition par spécialité' : 'Volume par spécialité (K L/an)',
+          title: metric === 'count' ? 'Répartition par spécialité' : 'Volume par spécialité (K L/an)',
           data,
           xLabel: 'Spécialité',
-          yLabel: chartType === 'pie' ? 'Nombre' : 'Volume (K L)',
+          yLabel: metric === 'count' ? 'Nombre' : 'Volume (K L)',
           secondaryLabel: 'Fidélité moy.'
         };
+
+        const pneumos = data.find(d => d.name.toLowerCase().includes('pneumo'));
+        insights = [
+          pneumos ? `Les **pneumologues** représentent ${Math.round(pneumos.value / data.reduce((s, d) => s + d.value, 0) * 100)}% ${metric === 'count' ? 'des praticiens' : 'du volume'}` : '',
+          `**${data[0].name}** : fidélité moyenne de ${data[0].secondaryValue}/10`
+        ].filter(Boolean);
+        followUp = [
+          `📊 Top 10 pneumologues par volume`,
+          `📈 Évolution fidélité par spécialité`,
+          `🥧 KOLs par spécialité`
+        ];
+        break;
       }
 
       case 'vingtile': {
-        // Répartition par vingtile
         const vingtileData = allPractitioners.reduce((acc, p) => {
-          const vingtile = `V${p.metrics.vingtile}`;
-          if (!acc[vingtile]) acc[vingtile] = { count: 0, volume: 0 };
-          acc[vingtile].count += 1;
-          acc[vingtile].volume += p.metrics.volumeL;
+          const v = p.metrics.vingtile;
+          const label = v <= 2 ? 'V1-2 (Top)' : v <= 5 ? 'V3-5 (Haut)' : v <= 10 ? 'V6-10 (Moyen)' : 'V11+ (Bas)';
+          if (!acc[label]) acc[label] = { count: 0, volume: 0, order: v <= 2 ? 1 : v <= 5 ? 2 : v <= 10 ? 3 : 4 };
+          acc[label].count += 1;
+          acc[label].volume += p.metrics.volumeL;
           return acc;
-        }, {} as Record<string, { count: number; volume: number }>);
+        }, {} as Record<string, { count: number; volume: number; order: number }>);
 
         const data = Object.entries(vingtileData)
           .map(([vingtile, stats]) => ({
             name: vingtile,
-            value: stats.count,
-            secondaryValue: Math.round(stats.volume / 1000)
+            value: metric === 'volume' ? Math.round(stats.volume / 1000) : stats.count,
+            secondaryValue: Math.round(stats.volume / 1000),
+            order: stats.order
           }))
-          .sort((a, b) => parseInt(a.name.slice(1)) - parseInt(b.name.slice(1)));
+          .sort((a, b) => a.order - b.order);
 
-        return {
+        const topSegment = data[0];
+        const totalVolume = data.reduce((s, d) => s + d.secondaryValue, 0);
+
+        chart = {
           type: chartType === 'pie' ? 'pie' : 'bar',
-          title: 'Répartition par vingtile',
+          title: 'Répartition par segment (vingtile)',
           data,
-          xLabel: 'Vingtile',
-          yLabel: 'Nombre de praticiens',
+          xLabel: 'Segment',
+          yLabel: metric === 'volume' ? 'Volume (K L)' : 'Praticiens',
           secondaryLabel: 'Volume (K L)'
         };
+
+        insights = [
+          `Le segment **${topSegment.name}** représente ${Math.round(topSegment.secondaryValue / totalVolume * 100)}% du volume total`,
+          `${data[0].value} praticiens dans le top segment (V1-2)`
+        ];
+        followUp = [
+          `📊 Détail des praticiens V1-2`,
+          `📈 Fidélité par segment`,
+          `🥧 KOLs par vingtile`
+        ];
+        break;
       }
 
       case 'loyalty': {
-        // Distribution de la fidélité
-        const loyaltyBuckets = ['0-2', '3-4', '5-6', '7-8', '9-10'];
-        const loyaltyData = loyaltyBuckets.map(bucket => {
-          const [min, max] = bucket.split('-').map(Number);
+        const loyaltyBuckets = [
+          { label: 'Très faible (0-2)', min: 0, max: 2 },
+          { label: 'Faible (3-4)', min: 3, max: 4 },
+          { label: 'Moyenne (5-6)', min: 5, max: 6 },
+          { label: 'Bonne (7-8)', min: 7, max: 8 },
+          { label: 'Excellente (9-10)', min: 9, max: 10 }
+        ];
+
+        const data = loyaltyBuckets.map(bucket => {
           const filtered = allPractitioners.filter(p =>
-            p.metrics.loyaltyScore >= min && p.metrics.loyaltyScore <= max
+            p.metrics.loyaltyScore >= bucket.min && p.metrics.loyaltyScore <= bucket.max
           );
           return {
-            name: bucket,
+            name: bucket.label.split(' ')[0],
+            fullLabel: bucket.label,
             value: filtered.length,
             secondaryValue: Math.round(filtered.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
           };
         });
 
-        return {
+        const atRisk = data[0].value + data[1].value;
+        const loyal = data[3].value + data[4].value;
+
+        chart = {
           type: chartType === 'pie' ? 'pie' : 'bar',
           title: 'Distribution par niveau de fidélité',
-          data: loyaltyData,
-          xLabel: 'Score de fidélité',
-          yLabel: 'Nombre de praticiens',
+          data,
+          xLabel: 'Niveau',
+          yLabel: 'Praticiens',
           secondaryLabel: 'Volume (K L)'
         };
+
+        insights = [
+          `**${atRisk} praticiens** avec fidélité faible (≤4) - à surveiller`,
+          `**${loyal} praticiens** très fidèles (≥7) - à maintenir`,
+          `Volume moyen par fidèle (≥7) : ${Math.round((data[3].secondaryValue + data[4].secondaryValue) / (data[3].value + data[4].value))}K L/an`
+        ];
+        followUp = [
+          `📊 Liste des praticiens à fidélité faible`,
+          `📈 Top praticiens les plus fidèles`,
+          `🥧 Fidélité par ville`
+        ];
+        break;
+      }
+
+      case 'risk': {
+        const riskCategories = allPractitioners.reduce((acc, p) => {
+          const lastVisit = p.lastVisitDate ? new Date(p.lastVisitDate) : null;
+          const daysSince = lastVisit ? Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+          const loyalty = p.metrics.loyaltyScore;
+
+          let risk = 'Faible';
+          if (daysSince > 90 || loyalty < 4) risk = 'Élevé';
+          else if (daysSince > 60 || loyalty < 6) risk = 'Moyen';
+
+          if (!acc[risk]) acc[risk] = { count: 0, volume: 0, order: risk === 'Élevé' ? 1 : risk === 'Moyen' ? 2 : 3 };
+          acc[risk].count += 1;
+          acc[risk].volume += p.metrics.volumeL;
+          return acc;
+        }, {} as Record<string, { count: number; volume: number; order: number }>);
+
+        const data = Object.entries(riskCategories)
+          .map(([risk, stats]) => ({
+            name: risk,
+            value: stats.count,
+            secondaryValue: Math.round(stats.volume / 1000),
+            order: stats.order
+          }))
+          .sort((a, b) => a.order - b.order);
+
+        const highRisk = data.find(d => d.name === 'Élevé');
+
+        chart = {
+          type: 'pie',
+          title: 'Répartition par niveau de risque',
+          data,
+          yLabel: 'Praticiens',
+          secondaryLabel: 'Volume (K L)'
+        };
+
+        insights = [
+          highRisk ? `⚠️ **${highRisk.value} praticiens** à risque élevé (${highRisk.secondaryValue}K L de volume)` : '',
+          `Critères de risque : >90j sans visite OU fidélité <4`
+        ].filter(Boolean);
+        followUp = [
+          `📊 Liste des praticiens à risque élevé`,
+          `📈 Évolution des visites par risque`,
+          `🥧 Risque par ville`
+        ];
+        break;
       }
 
       case 'kol': {
-        // KOLs vs non-KOLs
         const kols = allPractitioners.filter(p => p.metrics.isKOL);
         const nonKols = allPractitioners.filter(p => !p.metrics.isKOL);
+
+        const kolVolume = kols.reduce((sum, p) => sum + p.metrics.volumeL, 0);
+        const nonKolVolume = nonKols.reduce((sum, p) => sum + p.metrics.volumeL, 0);
 
         const data = [
           {
             name: 'KOLs',
             value: kols.length,
-            secondaryValue: Math.round(kols.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
+            secondaryValue: Math.round(kolVolume / 1000)
           },
           {
-            name: 'Non-KOLs',
+            name: 'Autres',
             value: nonKols.length,
-            secondaryValue: Math.round(nonKols.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
+            secondaryValue: Math.round(nonKolVolume / 1000)
           }
         ];
 
-        return {
+        chart = {
           type: 'pie',
-          title: 'Répartition KOLs vs Non-KOLs',
+          title: 'Répartition KOLs vs Autres praticiens',
           data,
           yLabel: 'Nombre',
-          secondaryLabel: 'Volume total (K L)'
+          secondaryLabel: 'Volume (K L)'
         };
+
+        const avgKolVolume = kolVolume / kols.length / 1000;
+        const avgOtherVolume = nonKolVolume / nonKols.length / 1000;
+
+        insights = [
+          `**${kols.length} KOLs** représentent ${Math.round(kolVolume / (kolVolume + nonKolVolume) * 100)}% du volume total`,
+          `Volume moyen KOL : **${Math.round(avgKolVolume)}K L/an** vs ${Math.round(avgOtherVolume)}K L pour les autres`
+        ];
+        followUp = [
+          `📊 Top KOLs par volume`,
+          `📈 KOLs non visités depuis 60j`,
+          `🥧 KOLs par spécialité`
+        ];
+        break;
+      }
+
+      case 'visits': {
+        const visitBuckets = [
+          { label: '<30j', min: 0, max: 30 },
+          { label: '30-60j', min: 30, max: 60 },
+          { label: '60-90j', min: 60, max: 90 },
+          { label: '>90j', min: 90, max: 999 },
+          { label: 'Jamais', min: 1000, max: 9999 }
+        ];
+
+        const data = visitBuckets.map(bucket => {
+          const filtered = allPractitioners.filter(p => {
+            if (!p.lastVisitDate && bucket.min === 1000) return true;
+            if (!p.lastVisitDate) return false;
+            const days = Math.floor((today.getTime() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24));
+            return days >= bucket.min && days < bucket.max;
+          });
+          return {
+            name: bucket.label,
+            value: filtered.length,
+            secondaryValue: Math.round(filtered.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000)
+          };
+        });
+
+        const needVisit = data[2].value + data[3].value;
+
+        chart = {
+          type: chartType === 'pie' ? 'pie' : 'bar',
+          title: 'Praticiens par ancienneté de visite',
+          data,
+          xLabel: 'Dernière visite',
+          yLabel: 'Praticiens',
+          secondaryLabel: 'Volume (K L)'
+        };
+
+        insights = [
+          `**${needVisit} praticiens** à recontacter (>60j sans visite)`,
+          `Volume à risque (>90j) : **${data[3].secondaryValue}K L/an**`
+        ];
+        followUp = [
+          `📊 Praticiens prioritaires à visiter`,
+          `📈 Planning de visites suggéré`,
+          `🥧 Visites par ville`
+        ];
+        break;
       }
 
       default: {
-        // Top prescripteurs par volume (défaut)
+        // Top prescripteurs par volume
         const topPractitioners = [...allPractitioners]
           .sort((a, b) => b.metrics.volumeL - a.metrics.volumeL)
           .slice(0, 10);
@@ -390,10 +609,15 @@ export default function AICoach() {
         const data = topPractitioners.map(p => ({
           name: `${p.lastName.substring(0, 8)}`,
           value: Math.round(p.metrics.volumeL / 1000),
-          secondaryValue: p.metrics.loyaltyScore
+          secondaryValue: p.metrics.loyaltyScore,
+          isKOL: p.metrics.isKOL
         }));
 
-        return {
+        const kolCount = data.filter(d => d.isKOL).length;
+        const topVolume = data.reduce((sum, d) => sum + d.value, 0);
+        const totalVolume = allPractitioners.reduce((sum, p) => sum + p.metrics.volumeL, 0) / 1000;
+
+        chart = {
           type: 'bar',
           title: 'Top 10 prescripteurs par volume (K L/an)',
           data,
@@ -401,8 +625,21 @@ export default function AICoach() {
           yLabel: 'Volume (K L)',
           secondaryLabel: 'Fidélité'
         };
+
+        insights = [
+          `Le **Top 10** représente ${Math.round(topVolume / totalVolume * 100)}% du volume total`,
+          `**${kolCount} KOLs** dans le Top 10`
+        ];
+        followUp = [
+          `📊 Répartition par ville`,
+          `📈 Top 10 par fidélité`,
+          `🥧 Répartition des volumes globale`
+        ];
+        break;
       }
     }
+
+    return { chart, insights, followUp };
   };
 
   // ============================================
@@ -535,12 +772,12 @@ INSTRUCTIONS IMPORTANTES :
     setInput('');
     setIsTyping(true);
 
-    // TALK TO MY DATA: Détecter si l'utilisateur demande un graphique
-    const { wantsChart, chartType, topic } = detectChartRequest(question);
-    let chartConfig: ChartConfig | null = null;
+    // TALK TO MY DATA: Analyse sémantique intelligente de la requête
+    const analysis = analyzeDataRequest(question);
+    let chartResult: { chart: ChartConfig; insights: string[]; followUp: string[] } | null = null;
 
-    if (wantsChart) {
-      chartConfig = generateChartData(chartType, topic);
+    if (analysis.wantsChart || analysis.wantsData) {
+      chartResult = generateChartData(analysis.chartType, analysis.topic, analysis.metric);
     }
 
     try {
@@ -552,9 +789,10 @@ INSTRUCTIONS IMPORTANTES :
         .join('\n\n');
 
       // Ajouter contexte spécifique pour les graphiques
-      const chartContext = wantsChart ? `
-L'utilisateur demande un graphique. Un graphique de type "${chartType}" sur le thème "${topic}" sera généré automatiquement et affiché.
-Fournis une brève analyse textuelle des données qui accompagnera le graphique. Ne décris pas le graphique lui-même, mais donne des insights sur les données.
+      const chartContext = chartResult ? `
+L'utilisateur demande une analyse de données. Un graphique de type "${analysis.chartType}" sur le thème "${analysis.topic}" sera affiché.
+Insights automatiques générés : ${chartResult.insights.join(' | ')}
+Fournis une brève analyse textuelle complémentaire. Sois synthétique et actionnable.
 ` : '';
 
       const prompt = `${context}
@@ -565,7 +803,7 @@ ${chartContext}
 QUESTION ACTUELLE :
 ${question}
 
-Réponds de manière précise et professionnelle en utilisant le format Markdown pour mettre en valeur les informations importantes. Si la question concerne des praticiens spécifiques, utilise les données fournies ci-dessus.`;
+Réponds de manière précise et professionnelle en utilisant le format Markdown. Si un graphique est généré, complète avec des recommandations actionnables.`;
 
       const aiResponse = await complete([{ role: 'user', content: prompt }]);
 
@@ -575,7 +813,8 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: aiResponse,
-          chart: chartConfig || undefined,
+          chart: chartResult?.chart || undefined,
+          insights: chartResult?.insights,
           timestamp: new Date(),
           isMarkdown: true,
           source: 'llm'
@@ -596,15 +835,16 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
       // Utiliser le système intelligent local
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Si un graphique est demandé, générer une réponse adaptée
+      // Si un graphique/données est demandé, générer une réponse riche
       let response;
-      if (wantsChart && chartConfig) {
-        const dataPoints = chartConfig.data.slice(0, 3);
-        const topItem = dataPoints[0];
+      if (chartResult) {
+        const topItems = chartResult.chart.data.slice(0, 3);
+        const insightText = chartResult.insights.map(i => `- ${i}`).join('\n');
+
         response = {
-          message: `Voici le graphique demandé.\n\n**Points clés :**\n- **${topItem.name}** arrive en tête avec ${topItem.value} ${chartConfig.yLabel || 'unités'}\n- ${dataPoints.length > 1 ? `Suivi par **${dataPoints[1].name}** (${dataPoints[1].value})` : ''}\n- Total de ${chartConfig.data.length} éléments analysés`,
+          message: `**📊 Analyse : ${chartResult.chart.title}**\n\n${insightText}\n\n**Top 3 :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item.value} ${chartResult.chart.yLabel || ''}`).join('\n')}\n\n**Pour approfondir :**\n${chartResult.followUp.map(f => `• ${f}`).join('\n')}`,
           practitioners: undefined,
-          insights: [`📊 Graphique "${chartConfig.title}" généré avec succès`],
+          insights: chartResult.insights,
           isMarkdown: true
         };
       } else {
@@ -621,7 +861,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
         content: response.message,
         practitioners: response.practitioners,
         insights: response.insights,
-        chart: chartConfig || undefined,
+        chart: chartResult?.chart || undefined,
         timestamp: new Date(),
         isMarkdown: response.isMarkdown,
         source: 'local'
