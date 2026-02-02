@@ -514,6 +514,117 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
   return query.limit ? results.slice(0, query.limit) : results;
 }
 
+/**
+ * Exécute une requête composée en deux étapes :
+ * 1. Sélectionner les top N éléments selon un critère
+ * 2. Les regrouper par une dimension
+ *
+ * Exemple: "Top 25 prescripteurs par ville" = d'abord top 25, puis grouper par ville
+ */
+export function executeCompoundQuery(
+  topN: number,
+  sortField: string,
+  groupByField: string,
+  filters?: DataFilter[]
+): ChartDataPoint[] {
+  const practitioners = DataService.getAllPractitioners();
+  const today = new Date();
+
+  // Enrichir les données
+  const enrichedData = practitioners.map(p => {
+    const lastVisit = p.lastVisitDate ? new Date(p.lastVisitDate) : null;
+    const daysSinceVisit = lastVisit
+      ? Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24))
+      : 999;
+
+    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    if (daysSinceVisit > 90 || p.metrics.loyaltyScore < 4) riskLevel = 'high';
+    else if (daysSinceVisit > 60 || p.metrics.loyaltyScore < 6) riskLevel = 'medium';
+
+    return {
+      ...p,
+      city: p.address.city,
+      postalCode: p.address.postalCode,
+      volumeL: p.metrics.volumeL,
+      loyaltyScore: p.metrics.loyaltyScore,
+      vingtile: p.metrics.vingtile,
+      isKOL: p.metrics.isKOL,
+      daysSinceVisit,
+      riskLevel
+    };
+  });
+
+  // Appliquer les filtres
+  let filteredData = enrichedData;
+  if (filters) {
+    for (const filter of filters) {
+      filteredData = filteredData.filter(item => {
+        const value = (item as Record<string, unknown>)[filter.field];
+        switch (filter.operator) {
+          case 'eq': return value === filter.value;
+          case 'ne': return value !== filter.value;
+          default: return true;
+        }
+      });
+    }
+  }
+
+  // Étape 1: Sélectionner les top N selon le critère de tri
+  const sortedData = [...filteredData].sort((a, b) => {
+    const aVal = (a as Record<string, unknown>)[sortField] as number || 0;
+    const bVal = (b as Record<string, unknown>)[sortField] as number || 0;
+    return bVal - aVal; // Décroissant
+  }).slice(0, topN);
+
+  // Étape 2: Regrouper par la dimension demandée
+  const grouped = new Map<string, typeof sortedData>();
+
+  for (const item of sortedData) {
+    let key: string;
+
+    switch (groupByField) {
+      case 'city':
+        key = item.city || 'Autre';
+        break;
+      case 'specialty':
+        key = item.specialty || 'Autre';
+        break;
+      case 'vingtileBucket': {
+        const v = item.vingtile;
+        key = v <= 2 ? 'V1-2 (Top)' : v <= 5 ? 'V3-5 (Haut)' : v <= 10 ? 'V6-10 (Moyen)' : 'V11+ (Bas)';
+        break;
+      }
+      case 'isKOL':
+        key = item.isKOL ? 'KOLs' : 'Autres';
+        break;
+      default:
+        key = String((item as Record<string, unknown>)[groupByField] || 'Autre');
+    }
+
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(item);
+  }
+
+  // Calculer les métriques pour chaque groupe
+  const results: ChartDataPoint[] = [];
+  for (const [name, items] of grouped) {
+    const totalVolume = items.reduce((sum, item) => sum + item.volumeL, 0);
+    const avgLoyalty = items.reduce((sum, item) => sum + item.loyaltyScore, 0) / items.length;
+
+    results.push({
+      name,
+      'Nombre': items.length,
+      'Volume (K L)': Math.round(totalVolume / 1000),
+      'Fidélité moy.': Math.round(avgLoyalty * 10) / 10
+    });
+  }
+
+  // Trier par volume décroissant
+  results.sort((a, b) => (b['Volume (K L)'] as number) - (a['Volume (K L)'] as number));
+
+  return results;
+}
+
 // Parser la réponse JSON du LLM avec meilleure tolérance
 export function parseLLMChartResponse(response: string): ChartSpec | null {
   try {
@@ -716,6 +827,116 @@ CONTEXTE DONNÉES ACTUELLES :
 export interface LocalInterpretation {
   spec: ChartSpec;
   confidence: number; // 0-1, how confident we are in the interpretation
+  isCompound?: boolean; // Si c'est une requête composée (top N puis groupBy)
+  compoundParams?: {
+    topN: number;
+    sortField: string;
+    groupByField: string;
+    filters?: DataFilter[];
+  };
+}
+
+/**
+ * Détecte si c'est une requête composée et extrait les paramètres
+ * Ex: "répartition par ville des meilleurs 25 prescripteurs"
+ */
+function detectCompoundQuery(question: string): {
+  isCompound: boolean;
+  topN?: number;
+  groupByField?: string;
+  sortField?: string;
+} {
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Pattern: "répartition/distribution par [ville/spécialité] des [top/meilleurs] N [prescripteurs]"
+  const compoundPatterns = [
+    /(?:repartition|distribution|diagramme|graphique).*par\s*(ville|specialite).*(?:des|du|de)\s*(?:top|meilleurs?|premiers?)\s*(\d+)/i,
+    /(?:top|meilleurs?|premiers?)\s*(\d+).*(?:repartition|distribution|par\s*(ville|specialite))/i,
+    /par\s*(ville|specialite).*(?:top|meilleurs?|premiers?)\s*(\d+)/i
+  ];
+
+  for (const pattern of compoundPatterns) {
+    const match = q.match(pattern);
+    if (match) {
+      // Extraire le groupBy et le nombre
+      let groupByField = 'city';
+      let topN = 10;
+
+      // Chercher la dimension de groupement
+      if (/ville/i.test(q)) groupByField = 'city';
+      else if (/specialite/i.test(q)) groupByField = 'specialty';
+      else if (/segment|vingtile/i.test(q)) groupByField = 'vingtileBucket';
+
+      // Chercher le nombre
+      const numMatch = q.match(/(\d+)/);
+      if (numMatch) topN = parseInt(numMatch[1], 10);
+
+      return {
+        isCompound: true,
+        topN,
+        groupByField,
+        sortField: 'volumeL' // Par défaut, trier par volume
+      };
+    }
+  }
+
+  return { isCompound: false };
+}
+
+/**
+ * Génère un ChartResult à partir d'une requête composée
+ */
+export function generateCompoundChartResult(
+  topN: number,
+  sortField: string,
+  groupByField: string,
+  filters?: DataFilter[]
+): ChartResult {
+  const data = executeCompoundQuery(topN, sortField, groupByField, filters);
+
+  const groupByLabel = groupByField === 'city' ? 'ville' :
+    groupByField === 'specialty' ? 'spécialité' :
+    groupByField === 'vingtileBucket' ? 'segment' : groupByField;
+
+  const spec: ChartSpec = {
+    chartType: data.length <= 6 ? 'pie' : 'bar',
+    title: `Répartition par ${groupByLabel} des Top ${topN} prescripteurs`,
+    description: `Distribution géographique des ${topN} plus gros prescripteurs`,
+    query: {
+      source: 'practitioners',
+      groupBy: groupByField,
+      metrics: [
+        { name: 'Nombre', field: 'id', aggregation: 'count' },
+        { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' }
+      ]
+    },
+    formatting: {
+      showLegend: true
+    }
+  };
+
+  // Générer des insights
+  const topGroup = data[0];
+  const totalVolume = data.reduce((sum, d) => sum + (d['Volume (K L)'] as number), 0);
+  const insights = [
+    `**${topGroup?.name}** concentre ${topGroup?.['Nombre']} des ${topN} meilleurs prescripteurs`,
+    `Volume total des top ${topN} : ${totalVolume}K L/an`,
+    `Répartis sur ${data.length} ${groupByLabel}s différentes`
+  ];
+
+  const suggestions = [
+    `Détail des praticiens à ${topGroup?.name}`,
+    `Évolution du volume par ${groupByLabel}`,
+    `Comparaison KOLs vs autres dans le top ${topN}`
+  ];
+
+  return {
+    spec,
+    data,
+    insights,
+    suggestions,
+    rawQuery: JSON.stringify({ topN, sortField, groupByField }, null, 2)
+  };
 }
 
 /**
@@ -729,8 +950,42 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
   const params = extractQueryParameters(question);
   const limit = params.limit || 10;
 
-  // Patterns pour détecter le type de requête
-  const isTopPrescribers = /top|prescri|volume|plus\s*(de\s*)?volume|qui\s+prescri/i.test(q);
+  // ============================================
+  // DÉTECTION DES REQUÊTES COMPOSÉES
+  // Ex: "répartition par ville des top 25 prescripteurs"
+  // ============================================
+  const compound = detectCompoundQuery(question);
+  if (compound.isCompound && compound.topN && compound.groupByField) {
+    const groupByLabel = compound.groupByField === 'city' ? 'ville' :
+      compound.groupByField === 'specialty' ? 'spécialité' : 'segment';
+
+    return {
+      spec: {
+        chartType: 'bar', // Sera potentiellement changé en pie si peu de catégories
+        title: `Répartition par ${groupByLabel} des Top ${compound.topN} prescripteurs`,
+        description: `Distribution des ${compound.topN} plus gros prescripteurs par ${groupByLabel}`,
+        query: {
+          source: 'practitioners',
+          groupBy: compound.groupByField,
+          metrics: [
+            { name: 'Nombre', field: 'id', aggregation: 'count' },
+            { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' }
+          ]
+        },
+        formatting: { showLegend: true }
+      },
+      confidence: 0.95,
+      isCompound: true,
+      compoundParams: {
+        topN: compound.topN,
+        sortField: compound.sortField || 'volumeL',
+        groupByField: compound.groupByField
+      }
+    };
+  }
+
+  // Patterns pour détecter le type de requête simple
+  const isTopPrescribers = /top|prescri|volume|plus\s*(de\s*)?volume|qui\s+prescri|meilleur/i.test(q);
   const isKOLComparison = /kols?\s*(vs|versus|contre|compar|aux autres)/i.test(q);
   const isKOLDistribution = /kols?\s*(par|selon|repartition|distribution)/i.test(q);
   const isKOLOnly = /\bkols?\b/i.test(q) && !isKOLComparison && !isKOLDistribution;
@@ -1005,10 +1260,19 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
 
 /**
  * Génère un graphique complet à partir d'une interprétation locale
+ * Gère automatiquement les requêtes simples et composées
  */
 export function generateChartLocally(question: string): ChartResult {
-  const { spec } = interpretQuestionLocally(question);
-  return generateChartFromSpec(spec);
+  const interpretation = interpretQuestionLocally(question);
+
+  // Si c'est une requête composée, utiliser le moteur dédié
+  if (interpretation.isCompound && interpretation.compoundParams) {
+    const { topN, sortField, groupByField, filters } = interpretation.compoundParams;
+    return generateCompoundChartResult(topN, sortField, groupByField, filters);
+  }
+
+  // Sinon, utiliser le moteur standard
+  return generateChartFromSpec(interpretation.spec);
 }
 
 // Couleurs par défaut pour les graphiques
