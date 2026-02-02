@@ -1,5 +1,20 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Sparkles, MessageCircle, Settings, Calendar, Map, BarChart3, Route, X, Brain } from 'lucide-react';
+import {
+  Home,
+  Users,
+  Sparkles,
+  MessageCircle,
+  Settings,
+  Calendar,
+  Map,
+  BarChart3,
+  Route,
+  X,
+  Brain,
+  Mic,
+  Zap,
+  PieChart
+} from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
 interface SidebarProps {
@@ -13,8 +28,14 @@ const menuItems = [
   { id: 'visits', icon: Calendar, label: 'Visites', path: '/visits' },
   { id: 'map', icon: Map, label: 'Territoire', path: '/map' },
   { id: 'tour', icon: Route, label: 'Optimisation', path: '/tour-optimization' },
+];
+
+const aiItems = [
+  { id: 'next-actions', icon: Zap, label: 'Mes Actions', path: '/next-actions', badge: 'Nouveau' },
+  { id: 'visit-report', icon: Mic, label: 'Compte-rendu', path: '/visit-report', badge: 'Vocal' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
   { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach' },
+  { id: 'data-explorer', icon: PieChart, label: 'Data Explorer', path: '/data-explorer', badge: 'Nouveau' },
 ];
 
 const managerItems = [
@@ -25,6 +46,39 @@ const managerItems = [
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const { currentUser } = useAppStore();
+
+  const renderMenuItem = (item: typeof menuItems[0] & { badge?: string }) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.path;
+
+    return (
+      <Link
+        key={item.id}
+        to={item.path}
+        onClick={onClose}
+        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
+          isActive
+            ? 'bg-white text-al-navy shadow-lg'
+            : 'text-white/80 hover:bg-white/10 hover:text-white'
+        }`}
+      >
+        <Icon className="w-5 h-5" />
+        <span className="font-medium flex-1">{item.label}</span>
+        {item.badge && (
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+            isActive
+              ? 'bg-al-teal/20 text-al-teal'
+              : 'bg-al-teal/30 text-al-teal'
+          }`}>
+            {item.badge}
+          </span>
+        )}
+        {isActive && !item.badge && (
+          <div className="ml-auto w-2 h-2 bg-al-teal rounded-full" />
+        )}
+      </Link>
+    );
+  };
 
   return (
     <div
@@ -56,56 +110,22 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
       {/* Navigation */}
       <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+        {/* Main Navigation */}
+        {menuItems.map(renderMenuItem)}
 
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              onClick={onClose}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
-                isActive
-                  ? 'bg-white text-al-navy shadow-lg'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-              {isActive && (
-                <div className="ml-auto w-2 h-2 bg-al-teal rounded-full" />
-              )}
-            </Link>
-          );
-        })}
+        {/* Section Intelligence IA */}
+        <div className="pt-6 mt-4 border-t border-white/10">
+          <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4 flex items-center gap-2">
+            <Sparkles className="w-3 h-3" />
+            Intelligence IA
+          </p>
+          {aiItems.map(renderMenuItem)}
+        </div>
 
         {/* Section Manager */}
         <div className="pt-6 mt-4 border-t border-white/10">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4">Manager</p>
-          {managerItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-
-            return (
-              <Link
-                key={item.id}
-                to={item.path}
-                onClick={onClose}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'bg-white text-al-navy shadow-lg'
-                    : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-2 h-2 bg-al-teal rounded-full" />
-                )}
-              </Link>
-            );
-          })}
+          {managerItems.map(renderMenuItem)}
         </div>
       </nav>
 
