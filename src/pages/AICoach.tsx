@@ -24,6 +24,7 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
 import { DataService } from '../services/dataService';
 import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
+import { universalSearch, getFullDatabaseContext } from '../services/universalSearch';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
@@ -180,12 +181,19 @@ export default function AICoach() {
       return lastVisit < ninetyDaysAgo;
     });
 
-    // NOUVEAU: Utiliser le moteur de requêtes intelligent pour analyser la question
+    // NOUVEAU: Utiliser le moteur de recherche universelle pour analyser la question
     let queryContext = '';
     let specificPractitionerContext = '';
+    let universalSearchContext = '';
 
     if (userQuestion) {
-      // Exécuter la requête intelligente basée sur la question
+      // Utiliser la recherche universelle pour des résultats complets
+      const universalResult = universalSearch(userQuestion);
+      if (universalResult.results.length > 0) {
+        universalSearchContext = universalResult.context;
+      }
+
+      // Exécuter aussi la requête classique pour compatibilité
       const queryResult = executeQuery(userQuestion);
 
       // Si des résultats spécifiques sont trouvés, générer le contexte de requête
@@ -203,7 +211,7 @@ export default function AICoach() {
     }
 
     // Générer le contexte complet du site pour les questions générales
-    const fullSiteContext = generateFullSiteContext();
+    const fullSiteContext = userQuestion ? getFullDatabaseContext() : generateFullSiteContext();
 
     return `Tu es un assistant stratégique expert pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
 
@@ -246,6 +254,7 @@ ${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 5).map(p =>
   `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`
 ).join('\n') : '- Tous les KOLs sont à jour'}
 
+${universalSearchContext}
 ${queryContext}
 ${specificPractitionerContext}
 ${fullSiteContext}
