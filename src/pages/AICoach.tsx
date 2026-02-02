@@ -18,7 +18,9 @@ import {
   AlertCircle,
   BarChart3,
   PieChart as PieChartIcon,
-  TrendingUp
+  TrendingUp,
+  Code2,
+  Lightbulb
 } from 'lucide-react';
 import {
   BarChart,
@@ -33,7 +35,8 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend
+  Legend,
+  ComposedChart
 } from 'recharts';
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
@@ -43,27 +46,38 @@ import { calculatePeriodMetrics, getTopPractitioners } from '../services/metrics
 import { DataService } from '../services/dataService';
 import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
 import { universalSearch, getFullDatabaseContext } from '../services/universalSearch';
+import {
+  CHART_GENERATION_PROMPT,
+  getDataContextForLLM,
+  parseLLMChartResponse,
+  generateChartFromSpec,
+  DEFAULT_CHART_COLORS,
+  type ChartSpec
+} from '../services/agenticChartEngine';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 
-// Types pour les graphiques
-type ChartType = 'bar' | 'pie' | 'line';
+// Types pour les graphiques (supportant l'approche agentique)
+type ChartType = 'bar' | 'pie' | 'line' | 'composed';
 
-interface ChartDataPoint {
-  name: string;
-  value: number;
-  secondaryValue?: number;
-  color?: string;
-}
-
+// Type pour le fallback local (compatibilité)
 interface ChartConfig {
   type: ChartType;
   title: string;
-  data: ChartDataPoint[];
+  data: Array<{ name: string; value: number; secondaryValue?: number }>;
   xLabel?: string;
   yLabel?: string;
   secondaryLabel?: string;
+  query?: { metrics?: Array<{ name: string }> };
+}
+
+interface AgenticChartData {
+  spec: ChartSpec;
+  data: Array<{ name: string; [key: string]: string | number }>;
+  insights: string[];
+  suggestions: string[];
+  generatedByLLM: boolean;
 }
 
 interface Message {
@@ -72,17 +86,15 @@ interface Message {
   content: string;
   practitioners?: (Practitioner & { daysSinceVisit?: number })[];
   insights?: string[];
-  chart?: ChartConfig;
+  agenticChart?: AgenticChartData;
+  suggestions?: string[];
   timestamp: Date;
   isMarkdown?: boolean;
-  source?: 'llm' | 'local';
+  source?: 'llm' | 'local' | 'agentic';
 }
 
 // Couleurs pour les graphiques
-const CHART_COLORS = [
-  '#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444',
-  '#06B6D4', '#EC4899', '#6366F1', '#14B8A6', '#F97316'
-];
+const CHART_COLORS = DEFAULT_CHART_COLORS;
 
 export default function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -98,16 +110,16 @@ export default function AICoach() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Suggestions contextuelles - Talk to My Data avec questions naturelles
+  // Suggestions contextuelles - Talk to My Data (approche agentique)
   const SUGGESTION_CHIPS = [
+    "Montre-moi un graphique des volumes par ville",
+    "Quelle est la répartition des praticiens par niveau de risque ?",
+    "Compare les KOLs aux autres praticiens en volume",
+    "Top 10 prescripteurs avec leur fidélité",
+    "Distribution des praticiens par ancienneté de visite",
+    "Analyse les pneumologues vs généralistes",
+    "Camembert des segments par vingtile",
     `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
-    "Montre-moi les volumes par ville",
-    "Quelle est la répartition par vingtile ?",
-    "Combien de praticiens à risque ?",
-    "Analyse des KOLs",
-    "Distribution de fidélité",
-    "Top 10 prescripteurs",
-    "Praticiens non vus depuis 60 jours",
   ];
 
   // Auto-scroll vers le bas
@@ -758,6 +770,20 @@ INSTRUCTIONS IMPORTANTES :
 - Adapte tes recommandations à la période (${periodLabel})`;
   };
 
+  // Détecter si la question demande une visualisation
+  const isVisualizationRequest = (q: string): boolean => {
+    const normalized = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const patterns = [
+      /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme/,
+      /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
+      /📊|📈|🥧|📉/,
+      /repartition|distribution|top\s*\d+|classement|compare/,
+      /combien|nombre de|total de|analyse/,
+      /par ville|par specialite|par segment|par vingtile|par risque/
+    ];
+    return patterns.some(p => p.test(normalized));
+  };
+
   const handleSend = async (question: string) => {
     if (!question.trim()) return;
 
@@ -772,105 +798,194 @@ INSTRUCTIONS IMPORTANTES :
     setInput('');
     setIsTyping(true);
 
-    // TALK TO MY DATA: Analyse sémantique intelligente de la requête
-    const analysis = analyzeDataRequest(question);
-    let chartResult: { chart: ChartConfig; insights: string[]; followUp: string[] } | null = null;
-
-    if (analysis.wantsChart || analysis.wantsData) {
-      chartResult = generateChartData(analysis.chartType, analysis.topic, analysis.metric);
-    }
+    // Détecter si c'est une demande de visualisation
+    const wantsVisualization = isVisualizationRequest(question);
 
     try {
-      // D'abord essayer avec Groq AI pour une vraie conversation
-      const context = buildContext(question);
-      const conversationHistory = messages
-        .slice(-4) // Garder les 4 derniers échanges pour le contexte
-        .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
-        .join('\n\n');
+      if (wantsVisualization) {
+        // ============================================
+        // MODE AGENTIQUE : Le LLM génère le code du graphique
+        // ============================================
+        console.log('🤖 Mode agentique activé - génération de graphique');
 
-      // Ajouter contexte spécifique pour les graphiques
-      const chartContext = chartResult ? `
-L'utilisateur demande une analyse de données. Un graphique de type "${analysis.chartType}" sur le thème "${analysis.topic}" sera affiché.
-Insights automatiques générés : ${chartResult.insights.join(' | ')}
-Fournis une brève analyse textuelle complémentaire. Sois synthétique et actionnable.
-` : '';
+        const dataContext = getDataContextForLLM();
+        const chartPrompt = `${CHART_GENERATION_PROMPT}
 
-      const prompt = `${context}
+${dataContext}
+
+DEMANDE DE L'UTILISATEUR :
+"${question}"
+
+Génère la spécification JSON du graphique demandé. Assure-toi que le JSON est valide et complet.`;
+
+        const chartResponse = await complete([{ role: 'user', content: chartPrompt }]);
+
+        if (chartResponse) {
+          // Parser la réponse du LLM pour extraire la spec
+          const spec = parseLLMChartResponse(chartResponse);
+
+          if (spec) {
+            // Exécuter la spec contre les vraies données
+            const chartResult = generateChartFromSpec(spec);
+
+            // Créer le message avec le graphique généré dynamiquement
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: `**${spec.title}**\n\n${spec.description || ''}\n\n*Graphique généré dynamiquement par l'IA*`,
+              agenticChart: {
+                spec: chartResult.spec,
+                data: chartResult.data,
+                insights: chartResult.insights,
+                suggestions: chartResult.suggestions,
+                generatedByLLM: true
+              },
+              insights: chartResult.insights,
+              suggestions: chartResult.suggestions,
+              timestamp: new Date(),
+              isMarkdown: true,
+              source: 'agentic'
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
+
+            if (autoSpeak) {
+              speak(`${spec.title}. ${chartResult.insights.join('. ')}`);
+            }
+          } else {
+            // Fallback si le parsing échoue
+            throw new Error('Impossible de parser la réponse du LLM');
+          }
+        } else {
+          throw new Error('Pas de réponse du LLM');
+        }
+      } else {
+        // ============================================
+        // MODE CONVERSATION : Réponse textuelle classique
+        // ============================================
+        const context = buildContext(question);
+        const conversationHistory = messages
+          .slice(-4)
+          .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
+          .join('\n\n');
+
+        const prompt = `${context}
 
 HISTORIQUE DE CONVERSATION :
 ${conversationHistory}
-${chartContext}
+
 QUESTION ACTUELLE :
 ${question}
 
-Réponds de manière précise et professionnelle en utilisant le format Markdown. Si un graphique est généré, complète avec des recommandations actionnables.`;
+Réponds de manière précise et professionnelle en utilisant le format Markdown.`;
 
-      const aiResponse = await complete([{ role: 'user', content: prompt }]);
+        const aiResponse = await complete([{ role: 'user', content: prompt }]);
 
-      if (aiResponse) {
-        // Réponse IA réussie
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: aiResponse,
-          chart: chartResult?.chart || undefined,
-          insights: chartResult?.insights,
-          timestamp: new Date(),
-          isMarkdown: true,
-          source: 'llm'
-        };
+        if (aiResponse) {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            isMarkdown: true,
+            source: 'llm'
+          };
 
-        setMessages(prev => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, assistantMessage]);
 
-        // Text-to-speech si activé
-        if (autoSpeak) {
-          speak(aiResponse);
+          if (autoSpeak) {
+            speak(aiResponse);
+          }
+        } else {
+          throw new Error('Pas de réponse de l\'IA');
         }
-      } else {
-        throw new Error('Pas de réponse de l\'IA');
       }
     } catch (error) {
-      console.log('Mode local activé (Groq non configuré)');
+      console.log('Mode local activé (LLM non disponible)', error);
 
-      // Utiliser le système intelligent local
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // ============================================
+      // FALLBACK LOCAL : Utiliser le système intelligent local
+      // ============================================
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Si un graphique/données est demandé, générer une réponse riche
-      let response;
-      if (chartResult) {
-        const topItems = chartResult.chart.data.slice(0, 3);
-        const insightText = chartResult.insights.map(i => `- ${i}`).join('\n');
+      if (wantsVisualization) {
+        // Fallback avec le système de détection locale
+        const analysis = analyzeDataRequest(question);
+        const chartResult = generateChartData(analysis.chartType, analysis.topic, analysis.metric);
 
-        response = {
-          message: `**📊 Analyse : ${chartResult.chart.title}**\n\n${insightText}\n\n**Top 3 :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item.value} ${chartResult.chart.yLabel || ''}`).join('\n')}\n\n**Pour approfondir :**\n${chartResult.followUp.map(f => `• ${f}`).join('\n')}`,
-          practitioners: undefined,
-          insights: chartResult.insights,
-          isMarkdown: true
-        };
+        if (chartResult) {
+          const topItems = chartResult.chart.data.slice(0, 3);
+          const firstMetric = chartResult.chart.query?.metrics?.[0]?.name || 'value';
+
+          // Convertir au format agentique
+          const agenticData: AgenticChartData = {
+            spec: {
+              chartType: chartResult.chart.type as ChartType,
+              title: chartResult.chart.title,
+              description: 'Généré localement',
+              query: {
+                source: 'practitioners',
+                metrics: [{ name: firstMetric, field: 'value', aggregation: 'sum' }]
+              }
+            },
+            data: chartResult.chart.data.map(d => ({
+              name: d.name,
+              [firstMetric]: d.value,
+              ...(d.secondaryValue !== undefined ? { secondary: d.secondaryValue } : {})
+            })),
+            insights: chartResult.insights,
+            suggestions: chartResult.followUp,
+            generatedByLLM: false
+          };
+
+          const response = {
+            message: `**📊 ${chartResult.chart.title}**\n\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top 3 :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item.value}`).join('\n')}`,
+            insights: chartResult.insights,
+            suggestions: chartResult.followUp
+          };
+
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: response.message,
+            agenticChart: agenticData,
+            insights: response.insights,
+            suggestions: response.suggestions,
+            timestamp: new Date(),
+            isMarkdown: true,
+            source: 'local'
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+
+          if (autoSpeak) {
+            speak(response.message);
+          }
+        }
       } else {
-        response = generateCoachResponse(
+        // Fallback conversation
+        const response = generateCoachResponse(
           question,
           practitioners,
           currentUser.objectives
         );
-      }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response.message,
-        practitioners: response.practitioners,
-        insights: response.insights,
-        chart: chartResult?.chart || undefined,
-        timestamp: new Date(),
-        isMarkdown: response.isMarkdown,
-        source: 'local'
-      };
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: response.message,
+          practitioners: response.practitioners,
+          insights: response.insights,
+          timestamp: new Date(),
+          isMarkdown: response.isMarkdown,
+          source: 'local'
+        };
 
-      setMessages(prev => [...prev, assistantMessage]);
+        setMessages(prev => [...prev, assistantMessage]);
 
-      if (autoSpeak && response.message) {
-        speak(response.message);
+        if (autoSpeak && response.message) {
+          speak(response.message);
+        }
       }
     }
 
@@ -1117,123 +1232,174 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                     </div>
                   )}
 
-                  {/* TALK TO MY DATA: Graphique interactif */}
-                  {message.chart && (
+                  {/* TALK TO MY DATA: Graphique Agentique */}
+                  {message.agenticChart && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-slate-200"
                     >
-                      <div className="flex items-center gap-2 mb-3">
-                        {message.chart.type === 'pie' ? (
-                          <PieChartIcon className="w-5 h-5 text-purple-500" />
-                        ) : message.chart.type === 'line' ? (
-                          <TrendingUp className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <BarChart3 className="w-5 h-5 text-blue-500" />
+                      {/* En-tête avec indicateur agentique */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {message.agenticChart.spec.chartType === 'pie' ? (
+                            <PieChartIcon className="w-5 h-5 text-purple-500" />
+                          ) : message.agenticChart.spec.chartType === 'line' ? (
+                            <TrendingUp className="w-5 h-5 text-green-500" />
+                          ) : message.agenticChart.spec.chartType === 'composed' ? (
+                            <BarChart3 className="w-5 h-5 text-indigo-500" />
+                          ) : (
+                            <BarChart3 className="w-5 h-5 text-blue-500" />
+                          )}
+                          <h4 className="font-semibold text-slate-800">{message.agenticChart.spec.title}</h4>
+                        </div>
+                        {message.agenticChart.generatedByLLM && (
+                          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 rounded-full">
+                            <Code2 className="w-3 h-3" />
+                            Généré par IA
+                          </span>
                         )}
-                        <h4 className="font-semibold text-slate-800">{message.chart.title}</h4>
                       </div>
 
-                      <div className="h-64 w-full">
+                      {/* Graphique dynamique */}
+                      <div className="h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                          {message.chart.type === 'pie' ? (
-                            <PieChart>
-                              <Pie
-                                data={message.chart.data}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {message.chart.data.map((_, index) => (
-                                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                              <Legend />
-                            </PieChart>
-                          ) : message.chart.type === 'line' ? (
-                            <LineChart data={message.chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                              <Legend />
-                              <Line
-                                type="monotone"
-                                dataKey="value"
-                                stroke="#8B5CF6"
-                                strokeWidth={2}
-                                dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
-                                name={message.chart.yLabel || 'Valeur'}
-                              />
-                              {message.chart.data[0]?.secondaryValue !== undefined && (
-                                <Line
-                                  type="monotone"
-                                  dataKey="secondaryValue"
-                                  stroke="#10B981"
-                                  strokeWidth={2}
-                                  dot={{ fill: '#10B981', strokeWidth: 2 }}
-                                  name={message.chart.secondaryLabel || 'Secondaire'}
-                                />
-                              )}
-                            </LineChart>
-                          ) : (
-                            <BarChart data={message.chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
-                              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                              <Legend />
-                              <Bar
-                                dataKey="value"
-                                fill="#3B82F6"
-                                radius={[4, 4, 0, 0]}
-                                name={message.chart.yLabel || 'Valeur'}
-                              >
-                                {message.chart.data.map((_, index) => (
-                                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                ))}
-                              </Bar>
-                              {message.chart.data[0]?.secondaryValue !== undefined && (
-                                <Bar
-                                  dataKey="secondaryValue"
-                                  fill="#10B981"
-                                  radius={[4, 4, 0, 0]}
-                                  name={message.chart.secondaryLabel || 'Secondaire'}
-                                />
-                              )}
-                            </BarChart>
-                          )}
+                          {(() => {
+                            const chart = message.agenticChart!;
+                            const data = chart.data;
+                            const metrics = chart.spec.query.metrics;
+                            const primaryMetric = metrics[0]?.name || Object.keys(data[0] || {}).find(k => k !== 'name') || 'value';
+                            const secondaryMetric = metrics[1]?.name;
+
+                            if (chart.spec.chartType === 'pie') {
+                              return (
+                                <PieChart>
+                                  <Pie
+                                    data={data}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
+                                    outerRadius={90}
+                                    fill="#8884d8"
+                                    dataKey={primaryMetric}
+                                  >
+                                    {data.map((_, index) => (
+                                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                  <Legend />
+                                </PieChart>
+                              );
+                            }
+
+                            if (chart.spec.chartType === 'line') {
+                              return (
+                                <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                  <Legend />
+                                  <Line
+                                    type="monotone"
+                                    dataKey={primaryMetric}
+                                    stroke="#8B5CF6"
+                                    strokeWidth={2}
+                                    dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
+                                    name={primaryMetric}
+                                  />
+                                  {secondaryMetric && (
+                                    <Line
+                                      type="monotone"
+                                      dataKey={secondaryMetric}
+                                      stroke="#10B981"
+                                      strokeWidth={2}
+                                      dot={{ fill: '#10B981', strokeWidth: 2 }}
+                                      name={secondaryMetric}
+                                    />
+                                  )}
+                                </LineChart>
+                              );
+                            }
+
+                            if (chart.spec.chartType === 'composed') {
+                              return (
+                                <ComposedChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
+                                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                  <Legend />
+                                  <Bar dataKey={primaryMetric} fill="#3B82F6" radius={[4, 4, 0, 0]} name={primaryMetric}>
+                                    {data.map((_, index) => (
+                                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                    ))}
+                                  </Bar>
+                                  {secondaryMetric && (
+                                    <Line type="monotone" dataKey={secondaryMetric} stroke="#EF4444" strokeWidth={2} name={secondaryMetric} />
+                                  )}
+                                </ComposedChart>
+                              );
+                            }
+
+                            // Default: Bar chart
+                            return (
+                              <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
+                                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                <Legend />
+                                <Bar dataKey={primaryMetric} fill="#3B82F6" radius={[4, 4, 0, 0]} name={primaryMetric}>
+                                  {data.map((_, index) => (
+                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                  ))}
+                                </Bar>
+                                {secondaryMetric && (
+                                  <Bar dataKey={secondaryMetric} fill="#10B981" radius={[4, 4, 0, 0]} name={secondaryMetric} />
+                                )}
+                              </BarChart>
+                            );
+                          })()}
                         </ResponsiveContainer>
                       </div>
 
-                      {/* Légende des données */}
-                      <div className="mt-3 pt-3 border-t border-slate-100">
-                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                          {message.chart.data.slice(0, 5).map((d, i) => (
-                            <span key={i} className="flex items-center gap-1">
-                              <span
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                              />
-                              {d.name}: {d.value}
-                            </span>
+                      {/* Insights générés */}
+                      {message.agenticChart.insights.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
+                          {message.agenticChart.insights.map((insight, i) => (
+                            <div key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                              <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                              <MarkdownText className="text-sm">{insight}</MarkdownText>
+                            </div>
                           ))}
-                          {message.chart.data.length > 5 && (
-                            <span className="text-slate-400">+{message.chart.data.length - 5} autres</span>
-                          )}
                         </div>
-                      </div>
+                      )}
+
+                      {/* Suggestions de suivi */}
+                      {message.suggestions && message.suggestions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-100">
+                          <p className="text-xs text-slate-500 mb-2">Pour approfondir :</p>
+                          <div className="flex flex-wrap gap-2">
+                            {message.suggestions.map((suggestion, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setInput(suggestion)}
+                                className="px-2 py-1 text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors border border-slate-200"
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
 
-                  {/* Insights */}
-                  {message.insights && message.insights.length > 0 && (
+                  {/* Insights standalone (sans graphique) */}
+                  {message.insights && message.insights.length > 0 && !message.agenticChart && (
                     <div className="mt-3 space-y-2">
                       {message.insights.map((insight, i) => (
                         <InsightBox
@@ -1242,7 +1408,6 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                             insight.toLowerCase().includes('urgent') || insight.toLowerCase().includes('risque') ? 'warning' :
                             insight.toLowerCase().includes('objectif atteint') ? 'success' :
                             insight.toLowerCase().includes('volume') || insight.toLowerCase().includes('opportunité') ? 'warning' :
-                            insight.toLowerCase().includes('graphique') ? 'success' :
                             'info'
                           }
                         >
