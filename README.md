@@ -6,14 +6,61 @@ ARIA (Air Liquide Intelligent Assistant) est une application web intelligente co
 
 L'application combine intelligence artificielle, analyse de données et interface utilisateur moderne pour fournir des recommandations personnalisées, générer des pitchs de vente sur mesure et offrir un coaching stratégique en temps réel.
 
+**ARIA est un véritable démonstrateur "Talk to My Data"** : toutes les recommandations sont générées dynamiquement à partir des données réelles, avec des justifications IA détaillées et des interconnections profondes entre tous les modules.
+
 ## ✨ Fonctionnalités Principales
 
 ### 🏠 Dashboard Intelligent
 - **KPIs animés en temps réel** : Suivi des visites mensuelles, objectifs, nouveaux prescripteurs et fidélité moyenne
-- **Recommandations IA** : Insights personnalisés basés sur l'analyse des données terrain
+- **Recommandations ARIA** : Insights personnalisés basés sur l'analyse des données terrain
 - **Visites du jour** : Agenda intelligent avec praticiens prioritaires
 - **Graphiques de performance** : Évolution des volumes d'oxygène sur 12 mois (Recharts)
 - **Notifications contextuelles** : Alertes et rappels en drawer latéral
+
+### 🎯 Mes Actions - Next Best Actions IA (Nouveau)
+- **Génération intelligente d'actions** basée sur l'analyse en temps réel des données praticiens
+- **Scores IA calculés** : Urgence, Impact, Probabilité de succès (0-100%)
+- **Justifications IA détaillées** pour chaque action :
+  - Résumé explicatif de la recommandation
+  - Métriques supportant la décision
+  - Risques si aucune action
+  - Opportunités si action réalisée
+  - Approche suggérée par ARIA
+  - Alertes concurrentielles contextuelles
+  - Analyse de tendance
+- **Types d'actions** : Visite urgente, KOL à voir, Opportunité, Risque de churn, Suivi, Upsell, Concurrent, Publication
+- **Gestion complète** : Complétion avec notes, report (snooze), rejet
+- **Seuils configurables** : Aucune valeur en dur, tout est paramétrable
+
+### 🎙️ Compte-Rendu Vocal (Nouveau)
+- **Dictée vocale** avec reconnaissance en temps réel (Web Speech API)
+- **Extraction IA automatique** des informations clés :
+  - Sujets abordés
+  - Sentiment (positif/neutre/négatif)
+  - Prochaines actions à mener
+  - Points clés à retenir
+  - Produits Air Liquide discutés
+  - Concurrents mentionnés
+  - Objections et freins
+  - Opportunités détectées
+- **Sauvegarde persistante** dans le profil praticien
+- **Création automatique de notes** stratégiques à partir des informations extraites
+
+### 📊 Data Explorer - Talk to My Data (Nouveau)
+- **Questions en langage naturel** sur vos données
+- **Visualisations dynamiques** générées par IA (graphiques, tableaux, cartes)
+- **Templates prédéfinis** pour analyses courantes :
+  - Performance territoire
+  - Analyse KOLs
+  - Risques de churn
+  - Opportunités de croissance
+- **Export des résultats** en différents formats
+
+### 🔍 Barre de Commandes Universelle (Nouveau)
+- **Recherche instantanée** sur toute l'application (praticiens, villes, actions)
+- **Commandes rapides** : `/pitch`, `/tour`, `/report`, `/actions`
+- **Activation** : `Cmd+K` (Mac) ou `Ctrl+K` (Windows)
+- **Navigation vocale** intégrée
 
 ### 👥 Gestion Complète des Praticiens
 - **Base de 150 praticiens** réalistes (100 médecins généralistes + 50 pneumologues)
@@ -23,10 +70,12 @@ L'application combine intelligence artificielle, analyse de données et interfac
   - Vingtile (Top 5%, Top 10%, etc.)
   - Niveau de risque (Faible, Moyen, Élevé)
   - Statut KOL (Key Opinion Leader)
-- **Fiches détaillées** avec 3 onglets :
-  - Synthèse IA : Points clés, battlecards concurrentielles, prochaine action
-  - Historique : Timeline des visites avec sentiments et notes
-  - Métriques : Graphiques d'évolution des volumes
+- **Fiches détaillées enrichies** avec 5 onglets :
+  - **Synthèse IA** : Points clés, battlecards concurrentielles, prochaine action
+  - **Historique** : Timeline des visites avec sentiments et notes
+  - **Métriques** : Graphiques d'évolution des volumes
+  - **Actualités** : Publications et news du praticien
+  - **Notes** : Notes utilisateur, comptes-rendus vocaux, actions IA (Nouveau)
 
 ### ✨ Générateur de Pitch IA (Groq Llama 3.3)
 - **Génération en streaming ultra-rapide** : Affichage mot à mot en temps réel
@@ -38,6 +87,17 @@ L'application combine intelligence artificielle, analyse de données et interfac
 - **Édition section par section** : Régénération ciblée avec instructions personnalisées
 - **Lecture audio (TTS)** : Web Speech API pour écouter le pitch en français
 - **Export** : Copie dans le presse-papiers
+- **Recherche de ville intelligente** avec suggestions
+
+### 🗺️ Optimisation de Tournée (Nouveau)
+- **Assistant pas-à-pas** pour planifier vos tournées
+- **Sélection multi-critères** des praticiens :
+  - Zone géographique
+  - Priorité (KOL, risque churn, opportunité)
+  - Temps depuis dernière visite
+- **Optimisation intelligente** du parcours
+- **Bénéfices calculés** par critère sélectionné
+- **Sauvegarde des visites** dans le calendrier
 
 ### 💬 Coach IA Conversationnel
 - **Questions suggérées** pour démarrage rapide
@@ -60,6 +120,34 @@ L'application combine intelligence artificielle, analyse de données et interfac
 - **Gestion de profil** : Informations utilisateur
 - **Préférences de notifications** : Alertes personnalisables
 - **Drawer de notifications** : Accès rapide aux alertes prioritaires
+
+## 🔄 Architecture Data Flow
+
+ARIA implémente une architecture de données interconnectée :
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Compte-Rendu   │────▶│   Store Central  │────▶│  Profil        │
+│  Vocal          │     │  (useUserData)   │     │  Praticien     │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                               │
+                               ▼
+                        ┌──────────────────┐
+                        │  AI Intelligence │
+                        │  Service         │
+                        └──────────────────┘
+                               │
+                               ▼
+                        ┌──────────────────┐
+                        │  Next Best       │
+                        │  Actions         │
+                        └──────────────────┘
+```
+
+- **Persistance localStorage** : Toutes les données utilisateur sont sauvegardées
+- **Notes automatiques** : Les comptes-rendus créent des notes dans le profil praticien
+- **Actions IA dynamiques** : Générées à partir de l'analyse en temps réel
+- **Justifications contextuelles** : Chaque recommandation explique son raisonnement
 
 ## 🎨 Design System
 
@@ -120,6 +208,7 @@ ARIA/
 │   │   ├── layout/              # Sidebar, Header, Layout
 │   │   ├── dashboard/           # StatCard, AIInsights, PerformanceChart
 │   │   ├── practitioners/       # FilterPanel
+│   │   ├── practitioner/        # NewsTab, NotesTab (enrichi)
 │   │   └── ui/                  # Button, Card, Badge, Avatar, Skeleton, etc.
 │   ├── pages/
 │   │   ├── Landing.tsx          # Page d'accueil
@@ -128,19 +217,28 @@ ARIA/
 │   │   ├── PractitionerProfile.tsx  # Fiche détaillée praticien
 │   │   ├── PitchGenerator.tsx   # Générateur de pitch IA
 │   │   ├── AICoach.tsx          # Coach conversationnel
+│   │   ├── NextBestActions.tsx  # Actions IA prioritaires (nouveau)
+│   │   ├── VoiceVisitReport.tsx # Compte-rendu vocal (nouveau)
+│   │   ├── TourOptimization.tsx # Optimisation tournée (nouveau)
+│   │   ├── DataExplorer.tsx     # Talk to My Data (nouveau)
 │   │   └── Settings.tsx         # Paramètres utilisateur
 │   ├── hooks/
 │   │   ├── useGroq.ts           # Hook pour Groq API
 │   │   └── useSpeech.ts         # Hook pour Text-to-Speech
 │   ├── services/
 │   │   ├── coachAI.ts           # Logique Coach IA
-│   │   └── pitchPrompts.ts      # Prompts Groq
+│   │   ├── pitchPrompts.ts      # Prompts Groq
+│   │   ├── actionIntelligence.ts # Génération actions IA (nouveau)
+│   │   ├── universalSearch.ts   # Recherche universelle (nouveau)
+│   │   └── dataService.ts       # Service données praticiens
 │   ├── data/
 │   │   └── practitioners.json   # Base de 150 praticiens
 │   ├── stores/
-│   │   └── useAppStore.ts       # Zustand store
+│   │   ├── useAppStore.ts       # Zustand store principal
+│   │   └── useUserDataStore.ts  # Store données utilisateur (nouveau)
 │   └── types/
 │       ├── index.ts             # Types principaux
+│       ├── database.ts          # Types base de données
 │       └── pitch.ts             # Types pitch
 ├── public/                       # Assets statiques
 ├── DEPLOYMENT.md                 # Guide de déploiement
@@ -157,13 +255,14 @@ ARIA/
 - **React Router DOM** : Routing SPA
 
 ### State Management & Data
-- **Zustand** : State management léger
+- **Zustand** : State management léger avec persistance
 - **Recharts** : Graphiques interactifs
 - **date-fns** : Manipulation de dates
 
 ### Intelligence Artificielle
 - **Groq API** : Génération de texte avec Llama 3.3 70B Versatile
-- **Web Speech API** : Text-to-Speech natif du navigateur
+- **Web Speech API** : Speech-to-Text et Text-to-Speech natif du navigateur
+- **Action Intelligence Service** : Analyse et scoring des actions recommandées
 
 ### Icônes & UI
 - **Lucide React** : Bibliothèque d'icônes moderne
@@ -180,6 +279,12 @@ ARIA/
   - Vingtiles : 1-5 (plus haut potentiel)
   - Volumes : 200,000 - 537,000 L O₂/an
   - 15 KOLs (10% des praticiens)
+
+### Données Persistantes (Nouveau)
+- **Rapports de visite** : Comptes-rendus vocaux avec extraction IA
+- **Notes utilisateur** : Observations, stratégies, intelligence concurrentielle
+- **Actions IA** : Historique des actions complétées, reportées, rejetées
+- **Seuils configurables** : Paramètres d'alerte personnalisables
 
 ### Données Mockées
 - Historique des 200+ visites
@@ -231,17 +336,32 @@ Voir `DEPLOYMENT.md` pour les instructions détaillées.
 - ✨ Animations fluides et naturelles
 - 🖱️ Feedback visuel sur tous les éléments interactifs
 - 📱 Interface responsive et accessible
+- 🎙️ Interactions vocales (dictée et lecture)
 
 ### Intelligence Artificielle
 - 🚀 Génération de pitch en streaming ultra-rapide (Groq)
-- 🎯 Recommandations basées sur l'analyse de données
+- 🎯 Recommandations basées sur l'analyse de données en temps réel
 - 💬 Coach IA avec impact business quantifié
 - 🔊 Lecture vocale en français naturel
+- 🧠 Justifications IA détaillées pour chaque action
+- 📊 Scoring multi-critères (urgence, impact, probabilité)
+
+### "Talk to My Data"
+- 🔄 Toutes les recommandations sont dynamiques
+- 📈 Aucune valeur en dur - tout est calculé
+- 🔗 Interconnexions profondes entre tous les modules
+- 💾 Persistance des données utilisateur
 
 ## 📸 Captures d'Écran
 
 ### Dashboard
 ![Dashboard avec KPIs, recommandations IA et graphiques de performance]
+
+### Next Best Actions
+![Interface des actions prioritaires avec justifications IA détaillées]
+
+### Compte-Rendu Vocal
+![Dictée vocale avec extraction automatique des informations]
 
 ### Générateur de Pitch
 ![Interface de génération avec streaming en temps réel]
@@ -260,6 +380,16 @@ Projet développé pour **Air Liquide Santé** en collaboration avec **Capgemini
 - Documentation à jour
 
 ## 📝 Changelog
+
+### Version 1.1.0 (Février 2026)
+- ✅ **Next Best Actions** : Actions IA avec justifications détaillées et scores
+- ✅ **Compte-Rendu Vocal** : Dictée avec extraction IA automatique
+- ✅ **Data Explorer** : Talk to My Data avec visualisations dynamiques
+- ✅ **Store persistant** : Sauvegarde des rapports, notes et actions
+- ✅ **NotesTab enrichi** : 3 sections (Notes, Comptes-rendus, Actions IA)
+- ✅ **Barre de commandes** : Recherche universelle avec Cmd+K
+- ✅ **Optimisation Tournée** : Assistant pas-à-pas avec calcul de bénéfices
+- ✅ **Interconnexions** : Data flow complet entre tous les modules
 
 ### Version 1.0.0 (Janvier 2026)
 - ✅ Landing page professionnelle Air Liquide
@@ -284,5 +414,5 @@ Pour toute question ou problème technique :
 
 ---
 
-**ARIA v1.0.0** - Air Liquide Intelligent Assistant
+**ARIA v1.1.0** - Air Liquide Intelligent Assistant
 Développé avec ❤️ pour Air Liquide Santé
