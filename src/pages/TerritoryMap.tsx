@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { Filter, Route, MapPin, TrendingUp, Clock } from 'lucide-react';
+import { Filter, Route, MapPin } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useNavigate } from 'react-router-dom';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { filterPractitionersByPeriod } from '../services/metricsCalculator';
-import { optimizeRoute } from '../services/routeOptimizer';
-import type { RouteOptimizationCriteria, RouteOptimizationResult } from '../services/routeOptimizer';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -102,18 +100,8 @@ export default function TerritoryMap() {
     kolOnly: false,
   });
 
-  const [optimizationCriteria, setOptimizationCriteria] = useState<RouteOptimizationCriteria>({
-    optimizeFor: 'distance',
-    maxVisitsPerDay: 6,
-    prioritizeKOLs: true,
-    prioritizeAtRisk: true,
-  });
-
-  const [optimizationResult, setOptimizationResult] = useState<RouteOptimizationResult | null>(null);
-  const [showOptimization, setShowOptimization] = useState(false);
   const [selectedPractitionerIds, setSelectedPractitionerIds] = useState<Set<string>>(new Set());
   const [showSelectionList, setShowSelectionList] = useState(false);
-  const [nonOptimizedDistance, setNonOptimizedDistance] = useState<number>(0);
 
   // Filtrer les praticiens par période
   const periodFilteredPractitioners = useMemo(() => {
@@ -161,24 +149,6 @@ export default function TerritoryMap() {
     }
   }, [mappedPractitioners]);
 
-  // Fonction pour calculer la distance d'un itinéraire non optimisé (ordre actuel)
-  const calculateNonOptimizedDistance = (practitioners: any[]) => {
-    if (practitioners.length < 2) return 0;
-    let totalDistance = 0;
-    for (let i = 0; i < practitioners.length - 1; i++) {
-      const p1 = practitioners[i];
-      const p2 = practitioners[i + 1];
-      if (p1.coords && p2.coords) {
-        const distance = Math.sqrt(
-          Math.pow(p2.coords[0] - p1.coords[0], 2) +
-          Math.pow(p2.coords[1] - p1.coords[1], 2)
-        ) * 111; // approximation en km
-        totalDistance += distance;
-      }
-    }
-    return totalDistance;
-  };
-
   // Fonction pour basculer la sélection d'un praticien
   const togglePractitionerSelection = (id: string) => {
     setSelectedPractitionerIds(prev => {
@@ -190,23 +160,6 @@ export default function TerritoryMap() {
       }
       return newSet;
     });
-  };
-
-  // Fonction pour calculer l'itinéraire optimal
-  const handleOptimizeRoute = () => {
-    if (selectedPractitioners.length === 0) {
-      alert('Veuillez sélectionner au moins un praticien pour l\'optimisation');
-      return;
-    }
-
-    // Calculer la distance non optimisée
-    const nonOptDist = calculateNonOptimizedDistance(selectedPractitioners);
-    setNonOptimizedDistance(nonOptDist);
-
-    // Optimiser
-    const result = optimizeRoute(selectedPractitioners as any[], optimizationCriteria);
-    setOptimizationResult(result);
-    setShowOptimization(true);
   };
 
   return (
@@ -366,159 +319,42 @@ export default function TerritoryMap() {
               Optimisation d'itinéraire
             </h2>
 
-            {/* Critères d'optimisation */}
-            <div className="space-y-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Optimiser pour</label>
-                <select
-                  value={optimizationCriteria.optimizeFor}
-                  onChange={(e) => setOptimizationCriteria(c => ({ ...c, optimizeFor: e.target.value as any }))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 text-sm"
-                >
-                  <option value="distance">Distance minimale</option>
-                  <option value="time">Temps minimal</option>
-                  <option value="kol_priority">Priorité KOLs</option>
-                  <option value="volume_priority">Priorité volume</option>
-                </select>
-              </div>
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                Optimisez vos tournées avec notre algorithme TSP 2-opt pour minimiser les distances et maximiser l'efficacité.
+              </p>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Visites par jour : {optimizationCriteria.maxVisitsPerDay}
-                </label>
-                <input
-                  type="range"
-                  min="3"
-                  max="10"
-                  value={optimizationCriteria.maxVisitsPerDay}
-                  onChange={(e) => setOptimizationCriteria(c => ({ ...c, maxVisitsPerDay: parseInt(e.target.value) }))}
-                  className="w-full accent-al-blue-500"
-                />
-                <div className="flex justify-between text-xs text-slate-500">
-                  <span>3</span>
-                  <span>10</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={optimizationCriteria.prioritizeKOLs}
-                    onChange={(e) => setOptimizationCriteria(c => ({ ...c, prioritizeKOLs: e.target.checked }))}
-                    className="w-4 h-4 text-al-blue-500 rounded"
-                  />
-                  <span className="text-sm font-medium">Prioriser les KOLs</span>
-                </label>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={optimizationCriteria.prioritizeAtRisk}
-                    onChange={(e) => setOptimizationCriteria(c => ({ ...c, prioritizeAtRisk: e.target.checked }))}
-                    className="w-4 h-4 text-al-blue-500 rounded"
-                  />
-                  <span className="text-sm font-medium">Prioriser à risque</span>
-                </label>
-              </div>
-            </div>
-
-            <button
-              onClick={handleOptimizeRoute}
-              disabled={selectedPractitioners.length === 0}
-              className="w-full bg-al-blue-500 hover:bg-al-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <TrendingUp className="w-4 h-4" />
-              Calculer l'itinéraire optimal
-            </button>
-          </div>
-
-          {/* Résultat de l'optimisation */}
-          {showOptimization && optimizationResult && (
-            <div className="p-6 border-b border-slate-200 bg-green-50">
-              <h3 className="font-bold text-green-900 mb-3 flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Résultat
-              </h3>
-
-              <p className="text-sm text-green-800 mb-4">{optimizationResult.summary}</p>
-
-              {/* Comparaison avant/après */}
-              {nonOptimizedDistance > 0 && (
-                <div className="mb-4 p-3 bg-white rounded-lg border-2 border-green-300">
-                  <p className="font-semibold text-sm text-green-900 mb-2">Bénéfices de l'optimisation</p>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Distance sans optimisation</span>
-                      <span className="font-medium text-slate-800">{nonOptimizedDistance.toFixed(1)} km</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Distance optimisée</span>
-                      <span className="font-medium text-green-700">{optimizationResult.totalDistance.toFixed(1)} km</span>
-                    </div>
-                    <div className="pt-2 border-t border-green-200 flex justify-between items-center">
-                      <span className="font-semibold text-green-900">Économie</span>
-                      <span className="font-bold text-green-700">
-                        -{(nonOptimizedDistance - optimizationResult.totalDistance).toFixed(1)} km
-                        ({(((nonOptimizedDistance - optimizationResult.totalDistance) / nonOptimizedDistance) * 100).toFixed(0)}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-green-900">Temps gagné</span>
-                      <span className="font-bold text-green-700">
-                        ~{Math.floor(((nonOptimizedDistance - optimizationResult.totalDistance) / 60) * 60)} min
-                      </span>
-                    </div>
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                    <Route className="w-5 h-5 text-white" />
                   </div>
+                  <div>
+                    <p className="font-semibold text-slate-800">Outil d'optimisation avancé</p>
+                    <p className="text-xs text-slate-600">Sélection, configuration, optimisation multi-jours</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/tour-optimization')}
+                  className="w-full bg-al-blue-500 hover:bg-al-blue-600 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Route className="w-4 h-4" />
+                  Ouvrir l'outil d'optimisation
+                </button>
+              </div>
+
+              {selectedPractitioners.length > 0 && (
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-bold text-al-blue-600">{selectedPractitioners.length}</span> praticiens sélectionnés sur la carte
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Utilisez l'outil d'optimisation pour planifier votre tournée
+                  </p>
                 </div>
               )}
-
-              <div className="space-y-3">
-                {optimizationResult.routes.map((route, idx) => (
-                  <div key={idx} className="bg-white rounded-lg p-3 shadow-sm">
-                    <h4 className="font-semibold text-sm mb-2">Jour {route.day}</h4>
-                    <div className="space-y-1 text-xs text-slate-600">
-                      <div className="flex justify-between">
-                        <span>Visites</span>
-                        <span className="font-medium">{route.practitioners.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Distance</span>
-                        <span className="font-medium">{route.totalDistance.toFixed(1)} km</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Temps estimé</span>
-                        <span className="font-medium">
-                          {Math.floor(route.totalTime / 60)}h{route.totalTime % 60}min
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Liste des praticiens dans l'ordre */}
-                    <div className="mt-2 pt-2 border-t border-slate-200">
-                      <p className="text-xs font-medium text-slate-700 mb-1">Ordre de visite:</p>
-                      <ol className="text-xs space-y-1">
-                        {route.order.map((idx, orderIdx) => {
-                          const p = route.practitioners[idx];
-                          return (
-                            <li key={orderIdx} className="flex items-center gap-2">
-                              <span className="font-medium text-al-blue-600">{orderIdx + 1}.</span>
-                              <span className="truncate">
-                                {p.lastName} ({p.city})
-                                {p.isKOL && ' KOL'}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
-          )}
+          </div>
 
           {/* Légende */}
           <div className="p-6">
