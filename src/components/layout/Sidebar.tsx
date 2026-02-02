@@ -12,8 +12,7 @@ import {
   X,
   Brain,
   Mic,
-  Zap,
-  PieChart
+  Zap
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -31,11 +30,10 @@ const menuItems = [
 ];
 
 const aiItems = [
-  { id: 'next-actions', icon: Zap, label: 'Mes Actions', path: '/next-actions', badge: 'Nouveau' },
-  { id: 'visit-report', icon: Mic, label: 'Compte-rendu', path: '/visit-report', badge: 'Vocal' },
+  { id: 'next-actions', icon: Zap, label: 'Mes Actions', path: '/next-actions' },
+  { id: 'visit-report', icon: Mic, label: 'Compte-rendu', path: '/visit-report' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
-  { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach' },
-  { id: 'data-explorer', icon: PieChart, label: 'Data Explorer', path: '/data-explorer', badge: 'Nouveau' },
+  { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach', badge: 'Data' },
 ];
 
 const managerItems = [

@@ -103,21 +103,49 @@ const ACTION_CONFIG = {
   }
 };
 
-// Composant Score Gauge
-const ScoreGauge = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <div className="flex items-center gap-2">
-    <span className="text-xs text-slate-500 w-16">{label}</span>
-    <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${value}%` }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className={`h-full ${color} rounded-full`}
-      />
+// Configuration des scores avec explications
+const SCORE_CONFIG = {
+  urgency: {
+    label: 'Urgence',
+    description: 'Délai depuis dernier contact, signaux de risque',
+    color: 'bg-red-500'
+  },
+  impact: {
+    label: 'Impact potentiel',
+    description: 'Volume concerné, influence sur le territoire',
+    color: 'bg-blue-500'
+  },
+  probability: {
+    label: 'Facilité',
+    description: 'Relation existante, historique de succès',
+    color: 'bg-green-500'
+  }
+};
+
+// Composant Score Gauge avec tooltip
+const ScoreGauge = ({ type, value }: { type: keyof typeof SCORE_CONFIG; value: number }) => {
+  const config = SCORE_CONFIG[type];
+  return (
+    <div className="group relative">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-600 w-24 font-medium">{config.label}</span>
+        <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${value}%` }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className={`h-full ${config.color} rounded-full`}
+          />
+        </div>
+        <span className="text-xs font-semibold text-slate-700 w-10 text-right">{value}/100</span>
+      </div>
+      {/* Tooltip */}
+      <div className="absolute -top-8 left-24 hidden group-hover:block bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+        {config.description}
+      </div>
     </div>
-    <span className="text-xs font-medium text-slate-600 w-8">{value}</span>
-  </div>
-);
+  );
+};
 
 // Composant Action Card amélioré
 const ActionCard = ({
@@ -338,12 +366,19 @@ const ActionCard = ({
                 <div className="bg-slate-50 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
-                    Scores IA
+                    Analyse ARIA
+                    <span className="text-xs font-normal text-slate-400">(survolez pour plus de détails)</span>
                   </h4>
-                  <div className="space-y-2">
-                    <ScoreGauge label="Urgence" value={action.scores.urgency} color="bg-red-500" />
-                    <ScoreGauge label="Impact" value={action.scores.impact} color="bg-blue-500" />
-                    <ScoreGauge label="Probabilité" value={action.scores.probability} color="bg-green-500" />
+                  <div className="space-y-3">
+                    <ScoreGauge type="urgency" value={action.scores.urgency} />
+                    <ScoreGauge type="impact" value={action.scores.impact} />
+                    <ScoreGauge type="probability" value={action.scores.probability} />
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-700">Score global</span>
+                      <span className="text-lg font-bold text-al-blue-600">{action.scores.overall}/100</span>
+                    </div>
                   </div>
                 </div>
 
