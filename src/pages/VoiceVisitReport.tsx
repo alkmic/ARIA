@@ -328,14 +328,14 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 mb-2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Mic className="w-7 h-7 text-white" />
+            <FileText className="w-7 h-7 text-white" />
           </div>
           <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            Compte-Rendu Vocal
+            Compte-Rendu de Visite
           </span>
         </h1>
         <p className="text-slate-600">
-          Dictez votre compte-rendu de visite et laissez ARIA extraire les informations clés
+          Dictez ou tapez votre compte-rendu et ARIA extraira automatiquement les informations clés
         </p>
       </div>
 
@@ -498,45 +498,65 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
               </button>
             </div>
 
-            {/* Recording Area */}
-            <div className="glass-card p-8">
-              <div className="text-center mb-6">
-                <motion.button
-                  onClick={toggleRecording}
-                  whileTap={{ scale: 0.95 }}
-                  className={`w-32 h-32 rounded-full mx-auto flex items-center justify-center transition-all shadow-2xl ${
-                    isRecording
-                      ? 'bg-gradient-to-br from-red-500 to-rose-500 shadow-red-500/30'
-                      : 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30 hover:shadow-emerald-500/40'
-                  }`}
-                >
-                  {isRecording ? (
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 1 }}
-                    >
-                      <MicOff className="w-12 h-12 text-white" />
-                    </motion.div>
-                  ) : (
-                    <Mic className="w-12 h-12 text-white" />
-                  )}
-                </motion.button>
+            {/* Input Area - Voice OR Text */}
+            <div className="glass-card p-6">
+              <h3 className="font-semibold text-slate-800 mb-4 text-center">
+                Comment souhaitez-vous saisir votre compte-rendu ?
+              </h3>
 
-                <p className={`mt-4 font-medium ${isRecording ? 'text-red-600' : 'text-slate-600'}`}>
-                  {isRecording ? 'Enregistrement en cours...' : 'Appuyez pour commencer'}
-                </p>
-                <p className="text-sm text-slate-400 mt-1">
-                  Décrivez votre visite : sujets abordés, réactions, prochaines étapes...
-                </p>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                {/* Voice Option */}
+                <div className="p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-300 transition-colors">
+                  <div className="text-center">
+                    <motion.button
+                      onClick={toggleRecording}
+                      whileTap={{ scale: 0.95 }}
+                      className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all shadow-lg ${
+                        isRecording
+                          ? 'bg-gradient-to-br from-red-500 to-rose-500 shadow-red-500/30'
+                          : 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30 hover:shadow-emerald-500/40'
+                      }`}
+                    >
+                      {isRecording ? (
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                        >
+                          <MicOff className="w-8 h-8 text-white" />
+                        </motion.div>
+                      ) : (
+                        <Mic className="w-8 h-8 text-white" />
+                      )}
+                    </motion.button>
+
+                    <p className={`mt-3 font-medium text-sm ${isRecording ? 'text-red-600' : 'text-slate-600'}`}>
+                      {isRecording ? 'Enregistrement...' : 'Dicter'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Text Option */}
+                <div className="p-4 border-2 border-slate-200 rounded-xl">
+                  <textarea
+                    value={transcript}
+                    onChange={(e) => setTranscript(e.target.value)}
+                    placeholder="Ou tapez directement votre compte-rendu ici...
+
+Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a mentionné avoir 3 patients candidats. Prochaine étape: envoyer la documentation technique."
+                    className="w-full h-32 p-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                    disabled={isRecording}
+                  />
+                </div>
               </div>
 
-              {/* Transcript */}
-              {transcript && (
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Transcription
+              {/* Live transcription display when recording */}
+              {(isRecording || transcript) && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                    {isRecording && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+                    {isRecording ? 'Transcription en cours...' : 'Votre compte-rendu'}
                   </label>
-                  <div className="bg-slate-50 rounded-xl p-4 max-h-48 overflow-y-auto">
+                  <div className="bg-slate-50 rounded-xl p-4 max-h-48 overflow-y-auto min-h-[80px]">
                     <p className="text-slate-700 whitespace-pre-wrap">{transcript}</p>
                     {isRecording && interimTranscriptRef.current && (
                       <span className="text-slate-400 italic">{interimTranscriptRef.current}</span>

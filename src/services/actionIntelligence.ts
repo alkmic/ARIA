@@ -363,8 +363,8 @@ export interface ActionGenerationConfig {
   topPrescriberVisitDays?: number;
   churnLoyaltyThreshold?: number;
   churnVolumeThreshold?: number;
-  opportunityGrowth?: number;
   opportunityLoyalty?: number;
+  maxActions?: number; // Limite le nombre d'actions retournées
 }
 
 export function generateIntelligentActions(
@@ -376,128 +376,137 @@ export function generateIntelligentActions(
     topPrescriberVisitDays = 45,
     churnLoyaltyThreshold = 5,
     churnVolumeThreshold = 50000,
-    opportunityGrowth = 25,
     opportunityLoyalty = 7,
+    maxActions = 12, // Par défaut, top 12 actions
   } = config;
 
   const practitioners = DataService.getAllPractitioners();
   const actions: Omit<AIAction, 'id' | 'createdAt' | 'status'>[] = [];
   const today = new Date();
 
+  // Track processed practitioners to avoid duplicates
+  const processedForType = new Map<string, Set<string>>();
+
   practitioners.forEach(p => {
     const context = analyzePractitionerContext(p);
 
-    // 1. KOL à visiter
+    // 1. KOL à visiter (priorité maximale)
     if (p.metrics.isKOL && context.daysSinceVisit > kolVisitDays) {
       const type: AIAction['type'] = 'visit_kol';
-      const scores = calculateScores(type, p, context);
-      const priority = context.daysSinceVisit > kolCriticalDays ? 'critical' : determinePriority(scores, type);
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
 
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Visite KOL prioritaire`,
-        reason: `${context.daysSinceVisit} jours depuis dernière visite`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: generateSuggestedDate(priority, type),
-      });
+        const scores = calculateScores(type, p, context);
+        const priority = context.daysSinceVisit > kolCriticalDays ? 'critical' : determinePriority(scores, type);
+
+        actions.push({
+          type,
+          priority,
+          practitionerId: p.id,
+          title: `Visite KOL prioritaire`,
+          reason: `${context.daysSinceVisit} jours depuis dernière visite`,
+          aiJustification: generateAIJustification(type, p, context, scores),
+          scores,
+          suggestedDate: generateSuggestedDate(priority, type),
+        });
+      }
     }
 
-    // 2. Top prescripteurs non visités
-    if (p.metrics.vingtile <= 5 && context.daysSinceVisit > topPrescriberVisitDays && !p.metrics.isKOL) {
-      const type: AIAction['type'] = 'visit_urgent';
-      const scores = calculateScores(type, p, context);
-      const priority = determinePriority(scores, type);
-
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Visite Top 25% à planifier`,
-        reason: `Vingtile ${p.metrics.vingtile} - ${context.daysSinceVisit}j sans visite`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: generateSuggestedDate(priority, type),
-      });
-    }
-
-    // 3. Risque de churn
+    // 2. Risque de churn (haute priorité)
     if ((p.metrics.churnRisk === 'high' || p.metrics.loyaltyScore < churnLoyaltyThreshold) &&
         p.metrics.volumeL > churnVolumeThreshold) {
       const type: AIAction['type'] = 'risk';
-      const scores = calculateScores(type, p, context);
-      const priority = p.metrics.volumeL > 100000 ? 'high' : determinePriority(scores, type);
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
 
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Risque de perte détecté`,
-        reason: `Fidélité ${p.metrics.loyaltyScore}/10 - Signaux d'attrition`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: generateSuggestedDate(priority, type),
-      });
+        const scores = calculateScores(type, p, context);
+        const priority = p.metrics.volumeL > 100000 ? 'high' : determinePriority(scores, type);
+
+        actions.push({
+          type,
+          priority,
+          practitionerId: p.id,
+          title: `Risque de perte détecté`,
+          reason: `Fidélité ${p.metrics.loyaltyScore}/10 - Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L`,
+          aiJustification: generateAIJustification(type, p, context, scores),
+          scores,
+          suggestedDate: generateSuggestedDate(priority, type),
+        });
+      }
     }
 
-    // 4. Opportunités de croissance
-    if (p.metrics.potentialGrowth > opportunityGrowth && p.metrics.loyaltyScore >= opportunityLoyalty) {
-      const type: AIAction['type'] = 'opportunity';
-      const scores = calculateScores(type, p, context);
-      const priority = determinePriority(scores, type);
-
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Opportunité de croissance`,
-        reason: `+${p.metrics.potentialGrowth}% potentiel identifié`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: generateSuggestedDate(priority, type),
-      });
-    }
-
-    // 5. Alerte concurrence
+    // 3. Alerte concurrence (haute priorité)
     if (context.competitorMentions.length > 0) {
       const type: AIAction['type'] = 'competitor';
-      const scores = calculateScores(type, p, context);
-      scores.urgency = 85; // Forcer haute urgence
-      const priority = 'high';
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
 
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Alerte concurrence`,
-        reason: `${context.competitorMentions.join(', ')} mentionné(s)`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: 'Sous 5 jours',
-      });
+        const scores = calculateScores(type, p, context);
+        scores.urgency = 85;
+
+        actions.push({
+          type,
+          priority: 'high',
+          practitionerId: p.id,
+          title: `Alerte concurrence`,
+          reason: `${context.competitorMentions.join(', ')} mentionné(s)`,
+          aiJustification: generateAIJustification(type, p, context, scores),
+          scores,
+          suggestedDate: 'Sous 5 jours',
+        });
+      }
     }
 
-    // 6. Suivi post-publication
-    if (context.recentPublications > 0 && context.daysSinceVisit > 30) {
-      const type: AIAction['type'] = 'publication';
-      const scores = calculateScores(type, p, context);
-      const priority = determinePriority(scores, type);
+    // 4. Top prescripteurs non visités (seulement les plus importants)
+    if (p.metrics.vingtile <= 3 && context.daysSinceVisit > topPrescriberVisitDays && !p.metrics.isKOL) {
+      const type: AIAction['type'] = 'visit_urgent';
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
 
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Opportunité publication`,
-        reason: `${context.recentPublications} publication(s) récente(s)`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: generateSuggestedDate(priority, type),
-      });
+        const scores = calculateScores(type, p, context);
+        const priority = determinePriority(scores, type);
+
+        actions.push({
+          type,
+          priority,
+          practitionerId: p.id,
+          title: `Visite Top 15% à planifier`,
+          reason: `Vingtile ${p.metrics.vingtile} - ${context.daysSinceVisit}j sans visite`,
+          aiJustification: generateAIJustification(type, p, context, scores),
+          scores,
+          suggestedDate: generateSuggestedDate(priority, type),
+        });
+      }
     }
 
-    // 7. Suivi requis (note récente avec action)
+    // 5. Opportunités de croissance (seulement les meilleures)
+    if (p.metrics.potentialGrowth > 35 && p.metrics.loyaltyScore >= opportunityLoyalty) {
+      const type: AIAction['type'] = 'opportunity';
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
+
+        const scores = calculateScores(type, p, context);
+        const priority = determinePriority(scores, type);
+
+        actions.push({
+          type,
+          priority,
+          practitionerId: p.id,
+          title: `Opportunité de croissance`,
+          reason: `+${p.metrics.potentialGrowth}% potentiel identifié`,
+          aiJustification: generateAIJustification(type, p, context, scores),
+          scores,
+          suggestedDate: generateSuggestedDate(priority, type),
+        });
+      }
+    }
+
+    // 6. Suivi requis (actions concrètes uniquement)
     const recentNotesWithAction = p.notes.filter(n => {
       const noteDate = new Date(n.date);
       return n.nextAction && (today.getTime() - noteDate.getTime()) < 14 * 24 * 60 * 60 * 1000;
@@ -505,42 +514,37 @@ export function generateIntelligentActions(
 
     if (recentNotesWithAction.length > 0) {
       const type: AIAction['type'] = 'followup';
-      const scores = calculateScores(type, p, context);
-      const priority = determinePriority(scores, type);
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
 
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Suivi à effectuer`,
-        reason: recentNotesWithAction[0].nextAction || 'Action en attente',
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: 'Cette semaine',
-      });
-    }
+        const scores = calculateScores(type, p, context);
+        const priority = determinePriority(scores, type);
 
-    // 8. Upsell (haute fidélité, volume développable)
-    if (p.metrics.loyaltyScore >= 8 && p.metrics.volumeL < 80000 && p.metrics.vingtile <= 10) {
-      const type: AIAction['type'] = 'upsell';
-      const scores = calculateScores(type, p, context);
-      const priority = determinePriority(scores, type);
-
-      actions.push({
-        type,
-        priority,
-        practitionerId: p.id,
-        title: `Potentiel d'expansion`,
-        reason: `Fidélité ${p.metrics.loyaltyScore}/10 - Volume développable`,
-        aiJustification: generateAIJustification(type, p, context, scores),
-        scores,
-        suggestedDate: 'Prochaine visite',
-      });
+        actions.push({
+          type,
+          priority,
+          practitionerId: p.id,
+          title: `Suivi à effectuer`,
+          reason: recentNotesWithAction[0].nextAction || 'Action en attente',
+          aiJustification: generateAIJustification(type, p, context, scores),
+          scores,
+          suggestedDate: 'Cette semaine',
+        });
+      }
     }
   });
 
-  // Tri par score global décroissant
-  return actions.sort((a, b) => b.scores.overall - a.scores.overall);
+  // Tri par score global décroissant et limitation au nombre max
+  return actions
+    .sort((a, b) => {
+      // Priorité critique d'abord
+      if (a.priority === 'critical' && b.priority !== 'critical') return -1;
+      if (b.priority === 'critical' && a.priority !== 'critical') return 1;
+      // Puis par score global
+      return b.scores.overall - a.scores.overall;
+    })
+    .slice(0, maxActions);
 }
 
 // Export des fonctions utilitaires
