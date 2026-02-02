@@ -130,44 +130,47 @@ function randomInt(min: number, max: number): number {
 }
 
 function generateRealisticVolume(vingtile: number, specialty: string, isKOL: boolean): number {
-  // Volumes réalistes en litres/an
-  // Pneumologues prescrivent plus que généralistes
-  // KOLs prescrivent plus
-  // Vingtile 1-5 = gros prescripteurs, 15-20 = petits prescripteurs
+  // Volumes RÉALISTES en litres/an d'oxygène prescrit
+  //
+  // Contexte réel en France :
+  // - Patient sous OLD : ~5 000 - 15 000 L/an d'O2 liquide
+  // - Un médecin généraliste suit 1-5 patients sous O2
+  // - Un pneumologue suit 10-50 patients sous O2
+  // - Vingtile 1 = top 5% prescripteurs, Vingtile 20 = bottom 5%
 
   let baseVolume: number;
 
   if (specialty === 'Pneumologue') {
-    // Pneumologues : 200K - 1.5M L/an
+    // Pneumologues : 30K - 300K L/an (suivent 5-40 patients)
     if (vingtile <= 2) {
-      baseVolume = randomInt(800000, 1500000);
+      baseVolume = randomInt(200000, 300000); // ~25-40 patients
     } else if (vingtile <= 5) {
-      baseVolume = randomInt(400000, 800000);
+      baseVolume = randomInt(120000, 200000); // ~15-25 patients
     } else if (vingtile <= 10) {
-      baseVolume = randomInt(150000, 400000);
+      baseVolume = randomInt(60000, 120000);  // ~8-15 patients
     } else if (vingtile <= 15) {
-      baseVolume = randomInt(60000, 150000);
+      baseVolume = randomInt(30000, 60000);   // ~4-8 patients
     } else {
-      baseVolume = randomInt(20000, 60000);
+      baseVolume = randomInt(10000, 30000);   // ~1-4 patients
     }
   } else {
-    // Médecins généralistes : 10K - 400K L/an
+    // Médecins généralistes : 5K - 80K L/an (suivent 1-10 patients)
     if (vingtile <= 2) {
-      baseVolume = randomInt(250000, 400000);
+      baseVolume = randomInt(50000, 80000);   // ~6-10 patients
     } else if (vingtile <= 5) {
-      baseVolume = randomInt(120000, 250000);
+      baseVolume = randomInt(30000, 50000);   // ~4-6 patients
     } else if (vingtile <= 10) {
-      baseVolume = randomInt(50000, 120000);
+      baseVolume = randomInt(15000, 30000);   // ~2-4 patients
     } else if (vingtile <= 15) {
-      baseVolume = randomInt(20000, 50000);
+      baseVolume = randomInt(8000, 15000);    // ~1-2 patients
     } else {
-      baseVolume = randomInt(5000, 20000);
+      baseVolume = randomInt(3000, 8000);     // ~0-1 patients (occasionnel)
     }
   }
 
-  // Bonus KOL : +20-40%
+  // Bonus KOL : +15-25% (influence plus de patients via leur réseau)
   if (isKOL) {
-    baseVolume *= 1 + (randomInt(20, 40) / 100);
+    baseVolume *= 1 + (randomInt(15, 25) / 100);
   }
 
   return Math.round(baseVolume);
@@ -227,8 +230,8 @@ function generateNews(
       content,
       type,
       relevance: isKOL
-        ? "💡 Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
-        : "💡 Pertinence : Maintenir la relation et valoriser l'expertise",
+        ? "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
+        : "Pertinence : Maintenir la relation et valoriser l'expertise",
       source: type === 'publication' ? 'Base bibliographique médicale' : undefined,
     });
   }
@@ -295,8 +298,9 @@ export function generatePractitioner(index: number): PractitionerProfile {
   const firstName = isMale ? randomChoice(FIRST_NAMES_M) : randomChoice(FIRST_NAMES_F);
   const lastName = randomChoice(LAST_NAMES);
 
-  // Spécialité (70% pneumologue, 30% généraliste)
-  const specialty = Math.random() < 0.7 ? 'Pneumologue' : 'Médecin généraliste';
+  // Spécialité (20% pneumologues, 80% généralistes - ratio réaliste France)
+  // En France : ~2000 pneumologues vs ~64000 médecins généralistes
+  const specialty = Math.random() < 0.20 ? 'Pneumologue' : 'Médecin généraliste';
 
   // Vingtile : distribution réaliste (plus de monde dans les vingtiles élevés)
   const vingtile = Math.random() < 0.15 ? randomInt(1, 5) : Math.random() < 0.4 ? randomInt(6, 10) : randomInt(11, 20);

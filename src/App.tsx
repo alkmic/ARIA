@@ -13,6 +13,9 @@ import TerritoryMap from './pages/TerritoryMap';
 import ManagerDashboard from './pages/ManagerDashboard';
 import KOLPlanningPage from './pages/KOLPlanningPage';
 import TourOptimizationPage from './pages/TourOptimizationPage';
+import VoiceVisitReport from './pages/VoiceVisitReport';
+import NextBestActions from './pages/NextBestActions';
+import DataExplorer from './pages/DataExplorer';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
 
 function App() {
@@ -37,6 +40,11 @@ function App() {
           <Route path="/kol-planning" element={<Layout><KOLPlanningPage /></Layout>} />
           <Route path="/tour-optimization" element={<Layout><TourOptimizationPage /></Layout>} />
           <Route path="/settings" element={<Layout><Settings /></Layout>} />
+
+          {/* New AI-powered pages */}
+          <Route path="/visit-report" element={<Layout><VoiceVisitReport /></Layout>} />
+          <Route path="/next-actions" element={<Layout><NextBestActions /></Layout>} />
+          <Route path="/data-explorer" element={<Layout><DataExplorer /></Layout>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -77,33 +77,33 @@ export class DataService {
 ║ FICHE COMPLÈTE - ${p.title} ${p.firstName} ${p.lastName}
 ╚════════════════════════════════════════════════════════════════════════════╝
 
-📋 INFORMATIONS PERSONNELLES :
+INFORMATIONS PERSONNELLES :
 - Identité complète : ${p.title} ${p.firstName} ${p.lastName}
 - Spécialité : ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}
-- Statut : ${p.metrics.isKOL ? '⭐ KEY OPINION LEADER (KOL)' : 'Praticien standard'}
+- Statut : ${p.metrics.isKOL ? 'KEY OPINION LEADER (KOL)' : 'Praticien standard'}
 
-📍 ADRESSE & CONTACT :
+ADRESSE & CONTACT :
 - Adresse complète : ${p.address.street}, ${p.address.postalCode} ${p.address.city}
 - Coordonnées GPS : ${p.address.coords.lat.toFixed(6)}, ${p.address.coords.lng.toFixed(6)}
 - Email : ${p.contact.email}
 - Téléphone : ${p.contact.phone}${p.contact.mobile ? `\n- Mobile : ${p.contact.mobile}` : ''}
 
-📊 MÉTRIQUES BUSINESS :
+MÉTRIQUES BUSINESS :
 - Volume annuel : ${(p.metrics.volumeL / 1000).toFixed(1)}K L/an (${(p.metrics.volumeMonthly / 1000).toFixed(1)}K L/mois)
 - Score de fidélité : ${p.metrics.loyaltyScore}/10
 - Vingtile : ${p.metrics.vingtile} (${p.metrics.vingtile <= 5 ? 'TOP PRESCRIPTEUR' : p.metrics.vingtile <= 10 ? 'Gros prescripteur' : 'Prescripteur moyen'})
 - Potentiel de croissance : +${p.metrics.potentialGrowth}%
-- Risque de churn : ${p.metrics.churnRisk === 'low' ? '🟢 FAIBLE' : p.metrics.churnRisk === 'medium' ? '🟡 MOYEN' : '🔴 ÉLEVÉ'}
+- Risque de churn : ${p.metrics.churnRisk === 'low' ? 'FAIBLE' : p.metrics.churnRisk === 'medium' ? 'MOYEN' : 'ÉLEVÉ'}
 
-📅 HISTORIQUE DE RELATION :
+HISTORIQUE DE RELATION :
 - Dernière visite : ${lastVisit} (il y a ${daysSinceVisit} jours)
 - Prochaine visite planifiée : ${p.nextScheduledVisit ? new Date(p.nextScheduledVisit).toLocaleDateString('fr-FR') : 'Non planifiée'}
-- Priorité de visite : ${p.metrics.isKOL && daysSinceVisit > 60 ? '🔴 TRÈS URGENT' : daysSinceVisit > 90 ? '🟠 URGENT' : daysSinceVisit > 60 ? '🟡 MOYEN' : '🟢 Normal'}
+- Priorité de visite : ${p.metrics.isKOL && daysSinceVisit > 60 ? 'TRÈS URGENT' : daysSinceVisit > 90 ? 'URGENT' : daysSinceVisit > 60 ? 'MOYEN' : 'Normal'}
 `;
 
     // Actualités/Publications
     if (p.news && p.news.length > 0) {
-      context += `\n📰 ACTUALITÉS & PUBLICATIONS (${p.news.length}) :\n`;
+      context += `\nACTUALITÉS & PUBLICATIONS (${p.news.length}) :\n`;
       p.news.forEach((news, idx) => {
         context += `\n${idx + 1}. [${new Date(news.date).toLocaleDateString('fr-FR')}] ${news.title}\n`;
         context += `   Type : ${news.type}\n`;
@@ -113,26 +113,26 @@ export class DataService {
         }
       });
     } else {
-      context += `\n📰 ACTUALITÉS & PUBLICATIONS : Aucune actualité récente enregistrée\n`;
+      context += `\nACTUALITÉS & PUBLICATIONS : Aucune actualité récente enregistrée\n`;
     }
 
     // Notes de visite
     if (p.notes && p.notes.length > 0) {
-      context += `\n📝 NOTES DE VISITE (${p.notes.length} dernières notes) :\n`;
+      context += `\nNOTES DE VISITE (${p.notes.length} dernières notes) :\n`;
       p.notes.slice(0, 5).forEach((note, idx) => {
         context += `\n${idx + 1}. [${new Date(note.date).toLocaleDateString('fr-FR')}] ${note.type.toUpperCase()}\n`;
         context += `   ${note.content}\n`;
         if (note.nextAction) {
-          context += `   ➡️ Action suivante : ${note.nextAction}\n`;
+          context += `   -> Action suivante : ${note.nextAction}\n`;
         }
       });
     } else {
-      context += `\n📝 NOTES DE VISITE : Aucune note enregistrée\n`;
+      context += `\nNOTES DE VISITE : Aucune note enregistrée\n`;
     }
 
     // Historique de visites
     if (p.visitHistory && p.visitHistory.length > 0) {
-      context += `\n🗓️ HISTORIQUE DE VISITES (${p.visitHistory.length} visites) :\n`;
+      context += `\nHISTORIQUE DE VISITES (${p.visitHistory.length} visites) :\n`;
       p.visitHistory.slice(0, 3).forEach((visit, idx) => {
         context += `   ${idx + 1}. ${new Date(visit.date).toLocaleDateString('fr-FR')}`;
         if (visit.duration) {

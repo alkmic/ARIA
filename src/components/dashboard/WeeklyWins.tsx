@@ -25,7 +25,7 @@ export function WeeklyWins() {
 
   return (
     <div className="glass-card p-4 sm:p-6">
-      <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4">🏆 Cette semaine</h3>
+      <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4">Cette semaine</h3>
 
       <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
         {wins.map((win, i) => (

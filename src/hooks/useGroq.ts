@@ -40,7 +40,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        setError('🔑 Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setError('Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
         setIsLoading(false);
         return;
       }
@@ -120,7 +120,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
       // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        setError('🔑 Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setError('Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
         setIsLoading(false);
         return null;
       }

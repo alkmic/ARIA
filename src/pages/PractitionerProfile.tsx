@@ -6,7 +6,6 @@ import {
   CheckCircle, Lightbulb, Swords, Calendar, Wand2, Newspaper, FileEdit
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
-import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -91,14 +90,15 @@ export default function PractitionerProfile() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Profile Info */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Avatar & Name */}
+          {/* Initials & Name */}
           <div className="glass-card p-6 text-center">
-            <Avatar
-              src={practitioner.avatarUrl}
-              alt={`${practitioner.firstName} ${practitioner.lastName}`}
-              size="xl"
-              className="mx-auto mb-4"
-            />
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4 ${
+              practitioner.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+              practitioner.specialty === 'Pneumologue' ? 'bg-gradient-to-br from-al-blue-500 to-al-blue-600' :
+              'bg-gradient-to-br from-slate-500 to-slate-600'
+            }`}>
+              {practitioner.firstName[0]}{practitioner.lastName[0]}
+            </div>
             <h1 className="text-2xl font-bold text-slate-800 mb-1">
               {practitioner.title} {practitioner.firstName} {practitioner.lastName}
             </h1>
@@ -155,8 +155,8 @@ export default function PractitionerProfile() {
                   practitioner.trend === 'up' ? 'text-success' :
                   practitioner.trend === 'down' ? 'text-danger' : 'text-slate-600'
                 }`}>
-                  {practitioner.trend === 'up' ? '↗️ +12%' :
-                   practitioner.trend === 'down' ? '↘️ -8%' : '→ Stable'}
+                  {practitioner.trend === 'up' ? '+12%' :
+                   practitioner.trend === 'down' ? '-8%' : 'Stable'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -359,12 +359,12 @@ function HistoryTab({ conversations, timePeriod, periodLabel }: { conversations:
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
-                conv.sentiment === 'positive' ? 'bg-green-100' :
-                conv.sentiment === 'negative' ? 'bg-red-100' : 'bg-slate-100'
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                conv.sentiment === 'positive' ? 'bg-green-100 text-green-600' :
+                conv.sentiment === 'negative' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'
               }`}>
-                {conv.sentiment === 'positive' ? '😊' :
-                 conv.sentiment === 'negative' ? '😟' : '😐'}
+                {conv.sentiment === 'positive' ? '+' :
+                 conv.sentiment === 'negative' ? '-' : '='}
               </div>
               <div className="flex-1">
                 <p className="font-medium text-slate-800">{formatDate(conv.date)}</p>

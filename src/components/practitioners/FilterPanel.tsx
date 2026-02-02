@@ -64,19 +64,19 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
             className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
           />
 
-          {/* Panel */}
+          {/* Panel - Responsive positioning */}
           <motion.div
-            initial={{ x: -400 }}
+            initial={{ x: '100%' }}
             animate={{ x: 0 }}
-            exit={{ x: -400 }}
+            exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-64 top-20 bottom-0 w-80 bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-full sm:w-80 bg-white shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="p-6 border-b border-slate-200">
+            <div className="p-4 sm:p-6 border-b border-slate-200">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-airLiquide-primary to-airLiquide-teal flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-teal flex items-center justify-center">
                     <Filter className="w-5 h-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-gray-900">Filtres</h2>
@@ -96,7 +96,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
             </div>
 
             {/* Filters */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* Spécialité */}
               <div>
                 <h3 className="font-semibold text-gray-900 mb-3">Spécialité</h3>
@@ -110,7 +110,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                         type="checkbox"
                         checked={filters.specialty?.includes(specialty) || false}
                         onChange={() => handleSpecialtyChange(specialty)}
-                        className="w-4 h-4 text-airLiquide-primary rounded focus:ring-2 focus:ring-airLiquide-primary"
+                        className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
                       <span className="text-sm text-gray-700">{specialty}</span>
                     </label>
@@ -131,7 +131,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                         type="checkbox"
                         checked={filters.vingtile?.includes(vingtile) || false}
                         onChange={() => handleVingtileChange(vingtile)}
-                        className="w-4 h-4 text-airLiquide-primary rounded focus:ring-2 focus:ring-airLiquide-primary"
+                        className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
                       <span className="text-sm text-gray-700">
                         Vingtile {vingtile} {vingtile === 1 && '(Top 5%)'}
@@ -154,7 +154,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                         type="checkbox"
                         checked={filters.riskLevel?.includes(risk) || false}
                         onChange={() => handleRiskLevelChange(risk)}
-                        className="w-4 h-4 text-airLiquide-primary rounded focus:ring-2 focus:ring-airLiquide-primary"
+                        className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
                       <span className="text-sm text-gray-700 capitalize">
                         {risk === 'low' ? 'Faible' : risk === 'medium' ? 'Moyen' : 'Élevé'}
@@ -173,7 +173,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                       type="radio"
                       checked={filters.isKOL === undefined}
                       onChange={() => handleIsKOLChange(undefined)}
-                      className="w-4 h-4 text-airLiquide-primary focus:ring-2 focus:ring-airLiquide-primary"
+                      className="w-4 h-4 text-al-blue-500 focus:ring-2 focus:ring-al-blue-500"
                     />
                     <span className="text-sm text-gray-700">Tous</span>
                   </label>
@@ -182,7 +182,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                       type="radio"
                       checked={filters.isKOL === true}
                       onChange={() => handleIsKOLChange(true)}
-                      className="w-4 h-4 text-airLiquide-primary focus:ring-2 focus:ring-airLiquide-primary"
+                      className="w-4 h-4 text-al-blue-500 focus:ring-2 focus:ring-al-blue-500"
                     />
                     <span className="text-sm text-gray-700">KOL uniquement</span>
                   </label>
@@ -191,7 +191,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                       type="radio"
                       checked={filters.isKOL === false}
                       onChange={() => handleIsKOLChange(false)}
-                      className="w-4 h-4 text-airLiquide-primary focus:ring-2 focus:ring-airLiquide-primary"
+                      className="w-4 h-4 text-al-blue-500 focus:ring-2 focus:ring-al-blue-500"
                     />
                     <span className="text-sm text-gray-700">Non-KOL uniquement</span>
                   </label>
@@ -210,7 +210,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
               </button>
               <button
                 onClick={onClose}
-                className="w-full py-2 text-sm bg-airLiquide-primary text-white hover:bg-airLiquide-darkBlue rounded-lg transition-colors font-medium"
+                className="w-full py-2 text-sm bg-al-blue-500 text-white hover:bg-al-blue-600 rounded-lg transition-colors font-medium"
               >
                 Appliquer ({activeFilterCount})
               </button>

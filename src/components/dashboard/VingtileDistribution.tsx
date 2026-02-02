@@ -154,7 +154,6 @@ export const VingtileDistribution: React.FC = () => {
 
         <div className="p-4 bg-gradient-to-br from-al-teal/10 to-al-sky/10 rounded-lg border border-al-teal/20">
           <div className="flex items-center space-x-2 mb-2">
-            <span className="text-sm">🎯</span>
             <p className="text-xs text-slate-600 font-medium">Praticiens Top 3</p>
           </div>
           <p className="text-2xl font-bold text-al-teal">
@@ -167,7 +166,6 @@ export const VingtileDistribution: React.FC = () => {
 
         <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200">
           <div className="flex items-center space-x-2 mb-2">
-            <span className="text-sm">📊</span>
             <p className="text-xs text-slate-600 font-medium">Volume moyen</p>
           </div>
           <p className="text-2xl font-bold text-slate-700">

@@ -25,6 +25,8 @@ interface AppState {
   getPractitionerById: (id: string) => Practitioner | undefined;
   getHighPriorityPractitioners: () => Practitioner[];
   getTodayVisits: () => UpcomingVisit[];
+  addVisits: (visits: UpcomingVisit[]) => void;
+  removeVisit: (visitId: string) => void;
 }
 
 // Mock data pour l'utilisateur connecté
@@ -46,7 +48,6 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I001',
     type: 'opportunity',
-    icon: '🎯',
     title: 'Opportunité détectée',
     message: 'Dr. Martin a augmenté ses prescriptions de 23% ce trimestre. Moment idéal pour renforcer la relation.',
     priority: 'high',
@@ -56,7 +57,6 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I002',
     type: 'alert',
-    icon: '⚠️',
     title: '3 KOLs non visités',
     message: '3 leaders d\'opinion n\'ont pas été contactés depuis plus de 90 jours.',
     priority: 'high',
@@ -65,7 +65,6 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I003',
     type: 'reminder',
-    icon: '📅',
     title: 'Visite demain',
     message: 'Rendez-vous confirmé avec Dr. Dupont demain à 10h. Documents de préparation disponibles.',
     priority: 'medium',
@@ -75,9 +74,8 @@ const mockInsights: AIInsight[] = [
   {
     id: 'I004',
     type: 'achievement',
-    icon: '🏆',
-    title: 'Objectif atteint !',
-    message: 'Félicitations ! Vous avez visité 100% des KOLs ce mois-ci.',
+    title: 'Objectif atteint',
+    message: 'Vous avez visité 100% des KOLs ce mois-ci.',
     priority: 'low',
   },
 ];
@@ -261,5 +259,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   getTodayVisits: () => {
     const today = new Date().toISOString().split('T')[0];
     return get().upcomingVisits.filter((v) => v.date === today);
+  },
+
+  addVisits: (visits) => {
+    set((state) => ({
+      upcomingVisits: [...state.upcomingVisits, ...visits].sort((a, b) => {
+        // Sort by date then by time
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.time.localeCompare(b.time);
+      }),
+    }));
+  },
+
+  removeVisit: (visitId) => {
+    set((state) => ({
+      upcomingVisits: state.upcomingVisits.filter((v) => v.id !== visitId),
+    }));
   },
 }));

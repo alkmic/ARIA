@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, AlertTriangle, Star, TrendingUp, MapPin, Clock, CheckCircle, Sparkles, ArrowLeft, Users, Droplets } from 'lucide-react';
+import { Calendar, AlertTriangle, Star, TrendingUp, MapPin, Clock, CheckCircle, Sparkles, ArrowLeft, Users, Droplets, FileText, Target, Shield } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import type { Practitioner } from '../types';
 
@@ -33,24 +33,38 @@ export const KOLPlanningPage: React.FC = () => {
       .slice(0, 3);
   }, [practitioners, upcomingVisits]);
 
-  // Analyse IA pour chaque KOL
-  const getKOLAnalysis = (kol: Practitioner) => {
+  // Analyse IA pour chaque KOL (déterministe basé sur les données)
+  const getKOLAnalysis = (kol: Practitioner, index: number) => {
     const daysSinceLastVisit = Math.floor((Date.now() - new Date(kol.lastVisitDate || 0).getTime()) / (1000 * 60 * 60 * 24));
     const volumeRank = practitioners.filter(p => p.volumeL > kol.volumeL).length + 1;
     const avgVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0) / practitioners.length;
     const volumeVsAvg = ((kol.volumeL / avgVolume - 1) * 100).toFixed(0);
 
+    // Calculs déterministes basés sur les données réelles
+    const baseOpportunityScore = 70 + Math.min(25, Math.floor(kol.loyaltyScore * 2.5));
+    const vingtileBonus = Math.max(0, 6 - kol.vingtile) * 3;
+    const opportunityScore = Math.min(100, baseOpportunityScore + vingtileBonus);
+
+    // Dates suggérées déterministes (basées sur l'index du KOL)
+    const daysOffset = 5 + (index * 3);
+    const suggestedDate = new Date(Date.now() + daysOffset * 24 * 60 * 60 * 1000);
+
+    // Temps de trajet basé sur le hash de l'ID (déterministe)
+    const idHash = kol.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const travelTime = 20 + (idHash % 25);
+
     return {
       urgencyScore: Math.min(100, Math.floor((daysSinceLastVisit / 180) * 100)),
       impactScore: Math.min(100, Math.floor((kol.volumeL / avgVolume) * 20)),
-      opportunityScore: Math.min(100, 75 + Math.floor(Math.random() * 25)),
+      opportunityScore,
       daysSinceLastVisit,
       volumeRank,
       volumeVsAvg: parseInt(volumeVsAvg),
       estimatedInfluence: kol.vingtile <= 2 ? 'Très élevée' : kol.vingtile <= 5 ? 'Élevée' : 'Moyenne',
-      suggestedDate: new Date(Date.now() + (7 - Math.floor(Math.random() * 3)) * 24 * 60 * 60 * 1000),
+      suggestedDate,
+      travelTime,
       keyTopics: [
-        'Nouvelles solutions O₂ domicile',
+        'Nouvelles solutions O2 domicile',
         'Études cliniques récentes GOLD 2025',
         'Programme de suivi patient personnalisé',
         'Formation équipe soignante'
@@ -69,20 +83,20 @@ export const KOLPlanningPage: React.FC = () => {
     };
   };
 
-  const kolsAnalysis = urgentKOLs.map(kol => ({
+  const kolsAnalysis = urgentKOLs.map((kol, index) => ({
     ...kol,
-    analysis: getKOLAnalysis(kol)
+    analysis: getKOLAnalysis(kol, index)
   }));
 
   // Proposition de planning optimisé
   const proposedSchedule = useMemo(() => {
     return kolsAnalysis.map((kol, index) => ({
       kol,
-      date: new Date(Date.now() + (3 + index * 2) * 24 * 60 * 60 * 1000),
+      date: kol.analysis.suggestedDate,
       timeSlot: ['09:00 - 10:00', '14:00 - 15:00', '16:00 - 17:00'][index],
       duration: 60,
       priority: index + 1,
-      travelTime: 25 + Math.floor(Math.random() * 20),
+      travelTime: kol.analysis.travelTime,
       preparation: [
         'Préparer pitch personnalisé',
         'Revoir historique des prescriptions',
@@ -93,10 +107,10 @@ export const KOLPlanningPage: React.FC = () => {
   }, [kolsAnalysis]);
 
   const totalImpact = kolsAnalysis.reduce((sum, k) => sum + k.analysis.impactScore, 0);
-  const avgUrgency = kolsAnalysis.reduce((sum, k) => sum + k.analysis.urgencyScore, 0) / kolsAnalysis.length;
+  const avgUrgency = kolsAnalysis.length > 0 ? kolsAnalysis.reduce((sum, k) => sum + k.analysis.urgencyScore, 0) / kolsAnalysis.length : 0;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -156,14 +170,17 @@ export const KOLPlanningPage: React.FC = () => {
               ces visites sont réalisées dans les 14 prochains jours.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                🎯 Précision du modèle : 92%
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1">
+                <Target className="w-3 h-3" />
+                Précision du modèle : 92%
               </span>
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                📊 Basé sur 2,847 interactions historiques
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                Basé sur 2 847 interactions historiques
               </span>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                ✨ Confiance : Très élevée
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Confiance : Très élevée
               </span>
             </div>
           </div>
@@ -195,7 +212,7 @@ export const KOLPlanningPage: React.FC = () => {
                         {kol.title} {kol.firstName} {kol.lastName}
                         <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                       </h3>
-                      <p className="text-slate-600 text-sm">{kol.specialty} • {kol.activityType}</p>
+                      <p className="text-slate-600 text-sm">{kol.specialty} - {kol.activityType}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <MapPin className="w-4 h-4 text-slate-400" />
                         <span className="text-sm text-slate-600">{kol.city}</span>
@@ -290,7 +307,10 @@ export const KOLPlanningPage: React.FC = () => {
 
                   {/* Sujets clés */}
                   <div>
-                    <h4 className="font-bold text-slate-800 mb-2">📋 Sujets Clés à Aborder</h4>
+                    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      Sujets Clés à Aborder
+                    </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {kol.analysis.keyTopics.map((topic, i) => (
                         <div key={i} className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
@@ -303,7 +323,10 @@ export const KOLPlanningPage: React.FC = () => {
 
                   {/* Opportunités */}
                   <div>
-                    <h4 className="font-bold text-slate-800 mb-2">🎯 Opportunités Identifiées</h4>
+                    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-slate-600" />
+                      Opportunités Identifiées
+                    </h4>
                     <div className="space-y-2">
                       {kol.analysis.opportunities.map((opp, i) => (
                         <div key={i} className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
@@ -316,7 +339,10 @@ export const KOLPlanningPage: React.FC = () => {
 
                   {/* Risques */}
                   <div>
-                    <h4 className="font-bold text-slate-800 mb-2">⚠️ Points de Vigilance</h4>
+                    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-slate-600" />
+                      Points de Vigilance
+                    </h4>
                     <div className="space-y-2">
                       {kol.analysis.risks.map((risk, i) => (
                         <div key={i} className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg">
@@ -329,7 +355,10 @@ export const KOLPlanningPage: React.FC = () => {
 
                   {/* Préparation */}
                   <div>
-                    <h4 className="font-bold text-slate-800 mb-2">✅ Checklist de Préparation</h4>
+                    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-slate-600" />
+                      Checklist de Préparation
+                    </h4>
                     <div className="space-y-2">
                       {proposedSchedule[index].preparation.map((item, i) => (
                         <label key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">

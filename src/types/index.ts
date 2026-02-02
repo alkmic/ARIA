@@ -72,7 +72,7 @@ export interface User {
 export interface AIInsight {
   id: string;
   type: 'opportunity' | 'alert' | 'reminder' | 'achievement';
-  icon: string;
+  icon?: string;
   title: string;
   message: string;
   priority: 'high' | 'medium' | 'low';

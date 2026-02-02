@@ -1,148 +1,122 @@
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, Zap, Brain, TrendingUp } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap, Brain, TrendingUp, MapPin, Users, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-airLiquide-primary via-airLiquide-darkBlue to-airLiquide-navy relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-airLiquide-primary via-airLiquide-darkBlue to-airLiquide-navy relative overflow-hidden flex flex-col">
+      {/* Animated background elements - subtler */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 90, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="absolute -top-40 -right-40 w-96 h-96 bg-airLiquide-teal/20 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.2, 0.15] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-20 -right-20 w-64 h-64 bg-airLiquide-teal/30 rounded-full blur-3xl"
         />
         <motion.div
-          animate={{
-            scale: [1.2, 1, 1.2],
-            rotate: [90, 0, 90],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="absolute -bottom-40 -left-40 w-96 h-96 bg-airLiquide-lightBlue/20 rounded-full blur-3xl"
+          animate={{ scale: [1.1, 1, 1.1], opacity: [0.2, 0.15, 0.2] }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-20 -left-20 w-64 h-64 bg-airLiquide-lightBlue/30 rounded-full blur-3xl"
         />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-8">
-        {/* Logo Air Liquide */}
+      {/* Main Content - Centered vertically */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-4">
+        {/* Logo Air Liquide - Compact */}
         <motion.div
-          initial={{ opacity: 0, y: -50 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mb-8"
+          transition={{ duration: 0.5 }}
+          className="mb-4"
         >
-          <div className="text-white text-2xl font-bold tracking-wider">
-            AIR LIQUIDE
+          <div className="text-white text-sm font-semibold tracking-[0.3em] uppercase">
+            Air Liquide Healthcare
           </div>
-          <div className="h-1 w-full bg-gradient-to-r from-airLiquide-teal to-airLiquide-lightBlue mt-2" />
+          <div className="h-0.5 w-full bg-gradient-to-r from-airLiquide-teal to-airLiquide-lightBlue mt-1" />
         </motion.div>
 
-        {/* ARIA Title */}
+        {/* ARIA Title - More compact */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-center mb-6"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-center mb-3"
         >
-          <h1 className="text-8xl font-black text-white mb-4 tracking-tight">
+          <h1 className="text-5xl sm:text-6xl font-black text-white tracking-tight">
             ARIA
           </h1>
-          <div className="flex items-center justify-center gap-3 text-airLiquide-teal text-2xl font-semibold">
-            <Sparkles className="w-6 h-6" />
-            <span>Air Liquide Intelligent Assistant</span>
-            <Sparkles className="w-6 h-6" />
+          <div className="flex items-center justify-center gap-2 text-airLiquide-teal text-sm sm:text-base font-medium mt-1">
+            <Sparkles className="w-4 h-4" />
+            <span>Assistant Intelligent pour Représentants</span>
+            <Sparkles className="w-4 h-4" />
           </div>
         </motion.div>
 
-        {/* Description */}
+        {/* Description - Shorter */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="text-white/80 text-xl text-center max-w-2xl mb-12 leading-relaxed"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-white/70 text-sm sm:text-base text-center max-w-lg mb-6 leading-relaxed"
         >
-          Votre assistant intelligent pour optimiser vos visites médicales,
-          générer des pitchs personnalisés et maximiser l'impact de vos actions terrain.
+          Optimisez vos visites terrain, générez des pitchs personnalisés et
+          maximisez l'impact de vos actions commerciales.
         </motion.p>
 
-        {/* Features */}
+        {/* Features - 2 rows, more compact */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="grid grid-cols-3 gap-8 mb-16"
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 mb-6 max-w-3xl"
         >
-          <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4">
-              <Brain className="w-8 h-8 text-airLiquide-teal" />
+          {[
+            { icon: Brain, label: 'Coach IA', color: 'text-airLiquide-teal' },
+            { icon: Zap, label: 'Pitch IA', color: 'text-airLiquide-lightBlue' },
+            { icon: TrendingUp, label: 'Analytics', color: 'text-airLiquide-teal' },
+            { icon: Users, label: 'CRM Pro', color: 'text-airLiquide-lightBlue' },
+            { icon: MapPin, label: 'Territoire', color: 'text-airLiquide-teal' },
+            { icon: Target, label: 'Objectifs', color: 'text-airLiquide-lightBlue' },
+          ].map((feature, i) => (
+            <div key={i} className="flex flex-col items-center text-center group">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-1.5 group-hover:bg-white/20 transition-colors">
+                <feature.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${feature.color}`} />
+              </div>
+              <span className="text-white/80 text-xs font-medium">{feature.label}</span>
             </div>
-            <h3 className="text-white font-bold text-lg mb-2">Coach IA</h3>
-            <p className="text-white/60 text-sm">
-              Recommandations personnalisées en temps réel
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4">
-              <Zap className="w-8 h-8 text-airLiquide-lightBlue" />
-            </div>
-            <h3 className="text-white font-bold text-lg mb-2">Pitch Generator</h3>
-            <p className="text-white/60 text-sm">
-              Génération de pitchs personnalisés avec IA
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4">
-              <TrendingUp className="w-8 h-8 text-airLiquide-teal" />
-            </div>
-            <h3 className="text-white font-bold text-lg mb-2">Analytics</h3>
-            <p className="text-white/60 text-sm">
-              Suivi de performance et insights actionnables
-            </p>
-          </div>
+          ))}
         </motion.div>
 
-        {/* CTA Button */}
+        {/* CTA Button - Smaller */}
         <motion.button
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1 }}
-          whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(0, 181, 173, 0.4)" }}
-          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          whileHover={{ scale: 1.03, boxShadow: "0 15px 30px rgba(0, 181, 173, 0.3)" }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/dashboard')}
-          className="group relative px-12 py-5 bg-gradient-to-r from-airLiquide-teal to-airLiquide-lightBlue text-white text-xl font-bold rounded-2xl shadow-2xl overflow-hidden"
+          className="group relative px-8 py-3 bg-gradient-to-r from-airLiquide-teal to-airLiquide-lightBlue text-white text-base font-semibold rounded-xl shadow-xl overflow-hidden"
         >
           <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-          <div className="relative flex items-center gap-3">
-            <span>Commencer l'expérience</span>
-            <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" />
+          <div className="relative flex items-center gap-2">
+            <span>Accéder au dashboard</span>
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
           </div>
         </motion.button>
-
-        {/* Version tag */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
-          className="mt-12 text-white/40 text-sm"
-        >
-          Démonstrateur v1.0 · Propulsé par Groq Llama 3.3 70B
-        </motion.div>
       </div>
+
+      {/* Footer - Version tag */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="relative z-10 pb-4 text-center"
+      >
+        <span className="text-white/30 text-xs">
+          v1.0 · Propulsé par Groq Llama 3.3 70B
+        </span>
+      </motion.div>
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Clock, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
-import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 
@@ -22,9 +21,8 @@ export const UpcomingVisits: React.FC = () => {
         transition={{ duration: 0.5, delay: 0.4 }}
         className="glass-card p-6"
       >
-        <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
-          <span>📅</span>
-          <span>Visites aujourd'hui</span>
+        <h2 className="text-lg font-bold text-slate-800 mb-4">
+          Visites aujourd'hui
         </h2>
 
         <div className="space-y-4">
@@ -38,11 +36,13 @@ export const UpcomingVisits: React.FC = () => {
                 onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
                 className="flex items-start space-x-3 p-3 hover:bg-slate-50 hover:scale-[1.01] rounded-lg transition-all duration-200 cursor-pointer"
               >
-                <Avatar
-                  src={visit.practitioner.avatarUrl}
-                  alt={`${visit.practitioner.firstName} ${visit.practitioner.lastName}`}
-                  size="md"
-                />
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                  visit.practitioner.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                  visit.practitioner.specialty === 'Pneumologue' ? 'bg-gradient-to-br from-al-blue-500 to-al-blue-600' :
+                  'bg-gradient-to-br from-slate-500 to-slate-600'
+                }`}>
+                  {visit.practitioner.firstName[0]}{visit.practitioner.lastName[0]}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
                     <p className="font-semibold text-slate-800 truncate">
@@ -94,9 +94,8 @@ export const UpcomingVisits: React.FC = () => {
         transition={{ duration: 0.5, delay: 0.5 }}
         className="glass-card p-6"
       >
-        <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
-          <span>🔥</span>
-          <span>Praticiens prioritaires</span>
+        <h2 className="text-lg font-bold text-slate-800 mb-4">
+          Praticiens prioritaires
         </h2>
 
         <div className="space-y-4">
@@ -117,11 +116,13 @@ export const UpcomingVisits: React.FC = () => {
                 onClick={() => navigate(`/practitioner/${practitioner.id}`)}
                 className="flex items-start space-x-3 p-3 hover:bg-slate-50 hover:scale-[1.01] rounded-lg transition-all duration-200 cursor-pointer"
               >
-                <Avatar
-                  src={practitioner.avatarUrl}
-                  alt={`${practitioner.firstName} ${practitioner.lastName}`}
-                  size="md"
-                />
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                  practitioner.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                  practitioner.specialty === 'Pneumologue' ? 'bg-gradient-to-br from-al-blue-500 to-al-blue-600' :
+                  'bg-gradient-to-br from-slate-500 to-slate-600'
+                }`}>
+                  {practitioner.firstName[0]}{practitioner.lastName[0]}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
                     <p className="font-semibold text-slate-800 truncate">
@@ -135,7 +136,7 @@ export const UpcomingVisits: React.FC = () => {
                     {practitioner.specialty} • Vingtile {practitioner.vingtile} • {(practitioner.volumeL / 1000).toFixed(0)}K L
                   </p>
                   <p className="text-xs text-danger font-medium">
-                    ⚠️ Non vu depuis {daysSinceVisit} jours
+                    Non vu depuis {daysSinceVisit} jours
                   </p>
                 </div>
               </motion.div>
