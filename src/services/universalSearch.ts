@@ -605,28 +605,52 @@ Question: "${question}"
 
 /**
  * Recherche rapide par texte (pour l'autocomplétion)
+ * Filtre strictement par ville si une ville est détectée
  */
 export function quickSearch(query: string, limit: number = 10): PractitionerProfile[] {
   if (!query || query.length < 2) return [];
 
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const practitioners = DataService.getAllPractitioners();
+
+  // Détecter si la requête est une ville connue
+  const isKnownCity = TERRITORY_CITIES.some(city => {
+    const normalizedCity = city.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return normalizedCity === q || normalizedCity.startsWith(q) || q.startsWith(normalizedCity);
+  });
 
   const scored = practitioners.map(p => {
     let score = 0;
-    const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
-    const city = p.address.city.toLowerCase();
+    const fullName = `${p.firstName} ${p.lastName}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const lastName = p.lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const firstName = p.firstName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const city = p.address.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const specialty = p.specialty.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-    // Correspondance exacte au début
-    if (fullName.startsWith(q)) score += 100;
-    else if (p.lastName.toLowerCase().startsWith(q)) score += 80;
-    else if (p.firstName.toLowerCase().startsWith(q)) score += 70;
-    else if (fullName.includes(q)) score += 50;
-    else if (city.includes(q)) score += 30;
-    else if (p.specialty.toLowerCase().includes(q)) score += 20;
+    // Si c'est une recherche par ville, filtrage STRICT
+    if (isKnownCity) {
+      if (city.includes(q) || q.includes(city)) {
+        score = 100; // Match ville exact
+      } else {
+        return { practitioner: p, score: 0 }; // Pas de match ville = exclus
+      }
+    } else {
+      // Recherche normale par nom
+      if (fullName.startsWith(q)) score = 100;
+      else if (lastName.startsWith(q)) score = 90;
+      else if (firstName.startsWith(q)) score = 80;
+      else if (lastName.includes(q)) score = 60;
+      else if (firstName.includes(q)) score = 50;
+      else if (fullName.includes(q)) score = 40;
+      else if (city.includes(q)) score = 30;
+      else if (specialty.includes(q)) score = 20;
+    }
 
-    // Bonus KOL
-    if (p.metrics.isKOL) score += 10;
+    // Bonus KOL seulement si déjà un match
+    if (score > 0 && p.metrics.isKOL) score += 5;
+
+    // Bonus volume pour départager
+    if (score > 0) score += Math.min(5, p.metrics.volumeL / 100000);
 
     return { practitioner: p, score };
   });

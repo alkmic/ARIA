@@ -34,8 +34,19 @@ import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegene
 import { DataService } from '../services/dataService';
 import { quickSearch } from '../services/universalSearch';
 import { SkeletonPitchSection } from '../components/ui/Skeleton';
+import { MarkdownText } from '../components/ui/MarkdownText';
 import type { PitchConfig, PitchSection } from '../types/pitch';
 import type { Practitioner } from '../types';
+
+// Couleurs et icones par section
+const SECTION_STYLES: Record<string, { gradient: string; bg: string; icon: string; borderColor: string }> = {
+  hook: { gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', icon: '1', borderColor: 'border-amber-200' },
+  proposition: { gradient: 'from-blue-500 to-cyan-500', bg: 'bg-blue-50', icon: '2', borderColor: 'border-blue-200' },
+  competition: { gradient: 'from-purple-500 to-pink-500', bg: 'bg-purple-50', icon: '3', borderColor: 'border-purple-200' },
+  cta: { gradient: 'from-green-500 to-emerald-500', bg: 'bg-green-50', icon: '4', borderColor: 'border-green-200' },
+  objections: { gradient: 'from-red-500 to-rose-500', bg: 'bg-red-50', icon: '5', borderColor: 'border-red-200' },
+  talking_points: { gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50', icon: '6', borderColor: 'border-indigo-200' },
+};
 
 // Produits Air Liquide disponibles
 const PRODUCTS = [
@@ -110,7 +121,7 @@ export function PitchGenerator() {
     temperature: 0.8,
     maxTokens: 3000,
   });
-  const { speak, pause, resume, stop, isSpeaking, isPaused } = useSpeech();
+  const { speak, pause, resume, stop, isSpeaking, isPaused, isSupported: speechSupported } = useSpeech();
 
   // Filtrage des praticiens
   const filteredPractitioners = useMemo(() => {
@@ -834,7 +845,7 @@ export function PitchGenerator() {
         className="space-y-6"
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setStep('configure')}
@@ -844,7 +855,9 @@ export function PitchGenerator() {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-purple-500" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
                 Pitch genere
               </h1>
               <p className="text-slate-600">
@@ -854,35 +867,39 @@ export function PitchGenerator() {
           </div>
 
           {sections.length > 0 && !isGenerating && (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSpeak}
-                className="btn-secondary flex items-center gap-2"
-              >
-                {isSpeaking && !isPaused ? (
-                  <>
-                    <Pause className="w-4 h-4" />
-                    Pause
-                  </>
-                ) : isSpeaking && isPaused ? (
-                  <>
-                    <Volume2 className="w-4 h-4" />
-                    Reprendre
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="w-4 h-4" />
-                    Ecouter
-                  </>
-                )}
-              </button>
-              {isSpeaking && (
-                <button
-                  onClick={stop}
-                  className="btn-secondary text-red-500 border-red-300"
-                >
-                  <VolumeX className="w-4 h-4" />
-                </button>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {speechSupported && (
+                <>
+                  <button
+                    onClick={handleSpeak}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    {isSpeaking && !isPaused ? (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        Pause
+                      </>
+                    ) : isSpeaking && isPaused ? (
+                      <>
+                        <Volume2 className="w-4 h-4" />
+                        Reprendre
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-4 h-4" />
+                        Ecouter
+                      </>
+                    )}
+                  </button>
+                  {isSpeaking && (
+                    <button
+                      onClick={stop}
+                      className="btn-secondary text-red-500 border-red-300"
+                    >
+                      <VolumeX className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
               )}
               <button
                 onClick={copyToClipboard}
@@ -921,9 +938,12 @@ export function PitchGenerator() {
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              <div className="flex items-center gap-2 mb-6">
-                <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
-                <p className="text-slate-600 font-medium">L'IA genere votre pitch ultra-personnalise...</p>
+              <div className="flex items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                <div>
+                  <p className="font-medium text-purple-800">Generation en cours...</p>
+                  <p className="text-sm text-purple-600">L'IA cree votre pitch ultra-personnalise</p>
+                </div>
               </div>
               {[1, 2, 3, 4].map((i) => (
                 <SkeletonPitchSection key={i} />
@@ -934,85 +954,109 @@ export function PitchGenerator() {
               key="content"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="space-y-4"
+              className="space-y-5"
             >
-              {sections.map((section, index) => (
-                <motion.div
-                  key={section.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="glass-card p-6 group relative"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white flex items-center justify-center font-bold text-sm">
-                        {section.icon}
-                      </span>
-                      <h3 className="text-lg font-bold text-slate-800">{section.title}</h3>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setEditingSection(section.id);
-                        setEditInstruction('');
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-purple-50"
-                    >
-                      <RefreshCw className="w-4 h-4 text-purple-500" />
-                    </button>
-                  </div>
+              {sections.map((section, index) => {
+                const style = SECTION_STYLES[section.id] || SECTION_STYLES.hook;
 
-                  {editingSection === section.id ? (
-                    <div className="space-y-3">
-                      <textarea
-                        value={editInstruction}
-                        onChange={(e) => setEditInstruction(e.target.value)}
-                        placeholder="Ex: Rendre plus percutant, ajouter des chiffres, raccourcir..."
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500"
-                        rows={3}
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
+                return (
+                  <motion.div
+                    key={section.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`glass-card p-6 group relative border-l-4 ${style.borderColor} hover:shadow-lg transition-shadow`}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.gradient} text-white flex items-center justify-center font-bold text-sm shadow-md`}>
+                          {style.icon}
+                        </span>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-800">{section.title}</h3>
+                          <p className="text-xs text-slate-500">Section {index + 1} / {sections.length}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => regenerateSection(section.id)}
-                          disabled={groqLoading || !editInstruction.trim()}
-                          className="btn-primary text-sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(section.content);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-slate-100"
+                          title="Copier cette section"
                         >
-                          {groqLoading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Regeneration...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4" />
-                              Regenerer
-                            </>
-                          )}
+                          <Copy className="w-4 h-4 text-slate-500" />
                         </button>
                         <button
                           onClick={() => {
-                            setEditingSection(null);
+                            setEditingSection(section.id);
                             setEditInstruction('');
                           }}
-                          className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-purple-50"
+                          title="Modifier cette section"
                         >
-                          Annuler
+                          <RefreshCw className="w-4 h-4 text-purple-500" />
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {section.content}
-                    </p>
-                  )}
-                </motion.div>
-              ))}
+
+                    {editingSection === section.id ? (
+                      <div className="space-y-3 bg-slate-50 -mx-6 -mb-6 p-6 rounded-b-xl border-t border-slate-200">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Comment souhaitez-vous modifier cette section ?
+                        </label>
+                        <textarea
+                          value={editInstruction}
+                          onChange={(e) => setEditInstruction(e.target.value)}
+                          placeholder="Ex: Rendre plus percutant, ajouter des chiffres, raccourcir, etre plus technique..."
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          rows={3}
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => regenerateSection(section.id)}
+                            disabled={groqLoading || !editInstruction.trim()}
+                            className="btn-primary text-sm"
+                          >
+                            {groqLoading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Regeneration...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-4 h-4" />
+                                Appliquer les modifications
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingSection(null);
+                              setEditInstruction('');
+                            }}
+                            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={`${style.bg} -mx-6 -mb-6 p-6 rounded-b-xl`}>
+                        <MarkdownText className="text-slate-700 leading-relaxed">
+                          {section.content}
+                        </MarkdownText>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
 
               {isGenerating && sections.length > 0 && (
-                <div className="flex items-center gap-2 text-slate-500">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Generation en cours...</span>
+                <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
+                  <span className="text-sm text-purple-700 font-medium">Generation des sections suivantes...</span>
                 </div>
               )}
             </motion.div>
@@ -1021,29 +1065,35 @@ export function PitchGenerator() {
 
         {/* Actions finales */}
         {sections.length > 0 && !isGenerating && (
-          <div className="glass-card p-6 bg-gradient-to-br from-purple-50 to-blue-50">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-lg text-slate-800">Pitch pret!</h3>
-                <p className="text-sm text-slate-600">
-                  {sections.length} sections generees pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
-                </p>
+          <div className="glass-card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                  <Check className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-green-800">Pitch pret a l'emploi !</h3>
+                  <p className="text-sm text-green-700">
+                    {sections.length} sections generees pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 w-full sm:w-auto">
                 <button
                   onClick={() => {
+                    stop();
                     setStep('select');
                     setSelectedPractitioner(null);
                     setSections([]);
                     setStreamedText('');
                   }}
-                  className="btn-secondary"
+                  className="btn-secondary flex-1 sm:flex-none"
                 >
                   Nouveau pitch
                 </button>
                 <button
                   onClick={copyToClipboard}
-                  className="btn-primary flex items-center gap-2"
+                  className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copied ? 'Copie!' : 'Copier tout'}
