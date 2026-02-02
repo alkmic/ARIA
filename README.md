@@ -17,44 +17,40 @@ L'application combine intelligence artificielle, analyse de données et interfac
 - **Graphiques de performance** : Évolution des volumes d'oxygène sur 12 mois (Recharts)
 - **Notifications contextuelles** : Alertes et rappels en drawer latéral
 
-### 🎯 Mes Actions - Next Best Actions IA (Nouveau)
-- **Génération intelligente d'actions** basée sur l'analyse en temps réel des données praticiens
-- **Scores IA calculés** : Urgence, Impact, Probabilité de succès (0-100%)
+### 🎯 Mes Actions - Next Best Actions IA
+- **Top 12 actions prioritaires** : ARIA sélectionne les actions les plus pertinentes
+- **Scores IA expliqués** avec tooltips :
+  - **Urgence** : Délai depuis dernier contact, signaux de risque
+  - **Impact potentiel** : Volume concerné, influence sur le territoire
+  - **Facilité** : Relation existante, historique de succès
 - **Justifications IA détaillées** pour chaque action :
   - Résumé explicatif de la recommandation
   - Métriques supportant la décision
   - Risques si aucune action
   - Opportunités si action réalisée
   - Approche suggérée par ARIA
-  - Alertes concurrentielles contextuelles
-  - Analyse de tendance
-- **Types d'actions** : Visite urgente, KOL à voir, Opportunité, Risque de churn, Suivi, Upsell, Concurrent, Publication
+- **Types d'actions** : Visite KOL, Risque churn, Alerte concurrence, Visite Top 15%, Opportunité croissance, Suivi
 - **Gestion complète** : Complétion avec notes, report (snooze), rejet
-- **Seuils configurables** : Aucune valeur en dur, tout est paramétrable
 
-### 🎙️ Compte-Rendu Vocal (Nouveau)
-- **Dictée vocale** avec reconnaissance en temps réel (Web Speech API)
+### 📝 Compte-Rendu de Visite
+- **Double saisie** : Dictée vocale OU saisie texte au choix
+- **Reconnaissance vocale** en temps réel (Web Speech API)
 - **Extraction IA automatique** des informations clés :
-  - Sujets abordés
-  - Sentiment (positif/neutre/négatif)
+  - Sujets abordés et sentiment (positif/neutre/négatif)
   - Prochaines actions à mener
   - Points clés à retenir
-  - Produits Air Liquide discutés
-  - Concurrents mentionnés
-  - Objections et freins
-  - Opportunités détectées
+  - Produits discutés et concurrents mentionnés
+  - Objections et opportunités détectées
 - **Sauvegarde persistante** dans le profil praticien
-- **Création automatique de notes** stratégiques à partir des informations extraites
+- **Création automatique de notes** stratégiques
 
-### 📊 Data Explorer - Talk to My Data (Nouveau)
+### 💬 Coach IA avec Data Explorer intégré
 - **Questions en langage naturel** sur vos données
-- **Visualisations dynamiques** générées par IA (graphiques, tableaux, cartes)
-- **Templates prédéfinis** pour analyses courantes :
-  - Performance territoire
-  - Analyse KOLs
-  - Risques de churn
-  - Opportunités de croissance
-- **Export des résultats** en différents formats
+- **Analyses stratégiques** avec impact quantifié
+- **Visualisations dynamiques** à la demande
+- **Suggestions contextuelles** pour démarrer
+- **Praticiens cliquables** pour navigation directe
+- **Dictée vocale** disponible
 
 ### 🔍 Barre de Commandes Universelle (Nouveau)
 - **Recherche instantanée** sur toute l'application (praticiens, villes, actions)
@@ -99,16 +95,6 @@ L'application combine intelligence artificielle, analyse de données et interfac
 - **Bénéfices calculés** par critère sélectionné
 - **Sauvegarde des visites** dans le calendrier
 
-### 💬 Coach IA Conversationnel
-- **Questions suggérées** pour démarrage rapide
-- **Analyse stratégique** avec impact sur les objectifs de vente :
-  - Praticiens à voir en priorité
-  - KOLs non visités depuis 60+ jours
-  - Stratégies pour atteindre les objectifs mensuels
-  - Praticiens à risque de churn
-  - Opportunités nouveaux prescripteurs
-- **Recommandations cliquables** : Navigation directe vers les fiches praticiens
-- **Envoi par touche Entrée** pour une expérience conversationnelle fluide
 
 ### 🎨 Landing Page Professionnelle
 - **Design immersif** aux couleurs Air Liquide
@@ -382,14 +368,14 @@ Projet développé pour **Air Liquide Santé** en collaboration avec **Capgemini
 ## 📝 Changelog
 
 ### Version 1.1.0 (Février 2026)
-- ✅ **Next Best Actions** : Actions IA avec justifications détaillées et scores
-- ✅ **Compte-Rendu Vocal** : Dictée avec extraction IA automatique
-- ✅ **Data Explorer** : Talk to My Data avec visualisations dynamiques
+- ✅ **Mes Actions simplifiées** : Top 12 actions prioritaires avec scores expliqués
+- ✅ **Compte-Rendu de Visite** : Dictée vocale OU saisie texte au choix
+- ✅ **Coach IA enrichi** : Intègre désormais Data Explorer pour les analyses
 - ✅ **Store persistant** : Sauvegarde des rapports, notes et actions
 - ✅ **NotesTab enrichi** : 3 sections (Notes, Comptes-rendus, Actions IA)
 - ✅ **Barre de commandes** : Recherche universelle avec Cmd+K
 - ✅ **Optimisation Tournée** : Assistant pas-à-pas avec calcul de bénéfices
-- ✅ **Interconnexions** : Data flow complet entre tous les modules
+- ✅ **Navigation simplifiée** : Moins d'outils, plus de clarté
 
 ### Version 1.0.0 (Janvier 2026)
 - ✅ Landing page professionnelle Air Liquide
