@@ -25,6 +25,8 @@ interface AppState {
   getPractitionerById: (id: string) => Practitioner | undefined;
   getHighPriorityPractitioners: () => Practitioner[];
   getTodayVisits: () => UpcomingVisit[];
+  addVisits: (visits: UpcomingVisit[]) => void;
+  removeVisit: (visitId: string) => void;
 }
 
 // Mock data pour l'utilisateur connecté
@@ -257,5 +259,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   getTodayVisits: () => {
     const today = new Date().toISOString().split('T')[0];
     return get().upcomingVisits.filter((v) => v.date === today);
+  },
+
+  addVisits: (visits) => {
+    set((state) => ({
+      upcomingVisits: [...state.upcomingVisits, ...visits].sort((a, b) => {
+        // Sort by date then by time
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.time.localeCompare(b.time);
+      }),
+    }));
+  },
+
+  removeVisit: (visitId) => {
+    set((state) => ({
+      upcomingVisits: state.upcomingVisits.filter((v) => v.id !== visitId),
+    }));
   },
 }));

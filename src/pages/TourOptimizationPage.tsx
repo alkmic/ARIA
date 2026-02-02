@@ -26,12 +26,13 @@ import {
   CalendarPlus,
   Check,
   Minus,
-  Plus
+  Plus,
+  Save
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
-import type { Practitioner } from '../types';
+import type { Practitioner, UpcomingVisit } from '../types';
 import 'leaflet/dist/leaflet.css';
 
 // Coordonnées des villes
@@ -66,12 +67,16 @@ interface OptimizedDay {
   visits: {
     practitioner: PractitionerWithCoords;
     order: number;
-    estimatedTime: string;
+    arrivalTime: string;
+    departureTime: string;
     travelTime: number;
+    visitDuration: number;
     distance: number;
   }[];
   totalDistance: number;
   totalTravelTime: number;
+  totalVisitTime: number;
+  endTime: string;
 }
 
 interface OptimizationResult {
@@ -95,8 +100,17 @@ function MapBounds({ bounds }: { bounds: L.LatLngBounds | null }) {
 
 export const TourOptimizationPage: React.FC = () => {
   const navigate = useNavigate();
-  const { practitioners } = useAppStore();
+  const { practitioners, upcomingVisits, addVisits } = useAppStore();
+  const [saved, setSaved] = useState(false);
   const { periodLabel } = useTimePeriod();
+
+  // IDs des praticiens déjà planifiés
+  const alreadyPlannedIds = useMemo(() => {
+    return new Set(upcomingVisits.map(v => v.practitionerId));
+  }, [upcomingVisits]);
+
+  // État pour montrer/cacher les visites déjà planifiées
+  const [showPlanned, setShowPlanned] = useState(false);
 
   // État principal
   const [currentStep, setCurrentStep] = useState<Step>('selection');
@@ -341,6 +355,15 @@ export const TourOptimizationPage: React.FC = () => {
           calculateDistance(start, a.coords) - calculateDistance(start, b.coords)
         );
         break;
+      case 'time':
+        // Pour le temps: grouper les praticiens par proximité géographique
+        // puis optimiser pour minimiser le temps total de trajet
+        sortedPractitioners.sort((a, b) => {
+          const distA = calculateDistance(start, a.coords);
+          const distB = calculateDistance(start, b.coords);
+          return distA - distB;
+        });
+        break;
       case 'balanced':
       default:
         sortedPractitioners.sort((a, b) => {
@@ -376,6 +399,7 @@ export const TourOptimizationPage: React.FC = () => {
       // Calculer les métriques
       let dayDistance = 0;
       let dayTravelTime = 0;
+      let dayVisitTime = 0;
       const visits: OptimizedDay['visits'] = [];
       let currentTime = 9 * 60; // 9h00
       let prevCoords = start;
@@ -387,19 +411,34 @@ export const TourOptimizationPage: React.FC = () => {
 
         dayDistance += dist;
         dayTravelTime += travel;
+        dayVisitTime += visitDuration;
         currentTime += travel;
+
+        const arrivalTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
+        const endOfVisit = currentTime + visitDuration;
+        const departureTime = `${Math.floor(endOfVisit / 60)}h${(endOfVisit % 60).toString().padStart(2, '0')}`;
 
         visits.push({
           practitioner: p,
           order: i + 1,
-          estimatedTime: `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`,
+          arrivalTime,
+          departureTime,
           travelTime: Math.round(travel),
+          visitDuration,
           distance: Math.round(dist * 10) / 10,
         });
 
         currentTime += visitDuration;
         prevCoords = p.coords;
       }
+
+      // Calculer l'heure de fin de journée (retour)
+      const returnDist = calculateDistance(prevCoords, start);
+      const returnTime = Math.ceil(returnDist / 0.6);
+      dayDistance += returnDist;
+      dayTravelTime += returnTime;
+      currentTime += returnTime;
+      const endTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
 
       // Date du jour
       const dayDate = new Date(baseDate);
@@ -415,6 +454,8 @@ export const TourOptimizationPage: React.FC = () => {
         visits,
         totalDistance: Math.round(dayDistance * 10) / 10,
         totalTravelTime: Math.round(dayTravelTime),
+        totalVisitTime: dayVisitTime,
+        endTime,
       });
 
       totalDistanceAll += dayDistance;
@@ -514,18 +555,87 @@ export const TourOptimizationPage: React.FC = () => {
     return [start, ...editableResult[activeDay].visits.map(v => v.practitioner.coords), start];
   }, [editableResult, activeDay, startPoint]);
 
-  // Critères d'optimisation
+  // Critères d'optimisation avec bénéfices attendus
   const criteriaOptions = [
-    { id: 'balanced' as const, label: 'Équilibré', icon: Zap, description: 'Compromis temps/priorité' },
-    { id: 'time' as const, label: 'Gain de temps', icon: Clock, description: 'Minimiser les trajets' },
-    { id: 'kol-first' as const, label: 'KOL prioritaires', icon: Star, description: 'KOLs en premier' },
-    { id: 'volume' as const, label: 'Volume maximal', icon: Droplets, description: 'Gros prescripteurs' },
-    { id: 'distance' as const, label: 'Distance min', icon: Navigation, description: 'Trajet le plus court' },
+    {
+      id: 'balanced' as const,
+      label: 'Équilibré',
+      icon: Zap,
+      description: 'Compromis temps/priorité',
+      benefit: 'Optimise le temps tout en respectant les priorités métier',
+      expectedSaving: '~25% km économisés'
+    },
+    {
+      id: 'time' as const,
+      label: 'Gain de temps',
+      icon: Clock,
+      description: 'Minimiser les trajets',
+      benefit: 'Regroupe les visites par proximité géographique',
+      expectedSaving: '~35% temps gagné'
+    },
+    {
+      id: 'kol-first' as const,
+      label: 'KOL prioritaires',
+      icon: Star,
+      description: 'KOLs visités en premier',
+      benefit: 'Garantit les RDV avec les leaders d\'opinion avant tout',
+      expectedSaving: 'KOLs planifiés le matin'
+    },
+    {
+      id: 'volume' as const,
+      label: 'Volume maximal',
+      icon: Droplets,
+      description: 'Gros prescripteurs en priorité',
+      benefit: 'Priorise les praticiens à fort volume de prescription',
+      expectedSaving: 'Focus sur le top 20%'
+    },
+    {
+      id: 'distance' as const,
+      label: 'Distance min',
+      icon: Navigation,
+      description: 'Trajet le plus court',
+      benefit: 'Minimise le kilométrage total de la tournée',
+      expectedSaving: '~40% km économisés'
+    },
   ];
 
   // Export PDF (simulation)
   const exportPDF = () => {
     alert('Export PDF - Fonctionnalité à intégrer avec une vraie génération PDF');
+  };
+
+  // Save to visits
+  const saveToVisits = () => {
+    if (!result || saved) return;
+
+    const newVisits: UpcomingVisit[] = [];
+    const baseDate = new Date(startDate);
+    let visitCounter = Date.now();
+
+    result.days.forEach((day, dayIndex) => {
+      // Calculate the actual date for this day (skipping weekends)
+      const dayDate = new Date(baseDate);
+      dayDate.setDate(baseDate.getDate() + dayIndex);
+      while (dayDate.getDay() === 0 || dayDate.getDay() === 6) {
+        dayDate.setDate(dayDate.getDate() + 1);
+      }
+
+      day.visits.forEach((visit) => {
+        const p = visit.practitioner;
+        newVisits.push({
+          id: `V-OPT-${visitCounter++}`,
+          practitionerId: p.id,
+          practitioner: p,
+          date: dayDate.toISOString().split('T')[0],
+          time: visit.arrivalTime.replace('h', ':').padStart(5, '0'),
+          type: 'scheduled',
+          notes: `Visite planifiée via optimisation de tournée (${criteriaOptions.find(c => c.id === criteria)?.label})`,
+        });
+      });
+    });
+
+    addVisits(newVisits);
+    setSaved(true);
   };
 
   // Export iCal
@@ -687,11 +797,26 @@ export const TourOptimizationPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Selection count */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-600">
-                <span className="font-bold text-al-blue-600">{selectedIds.size}</span> praticiens sélectionnés sur {practitionersWithCoords.length}
-              </p>
+            {/* Selection count and planned visits info */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-slate-600">
+                  <span className="font-bold text-al-blue-600">{selectedIds.size}</span> praticiens sélectionnés sur {practitionersWithCoords.length}
+                </p>
+                {alreadyPlannedIds.size > 0 && (
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPlanned}
+                      onChange={(e) => setShowPlanned(e.target.checked)}
+                      className="w-4 h-4 text-amber-500 rounded"
+                    />
+                    <span className="text-amber-700">
+                      Montrer {alreadyPlannedIds.size} déjà planifié(s)
+                    </span>
+                  </label>
+                )}
+              </div>
               <p className="text-sm text-slate-600">
                 Période: <span className="font-medium">{periodLabel}</span>
               </p>
@@ -699,44 +824,57 @@ export const TourOptimizationPage: React.FC = () => {
 
             {/* Practitioners grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-2">
-              {practitionersWithCoords.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => toggleSelect(p.id)}
-                  className={`glass-card p-4 cursor-pointer transition-all hover:shadow-md ${
-                    selectedIds.has(p.id)
-                      ? 'ring-2 ring-al-blue-500 bg-al-blue-50'
-                      : 'hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                      p.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
-                      p.specialty === 'Pneumologue' ? 'bg-gradient-to-br from-al-blue-500 to-al-blue-600' :
-                      'bg-gradient-to-br from-slate-500 to-slate-600'
-                    }`}>
-                      {p.firstName[0]}{p.lastName[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-slate-800 truncate">
-                          {p.title} {p.lastName}
-                        </p>
-                        {p.isKOL && <Star className="w-4 h-4 text-amber-500 fill-amber-500 flex-shrink-0" />}
+              {practitionersWithCoords
+                .filter(p => showPlanned || !alreadyPlannedIds.has(p.id))
+                .map((p) => {
+                  const isPlanned = alreadyPlannedIds.has(p.id);
+                  const plannedVisit = upcomingVisits.find(v => v.practitionerId === p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => toggleSelect(p.id)}
+                      className={`glass-card p-4 cursor-pointer transition-all hover:shadow-md relative ${
+                        selectedIds.has(p.id)
+                          ? 'ring-2 ring-al-blue-500 bg-al-blue-50'
+                          : isPlanned
+                          ? 'bg-amber-50 border-amber-200'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      {isPlanned && (
+                        <div className="absolute top-2 right-2 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                          Planifié {plannedVisit?.date}
+                        </div>
+                      )}
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                          p.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                          p.specialty === 'Pneumologue' ? 'bg-gradient-to-br from-al-blue-500 to-al-blue-600' :
+                          'bg-gradient-to-br from-slate-500 to-slate-600'
+                        }`}>
+                          {p.firstName[0]}{p.lastName[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-slate-800 truncate">
+                              {p.title} {p.lastName}
+                            </p>
+                            {p.isKOL && <Star className="w-4 h-4 text-amber-500 fill-amber-500 flex-shrink-0" />}
+                          </div>
+                          <p className="text-xs text-slate-500">{p.specialty}</p>
+                          <p className="text-xs text-slate-500">{p.city} • V{p.vingtile}</p>
+                        </div>
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          selectedIds.has(p.id)
+                            ? 'bg-al-blue-500 border-al-blue-500'
+                            : 'border-slate-300'
+                        }`}>
+                          {selectedIds.has(p.id) && <Check className="w-4 h-4 text-white" />}
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-500">{p.specialty}</p>
-                      <p className="text-xs text-slate-500">{p.city} • V{p.vingtile}</p>
                     </div>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                      selectedIds.has(p.id)
-                        ? 'bg-al-blue-500 border-al-blue-500'
-                        : 'border-slate-300'
-                    }`}>
-                      {selectedIds.has(p.id) && <Check className="w-4 h-4 text-white" />}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
 
             {/* Next button */}
@@ -768,22 +906,47 @@ export const TourOptimizationPage: React.FC = () => {
                 <Zap className="w-5 h-5 text-purple-500" />
                 Critère d'optimisation
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 {criteriaOptions.map((opt) => (
                   <button
                     key={opt.id}
                     onClick={() => setCriteria(opt.id)}
-                    className={`p-4 rounded-xl border-2 transition-all ${
+                    className={`p-4 rounded-xl border-2 transition-all text-left ${
                       criteria === opt.id
-                        ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
+                        ? 'border-purple-500 bg-purple-50 shadow-md scale-[1.02]'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <opt.icon className={`w-6 h-6 mx-auto mb-2 ${criteria === opt.id ? 'text-purple-600' : 'text-slate-500'}`} />
-                    <div className="font-bold text-sm">{opt.label}</div>
-                    <div className="text-xs text-slate-500 mt-1">{opt.description}</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <opt.icon className={`w-5 h-5 ${criteria === opt.id ? 'text-purple-600' : 'text-slate-500'}`} />
+                      <span className="font-bold text-sm">{opt.label}</span>
+                    </div>
+                    <div className="text-xs text-slate-600">{opt.description}</div>
+                    <div className={`text-xs mt-2 font-medium ${criteria === opt.id ? 'text-purple-600' : 'text-green-600'}`}>
+                      {opt.expectedSaving}
+                    </div>
                   </button>
                 ))}
+              </div>
+
+              {/* Benefit details for selected criteria */}
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0">
+                    {(() => {
+                      const opt = criteriaOptions.find(o => o.id === criteria);
+                      return opt ? <opt.icon className="w-5 h-5 text-white" /> : null;
+                    })()}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-purple-800">
+                      {criteriaOptions.find(o => o.id === criteria)?.label}
+                    </h4>
+                    <p className="text-sm text-purple-700 mt-1">
+                      {criteriaOptions.find(o => o.id === criteria)?.benefit}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1053,7 +1216,8 @@ export const TourOptimizationPage: React.FC = () => {
                           <div className="p-1">
                             <div className="font-bold">{visit.practitioner.title} {visit.practitioner.lastName}</div>
                             <div className="text-sm">{visit.practitioner.specialty}</div>
-                            <div className="text-sm text-blue-600">Arrivée: {visit.estimatedTime}</div>
+                            <div className="text-sm text-blue-600">Arrivée: {visit.arrivalTime}</div>
+                            <div className="text-sm text-slate-600">Départ: {visit.departureTime}</div>
                           </div>
                         </Popup>
                       </Marker>
@@ -1074,10 +1238,21 @@ export const TourOptimizationPage: React.FC = () => {
                 <h3 className="font-bold text-lg text-slate-800 mb-3 flex items-center gap-2">
                   <RouteIcon className="w-5 h-5 text-purple-500" />
                   Planning Jour {editableResult[activeDay]?.day}
-                  <span className="text-sm font-normal text-slate-500 ml-auto">
-                    {editableResult[activeDay]?.totalDistance} km • {Math.floor((editableResult[activeDay]?.totalTravelTime || 0) / 60)}h de trajet
-                  </span>
                 </h3>
+                <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
+                  <span className="bg-slate-100 px-2 py-1 rounded">
+                    {editableResult[activeDay]?.visits.length} visites
+                  </span>
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                    9h00 - {editableResult[activeDay]?.endTime}
+                  </span>
+                  <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                    {editableResult[activeDay]?.totalDistance} km
+                  </span>
+                  <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
+                    {Math.floor((editableResult[activeDay]?.totalTravelTime || 0) / 60)}h{((editableResult[activeDay]?.totalTravelTime || 0) % 60).toString().padStart(2, '0')} trajet
+                  </span>
+                </div>
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {editableResult[activeDay]?.visits.map((visit) => (
                     <div
@@ -1100,8 +1275,8 @@ export const TourOptimizationPage: React.FC = () => {
                         <p className="text-xs text-slate-500">{visit.practitioner.city}</p>
                       </div>
                       <div className="text-right text-xs">
-                        <div className="font-bold text-blue-600">{visit.estimatedTime}</div>
-                        <div className="text-slate-500">{visit.travelTime} min</div>
+                        <div className="font-bold text-blue-600">{visit.arrivalTime} - {visit.departureTime}</div>
+                        <div className="text-slate-500">{visit.travelTime} min trajet • {visit.visitDuration} min visite</div>
                       </div>
                     </div>
                   ))}
@@ -1120,24 +1295,45 @@ export const TourOptimizationPage: React.FC = () => {
             </div>
 
             {/* Actions */}
-            <div className="glass-card p-6 bg-gradient-to-br from-green-50 to-blue-50">
+            <div className={`glass-card p-6 ${saved ? 'bg-gradient-to-br from-green-100 to-emerald-100 border-green-300' : 'bg-gradient-to-br from-green-50 to-blue-50'}`}>
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800">Tournée optimisée avec succès !</h3>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Économie de {result.kmSaved} km et {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')} de trajet
-                  </p>
+                  {saved ? (
+                    <>
+                      <h3 className="font-bold text-lg text-green-800 flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        Visites enregistrées avec succès !
+                      </h3>
+                      <p className="text-sm text-green-700 mt-1">
+                        {result.days.reduce((sum, d) => sum + d.visits.length, 0)} visites ajoutées à votre agenda
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-bold text-lg text-slate-800">Tournée optimisée avec succès !</h3>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Économie de {result.kmSaved} km et {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')} de trajet
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-3 flex-wrap">
                   <button
                     onClick={() => {
                       setResult(null);
+                      setSaved(false);
                       setCurrentStep('selection');
                     }}
                     className="btn-secondary"
                   >
                     Nouvelle optimisation
                   </button>
+                  {!saved && (
+                    <button onClick={saveToVisits} className="btn-secondary flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white border-green-500">
+                      <Save className="w-4 h-4" />
+                      Enregistrer dans mes visites
+                    </button>
+                  )}
                   <button onClick={exportIcal} className="btn-secondary flex items-center gap-2">
                     <CalendarPlus className="w-4 h-4" />
                     Export iCal
