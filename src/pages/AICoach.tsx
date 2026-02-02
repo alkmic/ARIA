@@ -52,6 +52,12 @@ import {
   parseLLMChartResponse,
   generateChartFromSpec,
   DEFAULT_CHART_COLORS,
+  addToChartHistory,
+  getChartHistory,
+  buildChartContextForLLM,
+  isFollowUpQuestion,
+  extractQueryParameters,
+  clearChartHistory,
   type ChartSpec
 } from '../services/agenticChartEngine';
 import type { Practitioner } from '../types';
@@ -798,41 +804,127 @@ INSTRUCTIONS IMPORTANTES :
     setInput('');
     setIsTyping(true);
 
-    // Détecter si c'est une demande de visualisation
+    // Détecter le type de question
     const wantsVisualization = isVisualizationRequest(question);
+    const isFollowUp = isFollowUpQuestion(question);
+    const chartHistory = getChartHistory();
+    const hasRecentChart = chartHistory.length > 0;
 
     try {
-      if (wantsVisualization) {
-        // ============================================
-        // MODE AGENTIQUE : Le LLM génère le code du graphique
-        // ============================================
+      // ============================================
+      // MODE 1: Question de suivi sur un graphique précédent
+      // ============================================
+      if (isFollowUp && hasRecentChart) {
+        console.log('🔄 Mode suivi - question sur graphique précédent');
+
+        const chartContext = buildChartContextForLLM();
+        const context = buildContext(question);
+
+        // Construire le prompt avec contexte du graphique
+        const followUpPrompt = `${context}
+
+${chartContext}
+
+L'utilisateur pose une question de SUIVI concernant le graphique précédent.
+
+QUESTION DE L'UTILISATEUR :
+"${question}"
+
+INSTRUCTIONS :
+1. Analyse la question par rapport aux données du graphique précédent
+2. Si la question semble contredire les données, explique la réalité des données
+3. Sois précis et utilise les chiffres du graphique pour appuyer ta réponse
+4. Utilise le format Markdown
+
+Réponds de manière précise et contextuelle.`;
+
+        const aiResponse = await complete([{ role: 'user', content: followUpPrompt }]);
+
+        if (aiResponse) {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            isMarkdown: true,
+            source: 'llm'
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+
+          if (autoSpeak) {
+            speak(aiResponse);
+          }
+        } else {
+          throw new Error('Pas de réponse du LLM');
+        }
+      }
+      // ============================================
+      // MODE 2: Demande de visualisation/graphique
+      // ============================================
+      else if (wantsVisualization) {
         console.log('🤖 Mode agentique activé - génération de graphique');
 
         const dataContext = getDataContextForLLM();
+        const extractedParams = extractQueryParameters(question);
+
+        // Ajouter les paramètres extraits au prompt pour guider le LLM
+        let paramHints = '';
+        if (extractedParams.limit) {
+          paramHints += `\n⚠️ L'utilisateur demande EXACTEMENT ${extractedParams.limit} éléments (limit: ${extractedParams.limit})`;
+        }
+        if (extractedParams.wantsKOL) {
+          paramHints += `\n⚠️ L'utilisateur s'intéresse aux KOLs`;
+        }
+        if (extractedParams.wantsSpecialty) {
+          paramHints += `\n⚠️ Spécialité ciblée : ${extractedParams.wantsSpecialty}`;
+        }
+
         const chartPrompt = `${CHART_GENERATION_PROMPT}
 
 ${dataContext}
 
 DEMANDE DE L'UTILISATEUR :
 "${question}"
+${paramHints}
 
-Génère la spécification JSON du graphique demandé. Assure-toi que le JSON est valide et complet.`;
+Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les paramètres demandés (nombre d'éléments, filtres, etc.).`;
 
         const chartResponse = await complete([{ role: 'user', content: chartPrompt }]);
 
         if (chartResponse) {
           // Parser la réponse du LLM pour extraire la spec
-          const spec = parseLLMChartResponse(chartResponse);
+          let spec = parseLLMChartResponse(chartResponse);
 
           if (spec) {
+            // Forcer le limit si extrait de la question mais pas dans la spec
+            if (extractedParams.limit && (!spec.query.limit || spec.query.limit !== extractedParams.limit)) {
+              console.log(`📊 Forcing limit to ${extractedParams.limit} as requested`);
+              spec.query.limit = extractedParams.limit;
+            }
+
             // Exécuter la spec contre les vraies données
             const chartResult = generateChartFromSpec(spec);
+
+            // Sauvegarder dans l'historique pour les questions de suivi
+            addToChartHistory({
+              question,
+              spec: chartResult.spec,
+              data: chartResult.data,
+              insights: chartResult.insights,
+              timestamp: new Date()
+            });
+
+            // Générer une description enrichie basée sur les vraies données
+            const dataInsight = chartResult.data.length > 0
+              ? `\n\n**Résumé des données :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}`
+              : '';
 
             // Créer le message avec le graphique généré dynamiquement
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
-              content: `**${spec.title}**\n\n${spec.description || ''}\n\n*Graphique généré dynamiquement par l'IA*`,
+              content: `**${spec.title}**\n\n${spec.description || ''}${dataInsight}`,
               agenticChart: {
                 spec: chartResult.spec,
                 data: chartResult.data,
@@ -854,22 +946,27 @@ Génère la spécification JSON du graphique demandé. Assure-toi que le JSON es
             }
           } else {
             // Fallback si le parsing échoue
+            console.error('Parsing LLM response failed, trying fallback');
             throw new Error('Impossible de parser la réponse du LLM');
           }
         } else {
           throw new Error('Pas de réponse du LLM');
         }
-      } else {
-        // ============================================
-        // MODE CONVERSATION : Réponse textuelle classique
-        // ============================================
+      }
+      // ============================================
+      // MODE 3: Conversation textuelle classique
+      // ============================================
+      else {
         const context = buildContext(question);
+        const chartContext = hasRecentChart ? buildChartContextForLLM() : '';
+
         const conversationHistory = messages
-          .slice(-4)
+          .slice(-6)
           .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
           .join('\n\n');
 
         const prompt = `${context}
+${chartContext}
 
 HISTORIQUE DE CONVERSATION :
 ${conversationHistory}
@@ -877,7 +974,7 @@ ${conversationHistory}
 QUESTION ACTUELLE :
 ${question}
 
-Réponds de manière précise et professionnelle en utilisant le format Markdown.`;
+Réponds de manière précise et professionnelle en utilisant le format Markdown. Si la question concerne des données précises, utilise les informations disponibles.`;
 
         const aiResponse = await complete([{ role: 'user', content: prompt }]);
 
@@ -908,13 +1005,19 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
       // ============================================
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      // Extraire les paramètres même en mode fallback
+      const extractedParams = extractQueryParameters(question);
+
       if (wantsVisualization) {
         // Fallback avec le système de détection locale
         const analysis = analyzeDataRequest(question);
         const chartResult = generateChartData(analysis.chartType, analysis.topic, analysis.metric);
 
         if (chartResult) {
-          const topItems = chartResult.chart.data.slice(0, 3);
+          // Respecter le limit demandé par l'utilisateur
+          const requestedLimit = extractedParams.limit || 10;
+          const limitedData = chartResult.chart.data.slice(0, requestedLimit);
+          const topItems = limitedData.slice(0, 3);
           const firstMetric = chartResult.chart.query?.metrics?.[0]?.name || 'value';
 
           // Convertir au format agentique
@@ -925,10 +1028,11 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
               description: 'Généré localement',
               query: {
                 source: 'practitioners',
-                metrics: [{ name: firstMetric, field: 'value', aggregation: 'sum' }]
+                metrics: [{ name: firstMetric, field: 'value', aggregation: 'sum' }],
+                limit: requestedLimit
               }
             },
-            data: chartResult.chart.data.map(d => ({
+            data: limitedData.map(d => ({
               name: d.name,
               [firstMetric]: d.value,
               ...(d.secondaryValue !== undefined ? { secondary: d.secondaryValue } : {})
@@ -938,8 +1042,17 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
             generatedByLLM: false
           };
 
+          // Sauvegarder dans l'historique pour les questions de suivi
+          addToChartHistory({
+            question,
+            spec: agenticData.spec,
+            data: agenticData.data,
+            insights: chartResult.insights,
+            timestamp: new Date()
+          });
+
           const response = {
-            message: `**📊 ${chartResult.chart.title}**\n\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top 3 :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item.value}`).join('\n')}`,
+            message: `**📊 ${chartResult.chart.title}**\n\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top ${Math.min(3, topItems.length)} :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item.value}`).join('\n')}`,
             insights: chartResult.insights,
             suggestions: chartResult.followUp
           };
@@ -995,6 +1108,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
   const clearConversation = () => {
     if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
       setMessages([]);
+      clearChartHistory(); // Effacer aussi l'historique des graphiques
       stopSpeaking();
     }
   };

@@ -1,10 +1,10 @@
 /**
- * Agentic Chart Engine - Talk to My Data
+ * Agentic Chart Engine - Talk to My Data v2
  *
  * Ce moteur permet au LLM de générer dynamiquement des visualisations
  * en écrivant des spécifications de requêtes qui sont exécutées sur les données.
  *
- * Approche agentique : le LLM "code" les graphiques à la demande.
+ * V2: Améliorations majeures pour la pertinence et le contexte
  */
 
 import { DataService } from './dataService';
@@ -73,6 +73,34 @@ export interface ChartDataPoint {
   [key: string]: string | number;
 }
 
+// Historique des graphiques pour la mémoire conversationnelle
+export interface ChartHistory {
+  question: string;
+  spec: ChartSpec;
+  data: ChartDataPoint[];
+  insights: string[];
+  timestamp: Date;
+}
+
+// Stockage en mémoire des graphiques récents
+let chartHistoryStore: ChartHistory[] = [];
+
+export function addToChartHistory(history: ChartHistory): void {
+  chartHistoryStore.unshift(history);
+  // Garder les 5 derniers
+  if (chartHistoryStore.length > 5) {
+    chartHistoryStore = chartHistoryStore.slice(0, 5);
+  }
+}
+
+export function getChartHistory(): ChartHistory[] {
+  return chartHistoryStore;
+}
+
+export function clearChartHistory(): void {
+  chartHistoryStore = [];
+}
+
 // Schéma de données exposé au LLM
 export const DATA_SCHEMA = `
 ## Schéma des Données Disponibles
@@ -121,31 +149,48 @@ Champs disponibles :
 - city contains "Lyon"
 `;
 
-// Prompt système pour la génération de graphiques
-export const CHART_GENERATION_PROMPT = `Tu es un expert en visualisation de données pour un CRM pharmaceutique.
+// Prompt système AMÉLIORÉ pour la génération de graphiques
+export const CHART_GENERATION_PROMPT = `Tu es un expert en visualisation de données pour un CRM pharmaceutique Air Liquide Healthcare.
 
 ${DATA_SCHEMA}
 
 ## Ta Mission
-Analyse la demande de l'utilisateur et génère une spécification JSON pour créer le graphique approprié.
+Analyse la demande de l'utilisateur et génère une spécification JSON PRÉCISE pour créer le graphique demandé.
 
-## Format de Sortie
-Réponds UNIQUEMENT avec un bloc JSON valide suivant ce format :
+## RÈGLES CRITIQUES
+1. **RESPECTE EXACTEMENT les paramètres demandés** :
+   - Si l'utilisateur demande "15 praticiens" → limit: 15
+   - Si l'utilisateur demande "top 20" → limit: 20
+   - Si l'utilisateur demande "KOLs" → filtre isKOL: true
+   - Si l'utilisateur demande "pneumologues" → filtre specialty: "Pneumologue"
+
+2. **Choisis le type de graphique approprié** :
+   - "bar" : pour classements, top N, comparaisons de valeurs
+   - "pie" : pour répartitions/proportions (max 8 catégories)
+   - "composed" : pour comparer 2 métriques (ex: volume ET fidélité)
+   - "line" : pour évolutions temporelles uniquement
+
+3. **Pour les comparaisons KOLs vs Autres** :
+   - groupBy: "isKOL" (donnera 2 catégories: "KOLs" et "Autres")
+
+4. **Pour les répartitions par spécialité** :
+   - groupBy: "specialty"
+   - Avec filtre si besoin (ex: isKOL: true pour "KOLs par spécialité")
+
+## Format de Sortie OBLIGATOIRE
+Réponds UNIQUEMENT avec ce bloc JSON, sans texte avant ni après :
 
 \`\`\`json
 {
-  "chartType": "bar" | "pie" | "line" | "composed",
-  "title": "Titre du graphique",
-  "description": "Brève description de ce que montre le graphique",
+  "chartType": "bar",
+  "title": "Titre descriptif du graphique",
+  "description": "Ce graphique montre...",
   "query": {
     "source": "practitioners",
-    "filters": [
-      { "field": "specialty", "operator": "eq", "value": "Pneumologue" }
-    ],
+    "filters": [],
     "groupBy": "city",
     "metrics": [
-      { "name": "Volume (K L)", "field": "volumeL", "aggregation": "sum", "format": "k" },
-      { "name": "Fidélité moy.", "field": "loyaltyScore", "aggregation": "avg" }
+      { "name": "Volume (K L)", "field": "volumeL", "aggregation": "sum", "format": "k" }
     ],
     "sortBy": "Volume (K L)",
     "sortOrder": "desc",
@@ -153,41 +198,144 @@ Réponds UNIQUEMENT avec un bloc JSON valide suivant ce format :
   },
   "formatting": {
     "showLegend": true,
-    "xAxisLabel": "Ville",
-    "yAxisLabel": "Volume"
+    "xAxisLabel": "Label X",
+    "yAxisLabel": "Label Y"
   },
   "insights": [
-    "Point clé 1 basé sur les données",
-    "Point clé 2 basé sur les données"
+    "Insight basé sur ce que les données montreront",
+    "Deuxième insight pertinent"
   ],
   "suggestions": [
-    "Question de suivi suggérée 1",
-    "Question de suivi suggérée 2"
+    "Question de suivi 1",
+    "Question de suivi 2"
   ]
 }
 \`\`\`
 
-## Règles
-1. Choisis le type de graphique le plus adapté :
-   - pie : pour les répartitions/proportions (max 6-8 catégories)
-   - bar : pour les comparaisons, classements, top N
-   - line : pour les évolutions temporelles
-   - composed : pour combiner barres et lignes
+## Exemples de requêtes
 
-2. Limite les données :
-   - Top 10 maximum pour les barres
-   - 6-8 catégories max pour les camemberts
+**"Compare les KOLs aux autres praticiens en volume"** :
+- groupBy: "isKOL"
+- metrics: [{ name: "Volume Total (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
+- chartType: "bar"
 
-3. Ajoute toujours des insights pertinents basés sur ce que les données pourraient révéler
+**"Répartition des KOLs par spécialité"** :
+- filters: [{ field: "isKOL", operator: "eq", value: true }]
+- groupBy: "specialty"
+- metrics: [{ name: "Nombre de KOLs", field: "id", aggregation: "count" }]
+- chartType: "pie"
 
-4. Suggère des questions de suivi pour approfondir l'analyse
-
-5. Si la demande est ambiguë, choisis l'interprétation la plus utile pour un commercial pharma
+**"Top 15 praticiens par volume"** :
+- groupBy: null (pas de groupement, individus)
+- metrics: [{ name: "Volume (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
+- limit: 15
+- chartType: "bar"
 `;
+
+// Prompt pour l'analyse conversationnelle (réponse aux questions de suivi)
+export const CONVERSATION_ANALYSIS_PROMPT = `Tu es un assistant expert en analyse de données CRM pharmaceutique.
+
+L'utilisateur a posé une question qui fait suite à un graphique précédemment généré.
+
+## Graphique précédent
+{CHART_CONTEXT}
+
+## Question de l'utilisateur
+{USER_QUESTION}
+
+## Instructions
+1. Analyse la question en relation avec le graphique précédent
+2. Si la question contredit ce que montre le graphique, explique poliment la différence
+3. Si la question demande des précisions, fournis-les en te basant sur les données
+4. Sois précis et utilise les données du graphique pour appuyer ta réponse
+
+Réponds en Markdown de façon concise et précise.
+`;
+
+// Extraire les paramètres spécifiques de la question
+export function extractQueryParameters(question: string): {
+  limit?: number;
+  wantsKOL?: boolean;
+  wantsSpecialty?: string;
+  wantsComparison?: boolean;
+  wantsDistribution?: boolean;
+} {
+  const q = question.toLowerCase();
+  const params: ReturnType<typeof extractQueryParameters> = {};
+
+  // Extraire le nombre demandé (top N, X praticiens, etc.)
+  const numberMatch = q.match(/top\s*(\d+)|(\d+)\s*(?:praticiens?|medecins?|docteurs?|premiers?)/i);
+  if (numberMatch) {
+    params.limit = parseInt(numberMatch[1] || numberMatch[2], 10);
+  }
+
+  // Détecter si on parle de KOLs
+  if (/\bkols?\b|key opinion|leaders?\b/i.test(q)) {
+    params.wantsKOL = true;
+  }
+
+  // Détecter la spécialité
+  if (/pneumo/i.test(q)) {
+    params.wantsSpecialty = 'Pneumologue';
+  } else if (/generaliste|mg\b/i.test(q)) {
+    params.wantsSpecialty = 'Médecin généraliste';
+  }
+
+  // Détecter si c'est une comparaison
+  if (/compar|versus|vs\b|contre|par rapport/i.test(q)) {
+    params.wantsComparison = true;
+  }
+
+  // Détecter si c'est une répartition
+  if (/repartition|distribution|proportion|pourcentage/i.test(q)) {
+    params.wantsDistribution = true;
+  }
+
+  return params;
+}
+
+// Détecter si c'est une question de suivi sur un graphique précédent
+export function isFollowUpQuestion(question: string): boolean {
+  const q = question.toLowerCase();
+  const followUpPatterns = [
+    /ce n'est pas|mais.*graphique|precedent|sur ton|le graphique/,
+    /tu as montre|tu m'as|tu viens de/,
+    /donc|alors|pourtant|comment ça/,
+    /tous les.*sont|aucun.*n'est/
+  ];
+  return followUpPatterns.some(p => p.test(q));
+}
+
+// Construire le contexte des graphiques précédents pour le LLM
+export function buildChartContextForLLM(): string {
+  const history = getChartHistory();
+  if (history.length === 0) return '';
+
+  const lastChart = history[0];
+  const dataPreview = lastChart.data.slice(0, 10).map(d => {
+    const metrics = Object.entries(d)
+      .filter(([k]) => k !== 'name')
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ');
+    return `  - ${d.name}: ${metrics}`;
+  }).join('\n');
+
+  return `
+## DERNIER GRAPHIQUE GÉNÉRÉ
+Question: "${lastChart.question}"
+Type: ${lastChart.spec.chartType}
+Titre: ${lastChart.spec.title}
+
+Données affichées:
+${dataPreview}
+
+Insights: ${lastChart.insights.join(' | ')}
+`;
+}
 
 // Exécuter une requête de données
 export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
-  let practitioners = DataService.getAllPractitioners();
+  const practitioners = DataService.getAllPractitioners();
   const today = new Date();
 
   // Enrichir les données avec des champs calculés
@@ -265,7 +413,7 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
           break;
         }
         case 'isKOL': {
-          key = item.isKOL ? 'KOLs' : 'Autres';
+          key = item.isKOL ? 'KOLs' : 'Autres praticiens';
           break;
         }
         default: {
@@ -339,7 +487,7 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
   // Sans groupBy, retourner les items individuels (top N)
   const results: ChartDataPoint[] = filteredData.map(item => {
     const point: ChartDataPoint = {
-      name: `${item.lastName}`
+      name: `${item.title} ${item.lastName}`
     };
 
     for (const metric of query.metrics) {
@@ -347,6 +495,11 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
       if (metric.format === 'k') value = Math.round(value / 1000);
       point[metric.name] = Math.round(value * 10) / 10;
     }
+
+    // Ajouter des métadonnées utiles
+    point['_specialty'] = item.specialty;
+    point['_city'] = item.city;
+    point['_isKOL'] = item.isKOL ? 'Oui' : 'Non';
 
     return point;
   });
@@ -361,25 +514,62 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
   return query.limit ? results.slice(0, query.limit) : results;
 }
 
-// Parser la réponse JSON du LLM
+// Parser la réponse JSON du LLM avec meilleure tolérance
 export function parseLLMChartResponse(response: string): ChartSpec | null {
   try {
-    // Extraire le JSON du markdown si présent
+    // Essayer d'extraire le JSON du markdown
+    let jsonStr = response;
+
+    // Pattern 1: ```json ... ```
     const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
-    const jsonStr = jsonMatch ? jsonMatch[1] : response;
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1];
+    } else {
+      // Pattern 2: ``` ... ```
+      const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+      if (codeMatch) {
+        jsonStr = codeMatch[1];
+      } else {
+        // Pattern 3: JSON brut commençant par {
+        const rawMatch = response.match(/\{[\s\S]*\}/);
+        if (rawMatch) {
+          jsonStr = rawMatch[0];
+        }
+      }
+    }
+
+    // Nettoyer le JSON
+    jsonStr = jsonStr.trim();
 
     // Parser le JSON
     const parsed = JSON.parse(jsonStr);
 
-    // Valider la structure minimale
+    // Valider et normaliser la structure
     if (!parsed.chartType || !parsed.query || !parsed.query.metrics) {
-      console.error('Invalid chart spec structure');
+      console.error('Invalid chart spec structure:', parsed);
       return null;
+    }
+
+    // S'assurer que les metrics ont le bon format
+    if (!Array.isArray(parsed.query.metrics)) {
+      parsed.query.metrics = [parsed.query.metrics];
+    }
+
+    // S'assurer que les filtres sont un tableau
+    if (parsed.query.filters && !Array.isArray(parsed.query.filters)) {
+      parsed.query.filters = [parsed.query.filters];
+    }
+
+    // Normaliser le chartType
+    const validTypes = ['bar', 'pie', 'line', 'composed'];
+    if (!validTypes.includes(parsed.chartType)) {
+      parsed.chartType = 'bar';
     }
 
     return parsed as ChartSpec;
   } catch (error) {
     console.error('Failed to parse LLM chart response:', error);
+    console.error('Raw response:', response);
     return null;
   }
 }
@@ -401,7 +591,7 @@ export function generateChartFromSpec(spec: ChartSpec): ChartResult {
   };
 }
 
-// Générer des insights automatiques
+// Générer des insights automatiques améliorés
 function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[] {
   const insights: string[] = [];
 
@@ -425,11 +615,23 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
     insights.push(`${topItem.name} représente ${topShare}% du total`);
   }
 
+  // Comparaison KOL vs Autres
+  if (spec.query.groupBy === 'isKOL') {
+    const kolData = data.find(d => d.name.includes('KOL'));
+    const autresData = data.find(d => d.name.includes('Autres'));
+    if (kolData && autresData) {
+      const kolValue = kolData[firstMetric] as number;
+      const autresValue = autresData[firstMetric] as number;
+      const total = kolValue + autresValue;
+      insights.push(`Les KOLs représentent ${Math.round(kolValue / total * 100)}% du ${firstMetric.toLowerCase()}`);
+    }
+  }
+
   // Comparaison premier/dernier
   if (data.length > 2) {
     const lastItem = data[data.length - 1];
     const ratio = Math.round((topItem[firstMetric] as number) / (lastItem[firstMetric] as number || 1));
-    if (ratio > 1) {
+    if (ratio > 1 && ratio < 100) {
       insights.push(`Écart de x${ratio} entre ${topItem.name} et ${lastItem.name}`);
     }
   }
@@ -437,30 +639,42 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
   return insights;
 }
 
-// Générer des suggestions de suivi
+// Générer des suggestions de suivi améliorées
 function generateAutoSuggestions(spec: ChartSpec): string[] {
   const suggestions: string[] = [];
-
   const groupBy = spec.query.groupBy;
+  const hasKOLFilter = spec.query.filters?.some(f => f.field === 'isKOL');
 
   if (groupBy === 'city') {
     suggestions.push('Détail des KOLs par ville');
     suggestions.push('Praticiens à risque par ville');
   } else if (groupBy === 'specialty') {
-    suggestions.push('Top 10 par spécialité');
-    suggestions.push('Fidélité par spécialité');
+    if (hasKOLFilter) {
+      suggestions.push('Comparer KOLs vs autres praticiens');
+      suggestions.push('Volume par spécialité (tous praticiens)');
+    } else {
+      suggestions.push('KOLs par spécialité');
+      suggestions.push('Fidélité moyenne par spécialité');
+    }
+  } else if (groupBy === 'isKOL') {
+    suggestions.push('Répartition des KOLs par spécialité');
+    suggestions.push('Top 10 KOLs par volume');
   } else if (groupBy === 'vingtileBucket' || groupBy === 'vingtile') {
-    suggestions.push('Détail du segment Top');
-    suggestions.push('KOLs par segment');
+    suggestions.push('Détail du segment Top (V1-2)');
+    suggestions.push('KOLs par segment de potentiel');
   } else if (groupBy === 'riskLevel') {
     suggestions.push('Liste des praticiens à risque élevé');
-    suggestions.push('Actions prioritaires');
+    suggestions.push('Actions prioritaires par risque');
+  } else if (!groupBy) {
+    // Top N individuel
+    suggestions.push('Répartition par ville');
+    suggestions.push('Comparaison KOLs vs autres');
   }
 
-  // Suggestions génériques
+  // Suggestions génériques si vide
   if (!suggestions.length) {
-    suggestions.push('Répartition par ville');
-    suggestions.push('Analyse par segment');
+    suggestions.push('Analyse par ville');
+    suggestions.push('Répartition par segment');
   }
 
   return suggestions;
@@ -469,15 +683,28 @@ function generateAutoSuggestions(spec: ChartSpec): string[] {
 // Créer le contexte de données pour le LLM
 export function getDataContextForLLM(): string {
   const stats = DataService.getGlobalStats();
-  const cities = [...new Set(DataService.getAllPractitioners().map(p => p.address.city))];
+  const practitioners = DataService.getAllPractitioners();
+  const cities = [...new Set(practitioners.map(p => p.address.city))];
+
+  // Compter les KOLs par spécialité
+  const kolsBySpecialty = practitioners
+    .filter(p => p.metrics.isKOL)
+    .reduce((acc, p) => {
+      acc[p.specialty] = (acc[p.specialty] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
   return `
 CONTEXTE DONNÉES ACTUELLES :
-- ${stats.totalPractitioners} praticiens (${stats.pneumologues} pneumologues, ${stats.generalistes} généralistes)
-- ${stats.totalKOLs} KOLs
+- ${stats.totalPractitioners} praticiens au total
+  - ${stats.pneumologues} Pneumologues
+  - ${stats.generalistes} Médecins généralistes
+- ${stats.totalKOLs} KOLs identifiés
+  - Pneumologues: ${kolsBySpecialty['Pneumologue'] || 0} KOLs
+  - Généralistes: ${kolsBySpecialty['Médecin généraliste'] || 0} KOLs
 - Volume total : ${Math.round(stats.totalVolume / 1000)}K L/an
 - Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
-- Villes présentes : ${cities.slice(0, 10).join(', ')}${cities.length > 10 ? '...' : ''}
+- Villes présentes : ${cities.slice(0, 8).join(', ')}${cities.length > 8 ? ` (+${cities.length - 8} autres)` : ''}
 `;
 }
 
