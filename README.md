@@ -44,13 +44,22 @@ L'application combine intelligence artificielle, analyse de données et interfac
 - **Sauvegarde persistante** dans le profil praticien
 - **Création automatique de notes** stratégiques
 
-### 💬 Coach IA avec Data Explorer intégré
+### 💬 Coach IA - Talk to My Data
 - **Questions en langage naturel** sur vos données
+- **Génération de graphiques à la demande** :
+  - 📊 Graphiques en barres (volumes, comparaisons)
+  - 🥧 Camemberts (répartitions, distributions)
+  - 📈 Courbes (évolutions, tendances)
+- **Détection automatique** des demandes de visualisation
 - **Analyses stratégiques** avec impact quantifié
-- **Visualisations dynamiques** à la demande
-- **Suggestions contextuelles** pour démarrer
+- **Suggestions contextuelles** avec exemples de graphiques
 - **Praticiens cliquables** pour navigation directe
 - **Dictée vocale** disponible
+- **Exemples de questions** :
+  - "📊 Graphique des volumes par ville"
+  - "🥧 Répartition des praticiens par vingtile"
+  - "📈 Évolution de la fidélité par spécialité"
+  - "Top 10 prescripteurs en barres"
 
 ### 🔍 Barre de Commandes Universelle (Nouveau)
 - **Recherche instantanée** sur toute l'application (praticiens, villes, actions)
@@ -335,6 +344,7 @@ Voir `DEPLOYMENT.md` pour les instructions détaillées.
 ### "Talk to My Data"
 - 🔄 Toutes les recommandations sont dynamiques
 - 📈 Aucune valeur en dur - tout est calculé
+- 📊 **Graphiques générés à la demande** dans le Coach IA
 - 🔗 Interconnexions profondes entre tous les modules
 - 💾 Persistance des données utilisateur
 
@@ -368,6 +378,7 @@ Projet développé pour **Air Liquide Santé** en collaboration avec **Capgemini
 ## 📝 Changelog
 
 ### Version 1.1.0 (Février 2026)
+- ✅ **Coach IA "Talk to My Data"** : Génération de graphiques à la demande (barres, camemberts, courbes)
 - ✅ **Mes Actions simplifiées** : Top 12 actions prioritaires avec scores expliqués
 - ✅ **Compte-Rendu de Visite** : Dictée vocale OU saisie texte au choix
 - ✅ **Coach IA enrichi** : Intègre désormais Data Explorer pour les analyses
