@@ -166,14 +166,19 @@ Analyse la demande de l'utilisateur et génère une spécification JSON PRÉCISE
 
 2. **Choisis le type de graphique approprié** :
    - "bar" : pour classements, top N, comparaisons de valeurs
-   - "pie" : pour répartitions/proportions (max 8 catégories)
+   - "pie" : pour répartitions/proportions (max 8 catégories). Utilise "pie" si l'utilisateur dit "camembert", "répartition", "proportion"
    - "composed" : pour comparer 2 métriques (ex: volume ET fidélité)
    - "line" : pour évolutions temporelles uniquement
 
-3. **Pour les comparaisons KOLs vs Autres** :
+3. **Si l'utilisateur demande de MODIFIER un graphique précédent** (ex: "en camembert", "au format barres", "modifie ce graphique") :
+   - REPRENDS EXACTEMENT la même query (mêmes filtres, métriques, groupBy, limit)
+   - Change UNIQUEMENT le chartType demandé
+   - Adapte le titre et la description au nouveau format
+
+4. **Pour les comparaisons KOLs vs Autres** :
    - groupBy: "isKOL" (donnera 2 catégories: "KOLs" et "Autres")
 
-4. **Pour les répartitions par spécialité** :
+5. **Pour les répartitions par spécialité** :
    - groupBy: "specialty"
    - Avec filtre si besoin (ex: isKOL: true pour "KOLs par spécialité")
 
@@ -184,7 +189,7 @@ Réponds UNIQUEMENT avec ce bloc JSON, sans texte avant ni après :
 {
   "chartType": "bar",
   "title": "Titre descriptif du graphique",
-  "description": "Ce graphique montre...",
+  "description": "Description courte factuelle de ce que montre le graphique",
   "query": {
     "source": "practitioners",
     "filters": [],
@@ -200,17 +205,11 @@ Réponds UNIQUEMENT avec ce bloc JSON, sans texte avant ni après :
     "showLegend": true,
     "xAxisLabel": "Label X",
     "yAxisLabel": "Label Y"
-  },
-  "insights": [
-    "Insight basé sur ce que les données montreront",
-    "Deuxième insight pertinent"
-  ],
-  "suggestions": [
-    "Question de suivi 1",
-    "Question de suivi 2"
-  ]
+  }
 }
 \`\`\`
+
+NE PAS inclure "insights" ni "suggestions" dans le JSON — ils seront générés automatiquement à partir des données réelles.
 
 ## Exemples de requêtes
 
@@ -230,6 +229,13 @@ Réponds UNIQUEMENT avec ce bloc JSON, sans texte avant ni après :
 - metrics: [{ name: "Volume (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
 - limit: 15
 - chartType: "bar"
+
+**"Volumes par ville en camembert"** :
+- groupBy: "city"
+- metrics: [{ name: "Volume (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
+- chartType: "pie"
+- sortBy: "Volume (K L)"
+- sortOrder: "desc"
 `;
 
 // Prompt pour l'analyse conversationnelle (réponse aux questions de suivi)
@@ -294,16 +300,32 @@ export function extractQueryParameters(question: string): {
   return params;
 }
 
-// Détecter si c'est une question de suivi sur un graphique précédent
+// Détecter si c'est une question de suivi TEXTUELLE (pas de modification de graphique)
 export function isFollowUpQuestion(question: string): boolean {
   const q = question.toLowerCase();
+  // Only match genuine text follow-ups about a previous chart, NOT chart modifications
   const followUpPatterns = [
-    /ce n'est pas|mais.*graphique|precedent|sur ton|le graphique/,
-    /tu as montre|tu m'as|tu viens de/,
-    /donc|alors|pourtant|comment ça/,
+    /ce n'est pas ce que|tu as montre|tu m'as montre|tu viens de montrer/,
+    /explique.*graphique|pourquoi.*graphique|comment.*graphique/,
+    /que signifie|qu'est-ce que.*veut dire/,
     /tous les.*sont|aucun.*n'est/
   ];
   return followUpPatterns.some(p => p.test(q));
+}
+
+// Détecter si l'utilisateur veut MODIFIER le graphique précédent
+export function isChartModificationRequest(question: string): boolean {
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const modificationPatterns = [
+    /modifie.*graphi|change.*graphi|transforme.*graphi/,
+    /en (camembert|barres?|courbe|ligne|histogramme)/,
+    /au format (camembert|barres?|courbe|ligne|histogramme|pie|bar)/,
+    /le meme en|pareil (mais )?en|refais.*(en|au format)/,
+    /format (camembert|barres?|courbe|pie|bar|histogramme)/,
+    /passe.*en (camembert|barres?|courbe|ligne)/,
+    /je.*attendais.*camembert|je.*attendais.*barres/,
+  ];
+  return modificationPatterns.some(p => p.test(q));
 }
 
 // Construire le contexte des graphiques précédents pour le LLM
@@ -578,9 +600,9 @@ export function parseLLMChartResponse(response: string): ChartSpec | null {
 export function generateChartFromSpec(spec: ChartSpec): ChartResult {
   const data = executeDataQuery(spec.query);
 
-  // Générer des insights automatiques si non fournis
-  const insights = (spec as ChartSpec & { insights?: string[] }).insights || generateAutoInsights(spec, data);
-  const suggestions = (spec as ChartSpec & { suggestions?: string[] }).suggestions || generateAutoSuggestions(spec);
+  // Toujours générer les insights à partir des données RÉELLES (pas ceux du LLM qui ne voit pas les données)
+  const insights = generateAutoInsights(spec, data);
+  const suggestions = generateAutoSuggestions(spec);
 
   return {
     spec,
@@ -591,7 +613,7 @@ export function generateChartFromSpec(spec: ChartSpec): ChartResult {
   };
 }
 
-// Générer des insights automatiques améliorés
+// Générer des insights automatiques améliorés — basés sur les DONNÉES RÉELLES
 function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[] {
   const insights: string[] = [];
 
@@ -602,20 +624,52 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
   const firstMetric = spec.query.metrics[0]?.name;
   if (!firstMetric) return insights;
 
-  // Top item
+  const suffix = spec.formatting?.valueSuffix || '';
+
+  // Top item with actual value
   const topItem = data[0];
-  if (topItem) {
-    insights.push(`**${topItem.name}** arrive en tête avec ${topItem[firstMetric]} ${spec.formatting?.valueSuffix || ''}`);
+  const topValue = topItem?.[firstMetric];
+  if (topItem && topValue !== undefined) {
+    insights.push(`**${topItem.name}** arrive en tête avec ${topValue}${suffix}`);
   }
 
-  // Total ou moyenne selon le contexte
-  if (spec.chartType === 'pie' && data.length > 0) {
-    const total = data.reduce((sum, d) => sum + (d[firstMetric] as number || 0), 0);
-    const topShare = Math.round(((topItem[firstMetric] as number) / total) * 100);
-    insights.push(`${topItem.name} représente ${topShare}% du total`);
+  // Pie chart: show top 2-3 shares
+  if (spec.chartType === 'pie' && data.length > 1) {
+    const total = data.reduce((sum, d) => sum + ((d[firstMetric] as number) || 0), 0);
+    if (total > 0) {
+      const top3 = data.slice(0, 3);
+      const shares = top3.map(d => {
+        const pct = Math.round(((d[firstMetric] as number || 0) / total) * 100);
+        return `${d.name} (${pct}%)`;
+      });
+      insights.push(`Répartition : ${shares.join(', ')}`);
+      const topNPct = Math.round(top3.reduce((s, d) => s + ((d[firstMetric] as number) || 0), 0) / total * 100);
+      if (data.length > 3) {
+        insights.push(`Les ${top3.length} premiers représentent ${topNPct}% du total`);
+      }
+    }
   }
 
-  // Comparaison KOL vs Autres
+  // Bar/composed: show range and total
+  if ((spec.chartType === 'bar' || spec.chartType === 'composed') && data.length > 1) {
+    const lastItem = data[data.length - 1];
+    const lastValue = lastItem?.[firstMetric] as number;
+    if (topValue && lastValue && lastValue > 0) {
+      const ratio = Math.round((topValue as number) / lastValue);
+      if (ratio > 1 && ratio < 200) {
+        insights.push(`Écart de x${ratio} entre **${topItem.name}** (${topValue}${suffix}) et **${lastItem.name}** (${lastValue}${suffix})`);
+      }
+    }
+    // Total
+    const total = data.reduce((sum, d) => sum + ((d[firstMetric] as number) || 0), 0);
+    if (total > 0 && spec.query.metrics[0]?.aggregation === 'sum') {
+      const formattedTotal = spec.query.metrics[0]?.format === 'k'
+        ? `${Math.round(total)}K L` : `${total}`;
+      insights.push(`Total cumulé : ${formattedTotal}`);
+    }
+  }
+
+  // KOL vs Autres comparison
   if (spec.query.groupBy === 'isKOL') {
     const kolData = data.find(d => d.name.includes('KOL'));
     const autresData = data.find(d => d.name.includes('Autres'));
@@ -623,17 +677,16 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
       const kolValue = kolData[firstMetric] as number;
       const autresValue = autresData[firstMetric] as number;
       const total = kolValue + autresValue;
-      insights.push(`Les KOLs représentent ${Math.round(kolValue / total * 100)}% du ${firstMetric.toLowerCase()}`);
+      if (total > 0) {
+        insights.push(`Les KOLs représentent ${Math.round(kolValue / total * 100)}% du ${firstMetric.toLowerCase()}`);
+      }
     }
   }
 
-  // Comparaison premier/dernier
-  if (data.length > 2) {
-    const lastItem = data[data.length - 1];
-    const ratio = Math.round((topItem[firstMetric] as number) / (lastItem[firstMetric] as number || 1));
-    if (ratio > 1 && ratio < 100) {
-      insights.push(`Écart de x${ratio} entre ${topItem.name} et ${lastItem.name}`);
-    }
+  // Count-specific: total items
+  if (spec.query.metrics[0]?.aggregation === 'count' && data.length > 0) {
+    const total = data.reduce((sum, d) => sum + ((d[firstMetric] as number) || 0), 0);
+    insights.push(`${total} praticiens au total répartis en ${data.length} catégories`);
   }
 
   return insights;
@@ -684,7 +737,6 @@ function generateAutoSuggestions(spec: ChartSpec): string[] {
 export function getDataContextForLLM(): string {
   const stats = DataService.getGlobalStats();
   const practitioners = DataService.getAllPractitioners();
-  const cities = [...new Set(practitioners.map(p => p.address.city))];
 
   // Compter les KOLs par spécialité
   const kolsBySpecialty = practitioners
@@ -693,6 +745,21 @@ export function getDataContextForLLM(): string {
       acc[p.specialty] = (acc[p.specialty] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
+
+  // Volume par ville (pour que le LLM puisse donner des insights précis)
+  const cityStats = practitioners.reduce((acc, p) => {
+    const city = p.address.city;
+    if (!acc[city]) acc[city] = { count: 0, volume: 0, kols: 0 };
+    acc[city].count++;
+    acc[city].volume += p.metrics.volumeL;
+    if (p.metrics.isKOL) acc[city].kols++;
+    return acc;
+  }, {} as Record<string, { count: number; volume: number; kols: number }>);
+
+  const citySummary = Object.entries(cityStats)
+    .sort((a, b) => b[1].volume - a[1].volume)
+    .map(([city, s]) => `  - ${city}: ${s.count} praticiens, ${Math.round(s.volume / 1000)}K L, ${s.kols} KOL(s)`)
+    .join('\n');
 
   return `
 CONTEXTE DONNÉES ACTUELLES :
@@ -704,7 +771,9 @@ CONTEXTE DONNÉES ACTUELLES :
   - Généralistes: ${kolsBySpecialty['Médecin généraliste'] || 0} KOLs
 - Volume total : ${Math.round(stats.totalVolume / 1000)}K L/an
 - Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
-- Villes présentes : ${cities.slice(0, 8).join(', ')}${cities.length > 8 ? ` (+${cities.length - 8} autres)` : ''}
+
+VOLUMES PAR VILLE :
+${citySummary}
 `;
 }
 

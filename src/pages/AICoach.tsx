@@ -58,6 +58,7 @@ import {
   getChartHistory,
   buildChartContextForLLM,
   isFollowUpQuestion,
+  isChartModificationRequest,
   extractQueryParameters,
   clearChartHistory,
   type ChartSpec
@@ -384,14 +385,15 @@ INSTRUCTIONS IMPORTANTES :
     // Détecter le type de question
     const wantsVisualization = isVisualizationRequest(question);
     const isFollowUp = isFollowUpQuestion(question);
+    const wantsChartModification = isChartModificationRequest(question);
     const chartHistory = getChartHistory();
     const hasRecentChart = chartHistory.length > 0;
 
     try {
       // ============================================
-      // MODE 1: Question de suivi sur un graphique précédent
+      // MODE 1: Question de suivi TEXTUELLE sur un graphique (pas une modification)
       // ============================================
-      if (isFollowUp && hasRecentChart) {
+      if (isFollowUp && hasRecentChart && !wantsVisualization && !wantsChartModification) {
         console.log('🔄 Mode suivi - question sur graphique précédent');
 
         const chartContext = buildChartContextForLLM();
@@ -437,9 +439,9 @@ Réponds de manière précise et contextuelle.`;
         }
       }
       // ============================================
-      // MODE 2: Demande de visualisation/graphique
+      // MODE 2: Demande de visualisation/graphique (ou modification)
       // ============================================
-      else if (wantsVisualization) {
+      else if (wantsVisualization || wantsChartModification) {
         console.log('🤖 Mode agentique activé - génération de graphique');
 
         const dataContext = getDataContextForLLM();
@@ -457,7 +459,21 @@ Réponds de manière précise et contextuelle.`;
           paramHints += `\n⚠️ Spécialité ciblée : ${extractedParams.wantsSpecialty}`;
         }
 
+        // Inclure le graphique précédent si disponible (pour les modifications)
+        let previousChartContext = '';
+        if (hasRecentChart) {
+          const lastChart = chartHistory[0];
+          previousChartContext = `\n\n## GRAPHIQUE PRÉCÉDENT (à modifier si l'utilisateur le demande)
+Question originale: "${lastChart.question}"
+Spec JSON du graphique précédent:
+\`\`\`json
+${JSON.stringify({ chartType: lastChart.spec.chartType, title: lastChart.spec.title, query: lastChart.spec.query, formatting: lastChart.spec.formatting }, null, 2)}
+\`\`\`
+Si l'utilisateur demande de modifier ce graphique (changer le type, le format, etc.), REPRENDS la même query et change uniquement ce qui est demandé.`;
+        }
+
         const chartPrompt = `${CHART_GENERATION_PROMPT}
+${previousChartContext}
 
 ${dataContext}
 
