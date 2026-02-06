@@ -111,44 +111,70 @@ function getCategoryLabel(category: string): string {
 
 /** Construit une réponse locale à partir des résultats de recherche RAG */
 function buildLocalRAGResponse(results: SearchResult[]): string {
-  const parts: string[] = [
-    `Voici ce que j'ai trouvé dans la **base de connaissances entreprise** :\n`
-  ];
+  if (results.length === 0) return '';
 
-  const topResults = results.slice(0, 3);
-  for (let i = 0; i < topResults.length; i++) {
-    const result = topResults[i];
-    const source = result.chunk.metadata.source || 'Document interne';
-    const section = result.chunk.metadata.section || '';
-    const category = result.chunk.metadata.category || '';
+  const parts: string[] = [];
+  const topScore = results[0].score;
 
-    // Separator between sources
-    if (i > 0) parts.push('\n---\n');
+  // === PRIMARY RESULT: full content, no aggressive truncation ===
+  const primary = results[0];
+  const section = primary.chunk.metadata.section || '';
+  const source = primary.chunk.metadata.source || 'Document interne';
+  const category = primary.chunk.metadata.category || '';
 
-    // Section heading
-    if (section) {
-      parts.push(`### ${section}`);
-    }
+  parts.push(`Voici ce que j'ai trouvé dans la **base de connaissances entreprise** :\n`);
 
-    // Source attribution as blockquote
-    const categoryLabel = getCategoryLabel(category);
-    parts.push(`> ${categoryLabel} — ${source}\n`);
-
-    // Content, removing the duplicate title that getBuiltinChunks() prepends
-    let content = result.chunk.content;
-    if (section && content.startsWith(section)) {
-      content = content.substring(section.length).replace(/^\n+/, '');
-    }
-
-    const truncated = content.length > 600
-      ? content.substring(0, 600) + '...'
-      : content;
-    parts.push(truncated);
-    parts.push('');
+  if (section) {
+    parts.push(`### ${section}`);
   }
 
-  if (results.length > 3) {
-    parts.push(`\n> ${results.length - 3} autre(s) source(s) disponible(s) — posez une question plus précise pour affiner.`);
+  const categoryLabel = getCategoryLabel(category);
+  parts.push(`> ${categoryLabel} — ${source}\n`);
+
+  // Full content for primary source (builtin chunks are already curated/short)
+  let content = primary.chunk.content;
+  if (section && content.startsWith(section)) {
+    content = content.substring(section.length).replace(/^\n+/, '');
+  }
+  // Only truncate very long user-uploaded chunks
+  const isBuiltin = primary.chunk.documentId === 'builtin';
+  if (!isBuiltin && content.length > 1500) {
+    content = content.substring(0, 1500) + '...';
+  }
+  parts.push(content);
+
+  // === SECONDARY RESULTS: only if score >= 60% of top, shown as compact "Voir aussi" ===
+  const relevantSecondary = results.slice(1).filter(r => r.score >= topScore * 0.6);
+
+  if (relevantSecondary.length > 0) {
+    parts.push('\n---\n');
+    parts.push('**Voir aussi :**\n');
+
+    for (const result of relevantSecondary.slice(0, 2)) {
+      const secSection = result.chunk.metadata.section || '';
+      const secSource = result.chunk.metadata.source || '';
+      const secCategory = getCategoryLabel(result.chunk.metadata.category || '');
+
+      // Brief excerpt for secondary sources
+      let secContent = result.chunk.content;
+      if (secSection && secContent.startsWith(secSection)) {
+        secContent = secContent.substring(secSection.length).replace(/^\n+/, '');
+      }
+      const firstSentence = secContent.split(/[.\n]/)[0]?.trim() || secContent.substring(0, 150);
+      const excerpt = firstSentence.length > 200
+        ? firstSentence.substring(0, 200) + '...'
+        : firstSentence;
+
+      parts.push(`- **${secSection}** *(${secCategory} — ${secSource})*`);
+      parts.push(`  ${excerpt}`);
+    }
+  }
+
+  // Footer: remaining sources not shown
+  const shownCount = 1 + Math.min(relevantSecondary.length, 2);
+  const remaining = results.length - shownCount;
+  if (remaining > 0) {
+    parts.push(`\n> ${remaining} autre(s) source(s) disponible(s) — posez une question plus précise pour affiner.`);
   }
 
   return parts.join('\n');

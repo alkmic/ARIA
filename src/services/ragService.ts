@@ -300,8 +300,12 @@ export function buildRAGContext(
   const sections = results.map((r, i) => {
     const source = r.chunk.metadata.source || 'Document interne';
     const category = r.chunk.metadata.category || '';
+    // Builtin chunks are already curated/short — don't truncate. User chunks: limit to 1500.
+    const isBuiltin = r.chunk.documentId === 'builtin';
+    const maxLen = isBuiltin ? r.chunk.content.length : 1500;
+    const text = r.chunk.content.substring(0, maxLen) + (r.chunk.content.length > maxLen ? '...' : '');
     return `[Source ${i + 1} — ${source} (${category})]
-${r.chunk.content.substring(0, 600)}${r.chunk.content.length > 600 ? '...' : ''}`;
+${text}`;
   });
 
   return `
