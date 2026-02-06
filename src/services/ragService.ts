@@ -136,35 +136,21 @@ async function loadPDFJS(): Promise<any> {
       return;
     }
 
+    // Charger pdf.js via script tag (compatible tous navigateurs)
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
-    script.type = 'module';
-
-    // Utiliser une approche différente : charger via import() dynamique
-    import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs')
-      .then((module) => {
-        _pdfjsLib = module;
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
+    script.onload = () => {
+      _pdfjsLib = (window as any).pdfjsLib;
+      if (_pdfjsLib) {
         _pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
         resolve(_pdfjsLib);
-      })
-      .catch(() => {
-        // Si l'import dynamique échoue, essayer avec un script tag classique
-        const fallbackScript = document.createElement('script');
-        fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
-        fallbackScript.onload = () => {
-          _pdfjsLib = (window as any).pdfjsLib;
-          if (_pdfjsLib) {
-            _pdfjsLib.GlobalWorkerOptions.workerSrc =
-              'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
-            resolve(_pdfjsLib);
-          } else {
-            reject(new Error('pdf.js non chargé'));
-          }
-        };
-        fallbackScript.onerror = () => reject(new Error('Impossible de charger pdf.js'));
-        document.head.appendChild(fallbackScript);
-      });
+      } else {
+        reject(new Error('pdf.js non chargé'));
+      }
+    };
+    script.onerror = () => reject(new Error('Impossible de charger pdf.js depuis le CDN'));
+    document.head.appendChild(script);
   });
 }
 
