@@ -51,6 +51,7 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'BOURGOIN-JALLIEU': [45.5858, 5.2739],
   'ROMANS-SUR-ISÈRE': [45.0458, 5.0522],
   'MONTÉLIMAR': [44.5586, 4.7508],
+  'ANNEMASSE': [46.1958, 6.2354],
 };
 
 type Step = 'selection' | 'configuration' | 'optimization' | 'result';
@@ -100,7 +101,6 @@ const AVG_SPEED_KMH = 65; // Vitesse moyenne inter-urbaine
 const AVG_SPEED_KM_MIN = AVG_SPEED_KMH / 60; // ~1.08 km/min
 const START_HOUR = 9; // 9h00
 const LUNCH_START = 12 * 60; // 12h00 en minutes
-const LUNCH_END = 13 * 60; // 13h00 en minutes
 const MAX_END_MINUTES = 18 * 60 + 30; // 18h30 = fin de journée max
 
 /** Formate des minutes en "XhYY" */
@@ -434,9 +434,9 @@ export const TourOptimizationPage: React.FC = () => {
         });
     }
 
-    // Diviser en jours
-    const numDays = Math.ceil(sortedPractitioners.length / visitsPerDay);
+    // Diviser en jours avec gestion du débordement horaire
     const days: OptimizedDay[] = [];
+    const MAX_DAYS = 20; // Sécurité anti-boucle infinie
 
     // FIX: Date cumulatif — chaque jour avance au prochain jour ouvré
     const baseDate = new Date(startDate + 'T12:00:00'); // Midi pour éviter les bugs timezone
@@ -445,9 +445,15 @@ export const TourOptimizationPage: React.FC = () => {
     let totalDistanceAll = 0;
     let totalTravelTimeAll = 0;
 
-    for (let d = 0; d < numDays; d++) {
-      const dayPractitioners = sortedPractitioners.slice(d * visitsPerDay, (d + 1) * visitsPerDay);
-      if (dayPractitioners.length === 0) continue;
+    // Répartition équilibrée : au lieu de 6,6,6,1 → 5,5,5,4
+    const remaining = [...sortedPractitioners];
+    let dayIndex = 0;
+
+    while (remaining.length > 0 && dayIndex < MAX_DAYS) {
+      // Calculer une taille de chunk équilibrée
+      const remainingDays = Math.ceil(remaining.length / visitsPerDay);
+      const chunkSize = Math.ceil(remaining.length / remainingDays);
+      const dayPractitioners = remaining.splice(0, chunkSize);
 
       // Optimiser l'ordre pour ce jour
       let optimizedRoute = nearestNeighborTSP(dayPractitioners, start);
@@ -474,27 +480,20 @@ export const TourOptimizationPage: React.FC = () => {
         const dist = calculateDistance(prevCoords, p.coords);
         const travel = calculateTravelTime(dist);
 
-        // Vérifier si on doit insérer la pause déjeuner
+        // Vérifier si on doit insérer la pause déjeuner (toujours exactement 60 min)
         const arrivalIfNoLunch = currentTime + travel;
         if (!lunchTaken && arrivalIfNoLunch >= LUNCH_START) {
-          // Insérer pause déjeuner
-          if (currentTime < LUNCH_START) {
-            // On n'a pas encore atteint midi — pause à 12h
-            currentTime = LUNCH_END;
-          } else {
-            // On est déjà passé midi — pause immédiate d'1h
-            currentTime += 60;
-          }
+          currentTime += 60; // Pause déjeuner exacte de 60 min
           lunchTaken = true;
         }
 
         currentTime += travel;
 
-        // Vérifier la limite horaire : si la visite finirait après MAX_END
+        // Vérifier la limite horaire : si la visite finirait après MAX_END (18h30)
         if (currentTime + visitDuration > MAX_END_MINUTES && visits.length > 0) {
-          // On ne peut plus caser cette visite — elle sera reportée
-          // (dans cette version, on l'ajoute quand même pour ne pas perdre de praticiens)
-          // mais on signale que la journée est longue
+          // Reporter les visites restantes au jour suivant
+          remaining.unshift(...optimizedRoute.slice(i));
+          break;
         }
 
         dayDistance += dist;
@@ -503,7 +502,7 @@ export const TourOptimizationPage: React.FC = () => {
 
         visits.push({
           practitioner: p,
-          order: i + 1,
+          order: visits.length + 1,
           arrivalTime: formatMinutes(currentTime),
           departureTime: formatMinutes(currentTime + visitDuration),
           travelTime: Math.round(travel),
@@ -514,6 +513,9 @@ export const TourOptimizationPage: React.FC = () => {
         currentTime += visitDuration;
         prevCoords = p.coords;
       }
+
+      // Si aucune visite n'a pu être ajoutée (ne devrait pas arriver)
+      if (visits.length === 0) break;
 
       // Calculer le retour à la base
       const returnDist = calculateDistance(prevCoords, start);
@@ -530,7 +532,7 @@ export const TourOptimizationPage: React.FC = () => {
       });
 
       days.push({
-        day: d + 1,
+        day: dayIndex + 1,
         date: dateStr,
         dateObj: new Date(currentDate),
         visits,
@@ -548,6 +550,7 @@ export const TourOptimizationPage: React.FC = () => {
 
       // Avancer au prochain jour ouvré
       currentDate = nextBusinessDay(currentDate);
+      dayIndex++;
     }
 
     const finalResult: OptimizationResult = {
