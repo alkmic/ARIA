@@ -65,7 +65,7 @@ import {
 } from '../services/agenticChartEngine';
 import { useUserDataStore } from '../stores/useUserDataStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
-import { buildRAGContext } from '../services/ragService';
+import { buildRAGContext, searchChunks, getBuiltinChunks, type SearchResult } from '../services/ragService';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
@@ -95,6 +95,34 @@ interface Message {
 // Couleurs pour les graphiques
 const CHART_COLORS = DEFAULT_CHART_COLORS;
 
+/** Construit une réponse locale à partir des résultats de recherche RAG */
+function buildLocalRAGResponse(results: SearchResult[]): string {
+  const parts: string[] = [
+    `Voici ce que j'ai trouvé dans la **base de connaissances entreprise** :\n`
+  ];
+
+  for (const result of results.slice(0, 3)) {
+    const source = result.chunk.metadata.source || 'Document interne';
+    const section = result.chunk.metadata.section || '';
+
+    if (section) {
+      parts.push(`### ${section}`);
+    }
+    parts.push(`*Source : ${source}*\n`);
+    const content = result.chunk.content.length > 600
+      ? result.chunk.content.substring(0, 600) + '...'
+      : result.chunk.content;
+    parts.push(content);
+    parts.push('');
+  }
+
+  if (results.length > 3) {
+    parts.push(`> *${results.length - 3} autre(s) source(s) pertinente(s) disponible(s). Posez une question plus précise pour affiner.*`);
+  }
+
+  return parts.join('\n');
+}
+
 export default function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -114,12 +142,12 @@ export default function AICoach() {
   // Suggestions contextuelles - Talk to My Data (approche agentique)
   const SUGGESTION_CHIPS = [
     "Montre-moi un graphique des volumes par ville",
+    "Quels sont les produits d'Air Liquide Santé ?",
     "Quel médecin dont le prénom est Bernard a le plus de publications ?",
-    "Compare les KOLs aux autres praticiens en volume",
+    "Données épidémiologiques BPCO en France",
     "Top 10 prescripteurs avec leur fidélité",
     "Quels pneumologues à Lyon ont un risque de churn élevé ?",
     "Analyse les pneumologues vs généralistes",
-    "Camembert des segments par vingtile",
     `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
   ];
 
@@ -866,28 +894,56 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
           }
         }
       } else {
-        // Fallback conversation
-        const response = generateCoachResponse(
+        // Search RAG knowledge base for relevant answers
+        const builtinChunks = getBuiltinChunks();
+        const ragResults = searchChunks(question, documentChunks, builtinChunks, 5);
+
+        // Try local practitioner handler
+        const localResponse = generateCoachResponse(
           question,
           practitioners,
           currentUser.objectives
         );
 
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: response.message,
-          practitioners: response.practitioners,
-          insights: response.insights,
-          timestamp: new Date(),
-          isMarkdown: response.isMarkdown,
-          source: 'local'
-        };
+        // If local handler couldn't answer (generic help or no match), prefer RAG results
+        const useRAG = (localResponse.isGenericHelp || localResponse.isNoMatch)
+          && ragResults.length > 0
+          && ragResults[0].score > 0.5;
 
-        setMessages(prev => [...prev, assistantMessage]);
+        if (useRAG) {
+          const ragContent = buildLocalRAGResponse(ragResults);
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: ragContent,
+            insights: [`${ragResults.length} source(s) trouvée(s) dans la base de connaissances`],
+            timestamp: new Date(),
+            isMarkdown: true,
+            source: 'local'
+          };
 
-        if (autoSpeak && response.message) {
-          speak(response.message);
+          setMessages(prev => [...prev, assistantMessage]);
+
+          if (autoSpeak) {
+            speak(ragContent);
+          }
+        } else {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: localResponse.message,
+            practitioners: localResponse.practitioners,
+            insights: localResponse.insights,
+            timestamp: new Date(),
+            isMarkdown: localResponse.isMarkdown,
+            source: 'local'
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+
+          if (autoSpeak && localResponse.message) {
+            speak(localResponse.message);
+          }
         }
       }
     }

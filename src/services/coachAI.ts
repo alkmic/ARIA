@@ -9,6 +9,8 @@ export interface CoachResponse {
   insights?: string[];
   actions?: { label: string; onClick: () => void }[];
   isMarkdown?: boolean;
+  isGenericHelp?: boolean;
+  isNoMatch?: boolean;
 }
 
 // Calcul des jours depuis une date
@@ -105,7 +107,8 @@ function handlePractitionerNewsQuery(queryResult: ReturnType<typeof executeQuery
     return {
       message: `Je n'ai trouvé aucun praticien correspondant à **${nameHint}**. Vérifiez l'orthographe ou essayez avec un autre critère.`,
       insights: ['Conseil : Essayez avec juste le prénom ou le nom de famille'],
-      isMarkdown: true
+      isMarkdown: true,
+      isNoMatch: true
     };
   }
 
@@ -166,7 +169,8 @@ function handlePractitionerSearch(queryResult: ReturnType<typeof executeQuery>, 
         'Conseil : Essayez avec juste le prénom ou le nom de famille',
         'Vous pouvez aussi chercher par ville ou spécialité'
       ],
-      isMarkdown: true
+      isMarkdown: true,
+      isNoMatch: true
     };
   }
 
@@ -634,7 +638,8 @@ function getHelpResponse(): CoachResponse {
       `**Classements :**\n- "Top 5 prescripteurs par volume"\n- "Praticiens à risque de churn"`,
       `**Opportunités :**\n- "Quelles sont mes opportunités de nouveaux prescripteurs ?"\n- "Comment atteindre mon objectif mensuel ?"`
     ],
-    isMarkdown: true
+    isMarkdown: true,
+    isGenericHelp: true
   };
 }
 
