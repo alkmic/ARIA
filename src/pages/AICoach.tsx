@@ -233,11 +233,15 @@ function buildPointFollowUpResponse(
 
   parts.push(`**Point ${pointExtract.num}** — ${pointExtract.content}\n`);
 
-  if (results.length > 0) {
+  // Filter out the chunk that contained the original numbered list (user already saw it)
+  const pointPrefix = `${pointExtract.num}. ${pointExtract.content.substring(0, 20)}`;
+  const newResults = results.filter(r => !r.chunk.content.includes(pointPrefix));
+
+  if (newResults.length > 0) {
     parts.push(`Voici des informations complémentaires de la **base de connaissances** :\n`);
 
-    for (let i = 0; i < Math.min(results.length, 2); i++) {
-      const result = results[i];
+    for (let i = 0; i < Math.min(newResults.length, 2); i++) {
+      const result = newResults[i];
       const section = result.chunk.metadata.section || '';
       const source = result.chunk.metadata.source || '';
       const category = getCategoryLabel(result.chunk.metadata.category || '');
@@ -259,7 +263,8 @@ function buildPointFollowUpResponse(
       parts.push(content);
     }
   } else {
-    parts.push(`Pour des détails approfondis sur ce point, consultez les recommandations officielles ou configurez une clé API LLM dans les paramètres.`);
+    parts.push(`La base de connaissances ne contient pas de détails supplémentaires au-delà de ce qui a déjà été présenté.`);
+    parts.push(`\nPour des informations approfondies, configurez une clé API LLM (Groq, OpenAI ou Anthropic) dans les **Paramètres** pour bénéficier de réponses enrichies par l'IA.`);
   }
 
   return parts.join('\n');
