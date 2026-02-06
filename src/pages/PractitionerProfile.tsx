@@ -73,6 +73,15 @@ export default function PractitionerProfile() {
   // Générer l'historique de volumes si absent
   const volumeHistory = practitioner.volumeHistory || DataService.generateVolumeHistory(practitioner.volumeL, practitioner.id);
 
+  // Calculer la tendance réelle à partir de l'historique des volumes
+  const computedTrendPercent = (() => {
+    if (volumeHistory.length < 4) return 0;
+    const firstHalf = volumeHistory.slice(0, 6).reduce((s, m) => s + m.volume, 0);
+    const secondHalf = volumeHistory.slice(6).reduce((s, m) => s + m.volume, 0);
+    if (firstHalf === 0) return 0;
+    return Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+  })();
+
   const tabs = [
     { id: 'synthesis', label: 'Synthèse IA', icon: Sparkles },
     { id: 'history', label: 'Historique', icon: Calendar },
@@ -175,11 +184,11 @@ export default function PractitionerProfile() {
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                 <span className="text-slate-600">Tendance</span>
                 <span className={`font-semibold flex items-center gap-1 ${
-                  practitioner.trend === 'up' ? 'text-success' :
-                  practitioner.trend === 'down' ? 'text-danger' : 'text-slate-600'
+                  computedTrendPercent > 0 ? 'text-success' :
+                  computedTrendPercent < 0 ? 'text-danger' : 'text-slate-600'
                 }`}>
-                  {practitioner.trend === 'up' ? '+12%' :
-                   practitioner.trend === 'down' ? '-8%' : 'Stable'}
+                  {computedTrendPercent > 0 ? `+${computedTrendPercent}%` :
+                   computedTrendPercent < 0 ? `${computedTrendPercent}%` : 'Stable'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -262,7 +271,7 @@ export default function PractitionerProfile() {
               />
             )}
             {activeTab === 'metrics' && (
-              <MetricsTab volumeHistory={volumeHistory} practitioner={practitioner} periodLabel={periodLabel} periodLabelShort={periodLabelShort} />
+              <MetricsTab volumeHistory={volumeHistory} practitioner={practitioner} periodLabel={periodLabel} periodLabelShort={periodLabelShort} trendPercent={computedTrendPercent} />
             )}
             {activeTab === 'news' && (
               <NewsTab practitioner={practitioner} />
@@ -846,7 +855,7 @@ function HistoryTab({ conversations, myReports, timePeriod, periodLabel }: Histo
 // ============================================================
 // METRICS TAB
 // ============================================================
-function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort }: { volumeHistory: { month: string; volume: number; vingtileAvg: number }[]; practitioner: Practitioner; periodLabel: string; periodLabelShort: string }) {
+function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort, trendPercent }: { volumeHistory: { month: string; volume: number; vingtileAvg: number }[]; practitioner: Practitioner; periodLabel: string; periodLabelShort: string; trendPercent: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -898,8 +907,8 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
           <p className="text-2xl font-bold text-slate-800">
             {(practitioner.volumeL / 1000).toFixed(0)}K L
           </p>
-          <p className={`text-sm mt-1 ${practitioner.trend === 'up' ? 'text-success' : practitioner.trend === 'down' ? 'text-danger' : 'text-slate-500'}`}>
-            {practitioner.trend === 'up' ? '+12%' : practitioner.trend === 'down' ? '-8%' : 'Stable'} vs période précédente
+          <p className={`text-sm mt-1 ${trendPercent > 0 ? 'text-success' : trendPercent < 0 ? 'text-danger' : 'text-slate-500'}`}>
+            {trendPercent > 0 ? `+${trendPercent}%` : trendPercent < 0 ? `${trendPercent}%` : 'Stable'} vs période précédente
           </p>
         </div>
         <div className="glass-card p-4 text-center">

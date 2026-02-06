@@ -48,7 +48,7 @@ export function Landing() {
           </h1>
           <div className="flex items-center justify-center gap-2 text-airLiquide-teal text-sm font-medium mt-1.5">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Assistant Intelligent pour Representants</span>
+            <span>Assistant Intelligent pour Représentants</span>
             <Sparkles className="w-3.5 h-3.5" />
           </div>
         </motion.div>
@@ -114,7 +114,7 @@ export function Landing() {
         className="relative z-10 pb-4 text-center"
       >
         <span className="text-white/30 text-xs">
-          v1.0 · Propulse par IA generative
+          v1.0 · Propulsé par IA générative
         </span>
       </motion.div>
     </div>

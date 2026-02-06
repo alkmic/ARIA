@@ -22,7 +22,7 @@ export function Settings() {
     if (apiKey.startsWith('gsk_')) return 'Groq (Llama 3.3 70B)';
     if (apiKey.startsWith('sk-ant-')) return 'Anthropic (Claude)';
     if (apiKey.startsWith('sk-')) return 'OpenAI (GPT-4o)';
-    return 'Non configure';
+    return 'Non configuré';
   };
 
   const [saved, setSaved] = useState(false);
@@ -42,10 +42,10 @@ export function Settings() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800 mb-1 flex items-center space-x-3">
           <SettingsIcon className="w-6 h-6 text-al-blue-500" />
-          <span>Parametres</span>
+          <span>Paramètres</span>
         </h1>
         <p className="text-sm text-slate-500">
-          Gerez vos preferences et la configuration de l'application
+          Gérez vos préférences et la configuration de l'application
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export function Settings() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Role</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Rôle</label>
               <div className="px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-700 border border-slate-200">
                 {currentUser.role}
               </div>
@@ -89,7 +89,7 @@ export function Settings() {
             </div>
             <div className="flex items-center gap-2 pt-2 text-xs text-slate-400">
               <Info className="w-3.5 h-3.5" />
-              <span>Profil gere par l'administrateur</span>
+              <span>Profil géré par l'administrateur</span>
             </div>
           </div>
         </motion.div>
@@ -107,16 +107,16 @@ export function Settings() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Notifications</h2>
-              <p className="text-xs text-slate-500">Preferences d'alertes</p>
+              <p className="text-xs text-slate-500">Préférences d'alertes</p>
             </div>
           </div>
 
           <div className="space-y-3">
             {[
-              { key: 'visits' as const, label: 'Visites a planifier', desc: 'Alertes quand des praticiens doivent etre visites' },
-              { key: 'kols' as const, label: 'KOLs non visites', desc: 'Alertes pour les leaders d\'opinion a revoir' },
+              { key: 'visits' as const, label: 'Visites à planifier', desc: 'Alertes quand des praticiens doivent être visités' },
+              { key: 'kols' as const, label: 'KOLs non visités', desc: 'Alertes pour les leaders d\'opinion à revoir' },
               { key: 'objectives' as const, label: 'Objectifs atteints', desc: 'Notification quand un objectif est rempli' },
-              { key: 'daily' as const, label: 'Rappels quotidiens', desc: 'Resume de la journee chaque matin' },
+              { key: 'daily' as const, label: 'Rappels quotidiens', desc: 'Résumé de la journée chaque matin' },
             ].map(item => (
               <label key={item.key} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
                 <div>
@@ -141,7 +141,7 @@ export function Settings() {
               onClick={handleSaveNotifications}
               className="w-full mt-3 btn-primary text-sm py-2 flex items-center justify-center gap-2"
             >
-              {saved ? <><Check className="w-4 h-4" /> Enregistre</> : 'Enregistrer les preferences'}
+              {saved ? <><Check className="w-4 h-4" /> Enregistré</> : 'Enregistrer les préférences'}
             </button>
           </div>
         </motion.div>
@@ -154,12 +154,12 @@ export function Settings() {
           className="glass-card p-6"
         >
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+            <div className="p-2.5 bg-gradient-to-br from-al-blue-600 to-al-blue-500 rounded-xl">
               <Key className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Configuration IA</h2>
-              <p className="text-xs text-slate-500">Fournisseur LLM et cle API</p>
+              <p className="text-xs text-slate-500">Fournisseur LLM et clé API</p>
             </div>
           </div>
 
@@ -168,7 +168,7 @@ export function Settings() {
               <div className="flex items-center gap-2 mb-1">
                 <div className={`w-2 h-2 rounded-full ${isLLMConfigured ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`} />
                 <span className={`text-sm font-medium ${isLLMConfigured ? 'text-green-700' : 'text-amber-700'}`}>
-                  {isLLMConfigured ? 'LLM connecte' : 'LLM non configure'}
+                  {isLLMConfigured ? 'LLM connecté' : 'LLM non configuré'}
                 </span>
               </div>
               <p className="text-xs text-slate-600">
@@ -186,14 +186,14 @@ export function Settings() {
                 <p className="font-medium text-slate-700">Pour activer l'IA :</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Copiez <code className="bg-slate-200 px-1 rounded">.env.example</code> en <code className="bg-slate-200 px-1 rounded">.env</code></li>
-                  <li>Ajoutez votre cle API (Groq, OpenAI ou Anthropic)</li>
+                  <li>Ajoutez votre clé API (Groq, OpenAI ou Anthropic)</li>
                   <li>Relancez l'application</li>
                 </ol>
               </div>
             )}
 
             <p className="text-xs text-slate-400">
-              ARIA fonctionne en mode local sans cle API, avec des fonctionnalites IA reduites.
+              ARIA fonctionne en mode local sans clé API, avec des fonctionnalités IA réduites.
             </p>
           </div>
         </motion.div>
@@ -206,12 +206,12 @@ export function Settings() {
           className="glass-card p-6"
         >
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2.5 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl">
+            <div className="p-2.5 bg-gradient-to-br from-al-teal to-al-sky rounded-xl">
               <Database className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-800">Donnees</h2>
-              <p className="text-xs text-slate-500">Stockage et confidentialite</p>
+              <h2 className="text-lg font-semibold text-slate-800">Données</h2>
+              <p className="text-xs text-slate-500">Stockage et confidentialité</p>
             </div>
           </div>
 
@@ -222,28 +222,28 @@ export function Settings() {
                 <span className="text-xs text-slate-500">localStorage</span>
               </div>
               <p className="text-xs text-slate-500">
-                Vos donnees (notes, compte-rendus, actions) sont stockees localement dans votre navigateur.
+                Vos données (notes, comptes-rendus, actions) sont stockées localement dans votre navigateur.
               </p>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-slate-700">Praticiens</span>
-                <span className="text-xs font-medium text-al-blue-600">Donnees de demonstration</span>
+                <span className="text-xs font-medium text-al-blue-600">Données de démonstration</span>
               </div>
               <p className="text-xs text-slate-500">
-                Les 120 praticiens affiches sont des donnees fictives generees pour la demonstration.
+                Les 120 praticiens affichés sont des données fictives générées pour la démonstration.
               </p>
             </div>
             <button
               onClick={() => {
-                if (confirm('Effacer toutes les donnees locales ? (notes, compte-rendus, actions)')) {
+                if (confirm('Effacer toutes les données locales ? (notes, comptes-rendus, actions)')) {
                   localStorage.removeItem('aria-user-data');
                   window.location.reload();
                 }
               }}
               className="w-full text-sm text-red-600 hover:text-red-700 hover:bg-red-50 py-2 rounded-lg transition-colors"
             >
-              Reinitialiser les donnees locales
+              Réinitialiser les données locales
             </button>
           </div>
         </motion.div>
@@ -275,9 +275,9 @@ export function Settings() {
             </div>
           </div>
           <div className="p-3 bg-slate-50 rounded-lg">
-            <h3 className="text-sm font-medium text-slate-700 mb-2">Fournisseurs IA supportes</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-2">Fournisseurs IA supportés</h3>
             <div className="space-y-1 text-xs text-slate-500">
-              <div>Groq (gratuit, recommande)</div>
+              <div>Groq (gratuit, recommandé)</div>
               <div>OpenAI (GPT-4o)</div>
               <div>Anthropic (Claude)</div>
             </div>
@@ -298,7 +298,7 @@ export function Settings() {
 
       {/* Version Info */}
       <div className="text-center text-xs text-slate-400 pb-4">
-        ARIA v1.0.0 · Demonstrateur Air Liquide Sante · {isLLMConfigured ? detectProvider() : 'Mode local'}
+        ARIA v1.0.0 · Démonstrateur Air Liquide Santé · {isLLMConfigured ? detectProvider() : 'Mode local'}
       </div>
     </motion.div>
   );

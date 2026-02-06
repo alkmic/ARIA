@@ -28,9 +28,9 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </button>
 
           {/* ARIA Badge (visible on larger screens) */}
-          <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 bg-gradient-to-r from-purple-50 to-blue-50 px-3 py-1.5 rounded-full border border-purple-100">
-            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-            <span className="font-medium text-purple-700">ARIA</span>
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 bg-gradient-to-r from-al-blue-50 to-sky-50 px-3 py-1.5 rounded-full border border-al-blue-100">
+            <Sparkles className="w-3.5 h-3.5 text-al-blue-500" />
+            <span className="font-medium text-al-blue-700">ARIA</span>
             <span className="text-slate-400">|</span>
             <span>Parlez ou tapez vos commandes</span>
           </div>

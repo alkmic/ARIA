@@ -59,7 +59,13 @@
   }
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling — Firefox */
+* {
+  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-width: thin;
+}
+
+/* Scrollbar styling — WebKit (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -78,58 +84,3 @@
   @apply bg-al-blue-500/20 text-al-navy;
 }
 
-/* Welcome page animations */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.3;
-  }
-  50% {
-    transform: translateY(-100vh) translateX(20px);
-    opacity: 0.5;
-  }
-  90% {
-    opacity: 0.1;
-  }
-}
-
-@keyframes wave {
-  0% {
-    transform: translateX(0) translateY(0);
-  }
-  50% {
-    transform: translateX(-25%) translateY(-10px);
-  }
-  100% {
-    transform: translateX(0) translateY(0);
-  }
-}
-
-@keyframes wave-reverse {
-  0% {
-    transform: translateX(0) translateY(0);
-  }
-  50% {
-    transform: translateX(25%) translateY(10px);
-  }
-  100% {
-    transform: translateX(0) translateY(0);
-  }
-}
-
-.animate-float {
-  animation: float linear infinite;
-}
-
-.animate-wave {
-  animation: wave 8s ease-in-out infinite;
-  transform-origin: center;
-}
-
-.animate-wave-reverse {
-  animation: wave-reverse 10s ease-in-out infinite;
-  transform-origin: center;
-}

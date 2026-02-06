@@ -19,7 +19,7 @@ const actions: QuickAction[] = [
     label: 'Pitch IA',
     description: 'Générer un pitch personnalisé',
     path: '/pitch',
-    color: 'from-purple-500 to-indigo-500',
+    color: 'from-al-blue-600 to-al-blue-500',
   },
   {
     id: 'coach',
@@ -35,7 +35,7 @@ const actions: QuickAction[] = [
     label: 'Optimiser Tournée',
     description: 'Planifier les visites du jour',
     path: '/tour-optimization',
-    color: 'from-green-500 to-emerald-500',
+    color: 'from-al-teal to-emerald-500',
   },
   {
     id: 'map',
@@ -43,7 +43,7 @@ const actions: QuickAction[] = [
     label: 'Territoire',
     description: 'Visualiser votre secteur',
     path: '/map',
-    color: 'from-amber-500 to-orange-500',
+    color: 'from-al-sky to-al-blue-500',
   },
   {
     id: 'practitioners',
@@ -51,7 +51,7 @@ const actions: QuickAction[] = [
     label: 'Praticiens',
     description: 'Voir votre portefeuille',
     path: '/practitioners',
-    color: 'from-cyan-500 to-blue-500',
+    color: 'from-al-blue-500 to-al-teal',
   },
   {
     id: 'visits',
@@ -59,7 +59,7 @@ const actions: QuickAction[] = [
     label: 'Visites',
     description: 'Gérer votre agenda',
     path: '/visits',
-    color: 'from-rose-500 to-pink-500',
+    color: 'from-al-teal to-al-sky',
   },
 ];
 
