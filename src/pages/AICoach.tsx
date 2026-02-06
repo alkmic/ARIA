@@ -111,13 +111,13 @@ export default function AICoach() {
   // Suggestions contextuelles - Talk to My Data (approche agentique)
   const SUGGESTION_CHIPS = [
     "Montre-moi un graphique des volumes par ville",
-    "Quel medecin dont le prenom est Bernard a le plus de publications ?",
+    "Quel médecin dont le prénom est Bernard a le plus de publications ?",
     "Compare les KOLs aux autres praticiens en volume",
-    "Top 10 prescripteurs avec leur fidelite",
-    "Quels pneumologues a Lyon ont un risque de churn eleve ?",
-    "Analyse les pneumologues vs generalistes",
+    "Top 10 prescripteurs avec leur fidélité",
+    "Quels pneumologues à Lyon ont un risque de churn élevé ?",
+    "Analyse les pneumologues vs généralistes",
     "Camembert des segments par vingtile",
-    `Qui dois-je voir en priorite ${periodLabel.toLowerCase()} ?`,
+    `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
   ];
 
   // Auto-scroll vers le bas
@@ -920,10 +920,10 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 via-purple-500 to-al-sky flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center shadow-lg shadow-al-blue-500/20">
                 <Brain className="w-7 h-7 text-white" />
               </div>
-              <span className="bg-gradient-to-r from-al-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-al-blue-600 to-al-navy bg-clip-text text-transparent">
                 Coach IA Avancé
               </span>
             </h1>
@@ -998,9 +998,9 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
       <div className="flex-1 glass-card flex flex-col overflow-hidden border-2 border-slate-200/50">
         {/* Suggestions (si pas de messages) */}
         {messages.length === 0 && (
-          <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-purple-50/50 to-blue-50/50">
+          <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-al-blue-50/50 to-sky-50/50">
             <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="w-5 h-5 text-purple-500" />
+              <MessageSquare className="w-5 h-5 text-al-blue-500" />
               <p className="text-sm font-semibold text-slate-700">
                 Dialogue libre activé - Posez n'importe quelle question !
               </p>
@@ -1012,8 +1012,8 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                   key={i}
                   onClick={() => setInput(chip)}
                   className="px-3 py-2 bg-white text-slate-700 rounded-full text-xs sm:text-sm font-medium
-                           hover:bg-gradient-to-r hover:from-purple-100 hover:to-blue-100 hover:text-purple-700
-                           transition-all hover:shadow-md border border-slate-200 hover:border-purple-300"
+                           hover:bg-gradient-to-r hover:from-al-blue-50 hover:to-sky-50 hover:text-al-blue-700
+                           transition-all hover:shadow-md border border-slate-200 hover:border-al-blue-300"
                 >
                   {chip}
                 </button>
@@ -1033,14 +1033,14 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                 className={`flex gap-2 sm:gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
               >
                 {message.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 via-purple-500 to-al-sky flex items-center justify-center flex-shrink-0 shadow-md">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center flex-shrink-0 shadow-md">
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                 )}
 
                 <div className={`max-w-[85%] sm:max-w-[80%] ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-r from-al-blue-500 to-purple-500 text-white rounded-2xl rounded-tr-md px-3 sm:px-4 py-2 sm:py-3 shadow-md'
+                    ? 'bg-gradient-to-r from-al-blue-500 to-al-blue-600 text-white rounded-2xl rounded-tr-md px-3 sm:px-4 py-2 sm:py-3 shadow-md'
                     : 'space-y-3'
                 }`}>
                   {/* Message content */}
@@ -1062,7 +1062,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                           <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
                             <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                               message.source === 'llm'
-                                ? 'bg-purple-100 text-purple-600'
+                                ? 'bg-al-blue-100 text-al-blue-600'
                                 : 'bg-blue-100 text-blue-600'
                             }`}>
                               {message.source === 'llm' ? 'Groq AI' : 'Intelligence locale'}
@@ -1143,18 +1143,18 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           {message.agenticChart.spec.chartType === 'pie' ? (
-                            <PieChartIcon className="w-5 h-5 text-purple-500" />
+                            <PieChartIcon className="w-5 h-5 text-al-blue-500" />
                           ) : message.agenticChart.spec.chartType === 'line' ? (
                             <TrendingUp className="w-5 h-5 text-green-500" />
                           ) : message.agenticChart.spec.chartType === 'composed' ? (
-                            <BarChart3 className="w-5 h-5 text-indigo-500" />
+                            <BarChart3 className="w-5 h-5 text-al-navy" />
                           ) : (
                             <BarChart3 className="w-5 h-5 text-blue-500" />
                           )}
                           <h4 className="font-semibold text-slate-800">{message.agenticChart.spec.title}</h4>
                         </div>
                         {message.agenticChart.generatedByLLM && (
-                          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 rounded-full">
+                          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-gradient-to-r from-al-blue-100 to-sky-100 text-al-blue-700 rounded-full">
                             <Code2 className="w-3 h-3" />
                             Généré par IA
                           </span>
@@ -1338,14 +1338,14 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
               animate={{ opacity: 1 }}
               className="flex gap-3"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 via-purple-500 to-al-sky flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-slate-100">
                 <div className="flex gap-1.5 items-center">
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-2 h-2 bg-al-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-al-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-al-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   <span className="ml-2 text-xs text-slate-400">Analyse en cours...</span>
                 </div>
               </div>
@@ -1382,7 +1382,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
             <button
               onClick={() => handleSend(input)}
               disabled={!input.trim() || isTyping}
-              className="btn-primary px-4 sm:px-6 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-al-blue-500 to-purple-500 hover:from-al-blue-600 hover:to-purple-600 shadow-lg shadow-purple-500/20"
+              className="btn-primary px-4 sm:px-6 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-al-blue-500 to-al-blue-600 hover:from-al-blue-600 hover:to-al-navy shadow-lg shadow-al-blue-500/20"
             >
               <Send className="w-5 h-5" />
             </button>

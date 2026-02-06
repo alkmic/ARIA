@@ -95,11 +95,12 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </div>
           <div>
             <h1 className="text-2xl font-bold">ARIA</h1>
-            <p className="text-xs text-al-blue-200">AI Assistant</p>
+            <p className="text-xs text-al-blue-200">Assistant IA</p>
           </div>
         </Link>
         <button
           onClick={onClose}
+          aria-label="Fermer le menu"
           className="lg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
         >
           <X className="w-5 h-5" />
@@ -107,7 +108,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto" role="navigation" aria-label="Navigation principale">
         {/* Main Navigation */}
         {menuItems.map(renderMenuItem)}
 

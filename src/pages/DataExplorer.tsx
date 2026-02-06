@@ -463,10 +463,10 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center shadow-lg shadow-al-blue-500/20">
             <BarChart3 className="w-7 h-7 text-white" />
           </div>
-          <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-al-blue-600 to-al-navy bg-clip-text text-transparent">
             Data Explorer
           </span>
         </h1>
@@ -498,7 +498,7 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
           <button
             onClick={processQuery}
             disabled={isLoading || !query.trim()}
-            className="btn-primary bg-gradient-to-r from-indigo-500 to-purple-500 px-6 disabled:opacity-50"
+            className="btn-primary bg-gradient-to-r from-al-blue-500 to-al-sky px-6 disabled:opacity-50"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -517,7 +517,7 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
             <button
               key={i}
               onClick={() => setQuery(example)}
-              className="px-3 py-1.5 text-xs bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 rounded-full transition-colors"
+              className="px-3 py-1.5 text-xs bg-slate-100 hover:bg-al-blue-100 text-slate-600 hover:text-al-blue-700 rounded-full transition-colors"
             >
               {example}
             </button>
@@ -536,9 +536,9 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
               className="glass-card overflow-hidden"
             >
               {/* Query header */}
-              <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+              <div className="p-4 bg-gradient-to-r from-al-blue-50 to-sky-50 border-b border-al-blue-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
@@ -560,11 +560,11 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
                 {result.charts.map((chart, i) => (
                   <div key={i}>
                     <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                      {chart.type === 'bar' && <BarChart3 className="w-4 h-4 text-indigo-500" />}
-                      {chart.type === 'pie' && <PieChart className="w-4 h-4 text-indigo-500" />}
-                      {chart.type === 'line' && <TrendingUp className="w-4 h-4 text-indigo-500" />}
-                      {chart.type === 'table' && <Table className="w-4 h-4 text-indigo-500" />}
-                      {chart.type === 'stats' && <Users className="w-4 h-4 text-indigo-500" />}
+                      {chart.type === 'bar' && <BarChart3 className="w-4 h-4 text-al-blue-500" />}
+                      {chart.type === 'pie' && <PieChart className="w-4 h-4 text-al-blue-500" />}
+                      {chart.type === 'line' && <TrendingUp className="w-4 h-4 text-al-blue-500" />}
+                      {chart.type === 'table' && <Table className="w-4 h-4 text-al-blue-500" />}
+                      {chart.type === 'stats' && <Users className="w-4 h-4 text-al-blue-500" />}
                       {chart.title}
                     </h3>
                     {renderChart(chart)}
@@ -584,7 +584,7 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
                       <button
                         key={p.id}
                         onClick={() => navigate(`/practitioner/${p.id}`)}
-                        className="flex items-center gap-3 p-2 bg-white rounded-lg hover:bg-indigo-50 transition-colors text-left"
+                        className="flex items-center gap-3 p-2 bg-white rounded-lg hover:bg-al-blue-50 transition-colors text-left"
                       >
                         <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-sm font-bold">
                           {p.firstName[0]}{p.lastName[0]}
@@ -617,8 +617,8 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
             animate={{ opacity: 1 }}
             className="text-center py-16"
           >
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 mx-auto flex items-center justify-center mb-4">
-              <BarChart3 className="w-10 h-10 text-indigo-400" />
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-al-blue-100 to-sky-100 mx-auto flex items-center justify-center mb-4">
+              <BarChart3 className="w-10 h-10 text-al-blue-400" />
             </div>
             <h3 className="text-xl font-semibold text-slate-800 mb-2">
               Explorez vos données
@@ -631,7 +631,7 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
                 <button
                   key={i}
                   onClick={() => setQuery(example)}
-                  className="px-4 py-2 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 rounded-lg transition-colors text-sm"
+                  className="px-4 py-2 bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-600 hover:text-al-blue-700 rounded-lg transition-colors text-sm"
                 >
                   {example}
                 </button>

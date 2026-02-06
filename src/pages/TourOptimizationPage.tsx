@@ -790,7 +790,7 @@ export const TourOptimizationPage: React.FC = () => {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center shadow-lg">
               <RouteIcon className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -1003,7 +1003,7 @@ export const TourOptimizationPage: React.FC = () => {
             {/* Critère d'optimisation */}
             <div className="glass-card p-6">
               <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-purple-500" />
+                <Zap className="w-5 h-5 text-al-blue-500" />
                 Critère d'optimisation
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -1013,16 +1013,16 @@ export const TourOptimizationPage: React.FC = () => {
                     onClick={() => setCriteria(opt.id)}
                     className={`p-4 rounded-xl border-2 transition-all text-left ${
                       criteria === opt.id
-                        ? 'border-purple-500 bg-purple-50 shadow-md scale-[1.02]'
+                        ? 'border-al-blue-500 bg-al-blue-50 shadow-md scale-[1.02]'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <opt.icon className={`w-5 h-5 ${criteria === opt.id ? 'text-purple-600' : 'text-slate-500'}`} />
+                      <opt.icon className={`w-5 h-5 ${criteria === opt.id ? 'text-al-blue-600' : 'text-slate-500'}`} />
                       <span className="font-bold text-sm">{opt.label}</span>
                     </div>
                     <div className="text-xs text-slate-600">{opt.description}</div>
-                    <div className={`text-xs mt-2 font-medium ${criteria === opt.id ? 'text-purple-600' : 'text-green-600'}`}>
+                    <div className={`text-xs mt-2 font-medium ${criteria === opt.id ? 'text-al-blue-600' : 'text-green-600'}`}>
                       {opt.expectedSaving}
                     </div>
                   </button>
@@ -1030,19 +1030,19 @@ export const TourOptimizationPage: React.FC = () => {
               </div>
 
               {/* Benefit details for selected criteria */}
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="mt-4 p-4 bg-al-blue-50 rounded-lg border border-al-blue-200">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-al-blue-500 flex items-center justify-center flex-shrink-0">
                     {(() => {
                       const opt = criteriaOptions.find(o => o.id === criteria);
                       return opt ? <opt.icon className="w-5 h-5 text-white" /> : null;
                     })()}
                   </div>
                   <div>
-                    <h4 className="font-bold text-purple-800">
+                    <h4 className="font-bold text-al-blue-800">
                       {criteriaOptions.find(o => o.id === criteria)?.label}
                     </h4>
-                    <p className="text-sm text-purple-700 mt-1">
+                    <p className="text-sm text-al-blue-700 mt-1">
                       {criteriaOptions.find(o => o.id === criteria)?.benefit}
                     </p>
                   </div>
@@ -1152,7 +1152,7 @@ export const TourOptimizationPage: React.FC = () => {
             </div>
 
             {/* Summary */}
-            <div className="glass-card p-6 bg-gradient-to-br from-purple-50 to-blue-50">
+            <div className="glass-card p-6 bg-gradient-to-br from-al-blue-50 to-sky-50">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <h3 className="font-bold text-lg text-slate-800">Résumé</h3>
@@ -1192,7 +1192,7 @@ export const TourOptimizationPage: React.FC = () => {
             className="glass-card p-8"
           >
             <div className="max-w-2xl mx-auto text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <div className="w-16 h-16 bg-gradient-to-br from-al-blue-500 to-al-sky rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-xl text-slate-800 mb-2">Optimisation en cours...</h3>
@@ -1200,7 +1200,7 @@ export const TourOptimizationPage: React.FC = () => {
 
               <div className="relative h-4 bg-slate-200 rounded-full overflow-hidden mb-2">
                 <motion.div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-blue-600"
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-al-blue-500 to-al-sky"
                   initial={{ width: '0%' }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
@@ -1253,12 +1253,12 @@ export const TourOptimizationPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="glass-card p-4 bg-gradient-to-br from-purple-50 to-pink-50">
+                  <div className="glass-card p-4 bg-gradient-to-br from-al-blue-50 to-sky-50">
                     <div className="flex items-center gap-2 mb-1">
-                      <Navigation className="w-5 h-5 text-purple-600" />
+                      <Navigation className="w-5 h-5 text-al-blue-600" />
                       <span className="text-sm text-slate-600">Distance totale optimisée</span>
                     </div>
-                    <div className="text-2xl font-bold text-purple-700">{result.totalDistance} km</div>
+                    <div className="text-2xl font-bold text-al-blue-700">{result.totalDistance} km</div>
                     <div className="text-xs text-slate-500 mt-1">
                       sur {result.days.length} jour{result.days.length > 1 ? 's' : ''} • trajet : {formatMinutes(result.totalTravelTime)}
                     </div>
@@ -1363,7 +1363,7 @@ export const TourOptimizationPage: React.FC = () => {
               {/* Liste des visites */}
               <div className="glass-card p-4">
                 <h3 className="font-bold text-lg text-slate-800 mb-3 flex items-center gap-2">
-                  <RouteIcon className="w-5 h-5 text-purple-500" />
+                  <RouteIcon className="w-5 h-5 text-al-blue-500" />
                   Planning Jour {editableResult[activeDay]?.day}
                 </h3>
                 <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
@@ -1373,7 +1373,7 @@ export const TourOptimizationPage: React.FC = () => {
                   <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
                     {editableResult[activeDay]?.startTime} — {editableResult[activeDay]?.endTime}
                   </span>
-                  <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                  <span className="bg-al-blue-50 text-al-blue-700 px-2 py-1 rounded">
                     {editableResult[activeDay]?.totalDistance} km
                   </span>
                   <span className="bg-green-50 text-green-700 px-2 py-1 rounded">

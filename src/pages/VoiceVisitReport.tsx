@@ -718,13 +718,13 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               {extractedInfo.nextActions.length > 0 && (
                 <div className="glass-card p-4">
                   <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-purple-500" />
+                    <Target className="w-4 h-4 text-al-blue-500" />
                     Prochaines actions
                   </h4>
                   <ul className="space-y-2">
                     {extractedInfo.nextActions.map((action, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                        <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-al-blue-400 mt-0.5 flex-shrink-0" />
                         {action}
                       </li>
                     ))}
@@ -803,7 +803,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                       observation: { icon: Eye, color: 'text-blue-500', bg: 'bg-blue-100' },
                       strategy: { icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-100' },
                       competitive: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-100' },
-                      reminder: { icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-100' },
+                      reminder: { icon: Calendar, color: 'text-al-blue-500', bg: 'bg-al-blue-100' },
                     };
                     const config = categoryIcons[update.category];
                     const Icon = config.icon;

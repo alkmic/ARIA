@@ -29,7 +29,7 @@ interface NotesTabProps {
 
 const noteTypeConfig = {
   observation: { label: 'Observation', icon: Eye, color: 'text-blue-500', bg: 'bg-blue-50' },
-  reminder: { label: 'Rappel', icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-50' },
+  reminder: { label: 'Rappel', icon: Calendar, color: 'text-al-blue-500', bg: 'bg-al-blue-50' },
   strategy: { label: 'Stratégie', icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
   competitive: { label: 'Concurrence', icon: Swords, color: 'text-amber-500', bg: 'bg-amber-50' }
 };
@@ -362,7 +362,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
               className="w-full flex items-center justify-between p-3 glass-card hover:bg-slate-50 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Brain className="w-5 h-5 text-purple-500" />
+                <Brain className="w-5 h-5 text-al-blue-500" />
                 <span className="font-medium">Voir toutes les actions IA</span>
               </div>
               <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -484,11 +484,11 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
                 )}
 
                 {report.extractedInfo.nextActions.length > 0 && (
-                  <div className="bg-purple-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-purple-700 mb-2">Actions à faire</h4>
+                  <div className="bg-al-blue-50 rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-al-blue-700 mb-2">Actions à faire</h4>
                     <ul className="space-y-1">
                       {report.extractedInfo.nextActions.map((action, i) => (
-                        <li key={i} className="text-xs text-purple-800">• {action}</li>
+                        <li key={i} className="text-xs text-al-blue-800">• {action}</li>
                       ))}
                     </ul>
                   </div>
@@ -564,7 +564,7 @@ function ActionCard({ action }: { action: AIAction }) {
   const statusConfig = {
     pending: { label: 'À faire', color: 'text-amber-600 bg-amber-100' },
     completed: { label: 'Terminé', color: 'text-green-600 bg-green-100' },
-    snoozed: { label: 'Reporté', color: 'text-purple-600 bg-purple-100' },
+    snoozed: { label: 'Reporté', color: 'text-al-blue-600 bg-al-blue-100' },
     dismissed: { label: 'Ignoré', color: 'text-slate-600 bg-slate-100' }
   };
 

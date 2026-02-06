@@ -256,7 +256,7 @@ export default function TerritoryMap() {
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-purple-500" />
+                <MapPin className="w-5 h-5 text-al-blue-500" />
                 Praticiens à visiter
               </h2>
               <button
@@ -324,9 +324,9 @@ export default function TerritoryMap() {
                 Optimisez vos tournées avec notre algorithme TSP 2-opt pour minimiser les distances et maximiser l'efficacité.
               </p>
 
-              <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg">
+              <div className="p-4 bg-gradient-to-br from-al-blue-50 to-sky-50 rounded-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center">
                     <Route className="w-5 h-5 text-white" />
                   </div>
                   <div>

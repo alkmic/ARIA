@@ -352,7 +352,7 @@ export default function ManagerDashboard() {
           className="glass-card p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-2">
-            <Star className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500" />
+            <Star className="w-6 h-6 sm:w-8 sm:h-8 text-al-blue-500" />
             <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{metrics.kolCount}</p>

@@ -9,7 +9,7 @@ interface NewsTabProps {
 
 const TYPE_CONFIG: Record<string, { bg: string; text: string; icon: React.ReactNode; label: string }> = {
   publication: { bg: 'bg-blue-100', text: 'text-blue-600', icon: <FileText className="w-5 h-5" />, label: 'Publication' },
-  conference: { bg: 'bg-purple-100', text: 'text-purple-600', icon: <Mic className="w-5 h-5" />, label: 'Conférence' },
+  conference: { bg: 'bg-al-blue-100', text: 'text-al-blue-600', icon: <Mic className="w-5 h-5" />, label: 'Conférence' },
   certification: { bg: 'bg-teal-100', text: 'text-teal-600', icon: <Award className="w-5 h-5" />, label: 'Certification' },
   award: { bg: 'bg-amber-100', text: 'text-amber-600', icon: <Award className="w-5 h-5" />, label: 'Distinction' },
   event: { bg: 'bg-green-100', text: 'text-green-600', icon: <Calendar className="w-5 h-5" />, label: 'Événement' },

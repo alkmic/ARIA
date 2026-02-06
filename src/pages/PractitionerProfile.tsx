@@ -508,7 +508,7 @@ function SynthesisTab({ practitioner, enrichedProfile, myReports, myNotes, navig
       {/* AI Analysis */}
       <div className="glass-card p-6">
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
-          <Brain className="w-5 h-5 text-purple-500" />
+          <Brain className="w-5 h-5 text-al-blue-500" />
           Analyse IA du praticien
         </h3>
         <p className="text-slate-600 leading-relaxed">{aiAnalysis}</p>
@@ -597,9 +597,9 @@ function SynthesisTab({ practitioner, enrichedProfile, myReports, myNotes, navig
 
       {/* User Visit Reports */}
       {myReports.length > 0 && (
-        <div className="glass-card p-6 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
+        <div className="glass-card p-6 bg-gradient-to-br from-al-blue-50/50 to-sky-50/50">
           <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
-            <FileText className="w-5 h-5 text-purple-500" />
+            <FileText className="w-5 h-5 text-al-blue-500" />
             Mes comptes-rendus ({myReports.length})
           </h3>
           <div className="space-y-3">
@@ -646,7 +646,7 @@ function SynthesisTab({ practitioner, enrichedProfile, myReports, myNotes, navig
                 observation: 'border-blue-200 bg-blue-50',
                 strategy: 'border-emerald-200 bg-emerald-50',
                 competitive: 'border-amber-200 bg-amber-50',
-                reminder: 'border-purple-200 bg-purple-50',
+                reminder: 'border-al-blue-200 bg-al-blue-50',
               };
               return (
                 <div key={note.id} className={`p-3 rounded-lg border text-sm ${typeColors[note.type] || 'border-slate-200 bg-slate-50'}`}>
@@ -792,7 +792,7 @@ function HistoryTab({ conversations, myReports, timePeriod, periodLabel }: Histo
         </div>
       ) : (
         filteredEntries.map((entry, i) => (
-          <div key={i} className={`glass-card p-5 relative ${entry.source === 'user' ? 'border-l-4 border-l-purple-400' : ''}`}>
+          <div key={i} className={`glass-card p-5 relative ${entry.source === 'user' ? 'border-l-4 border-l-al-blue-400' : ''}`}>
             {/* Connection Line */}
             {i < filteredEntries.length - 1 && (
               <div className="absolute left-8 top-16 bottom-0 w-0.5 bg-slate-200 -mb-4" />
@@ -815,7 +815,7 @@ function HistoryTab({ conversations, myReports, timePeriod, periodLabel }: Histo
               </div>
               <div className="flex items-center gap-2">
                 {entry.source === 'user' && (
-                  <span className="text-[10px] px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full font-medium">
+                  <span className="text-[10px] px-2 py-0.5 bg-al-blue-100 text-al-blue-600 rounded-full font-medium">
                     Mon CR
                   </span>
                 )}

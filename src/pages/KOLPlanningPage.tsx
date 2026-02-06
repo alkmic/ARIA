@@ -237,34 +237,34 @@ export const KOLPlanningPage: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card p-6 bg-gradient-to-br from-purple-50 to-blue-50"
+        className="glass-card p-6 bg-gradient-to-br from-al-blue-50 to-sky-50"
       >
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center flex-shrink-0">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-lg text-slate-800 mb-2">Analyse IA - Recommandations Stratégiques</h3>
             <p className="text-slate-700 leading-relaxed">
-              Ces {kolsAnalysis.length} KOLs sont identifies comme prioritaires selon <strong>7 criteres</strong> :
-              anciennete de la derniere visite, volume de prescription, influence regionale, engagement historique,
-              potentiel de croissance, risque concurrentiel et opportunites de collaboration.
+              Ces {kolsAnalysis.length} KOLs sont identifiés comme prioritaires selon <strong>7 critères</strong> :
+              ancienneté de la dernière visite, volume de prescription, influence régionale, engagement historique,
+              potentiel de croissance, risque concurrentiel et opportunités de collaboration.
               En visitant ces KOLs dans les 14 prochains jours, vous pourriez consolider un volume total de{' '}
-              <strong className="text-purple-600">{(kolsAnalysis.reduce((s, k) => s + k.volumeL, 0) / 1000).toFixed(0)}K litres/an</strong> et
+              <strong className="text-al-blue-600">{(kolsAnalysis.reduce((s, k) => s + k.volumeL, 0) / 1000).toFixed(0)}K litres/an</strong> et
               renforcer la relation avec vos prescripteurs les plus influents.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1">
+              <span className="px-3 py-1 bg-al-blue-100 text-al-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
                 <Target className="w-3 h-3" />
-                {kolsAnalysis.length} KOLs a recontacter
+                {kolsAnalysis.length} KOLs à recontacter
               </span>
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
-                Analyse basee sur les donnees du territoire
+                Analyse basée sur les données du territoire
               </span>
               <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                Criteres : volume, fidelite, delai de visite
+                Critères : volume, fidélité, délai de visite
               </span>
             </div>
           </div>
@@ -343,10 +343,10 @@ export const KOLPlanningPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                      <Users className="w-4 h-4 text-purple-500" />
+                      <Users className="w-4 h-4 text-al-blue-500" />
                       <div>
                         <div className="text-xs text-slate-500">Influence</div>
-                        <div className="text-sm font-bold text-purple-700">{kol.analysis.estimatedInfluence}</div>
+                        <div className="text-sm font-bold text-al-blue-700">{kol.analysis.estimatedInfluence}</div>
                       </div>
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export const KOLPlanningPage: React.FC = () => {
                   className="mt-6 pt-6 border-t border-slate-200 space-y-4"
                 >
                   {/* Planning proposé */}
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-sky-50 rounded-lg border border-blue-200">
                     <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-blue-600" />
                       Planning Proposé

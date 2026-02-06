@@ -86,7 +86,7 @@ const Welcome: React.FC = () => {
         {/* Description */}
         <p className="text-base text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed">
           Votre assistant intelligent pour optimiser vos relations avec les praticiens
-          et maximiser l'impact de vos visites medicales.
+          et maximiser l'impact de vos visites médicales.
         </p>
 
         {/* CTA Button */}
@@ -95,7 +95,7 @@ const Welcome: React.FC = () => {
           className="group relative inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-al-navy bg-white rounded-full overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-al-sky/50 cursor-pointer"
         >
           <span className="relative z-10 flex items-center space-x-3">
-            <span>Lancer l'experience</span>
+            <span>Lancer l'expérience</span>
             <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
           </span>
 
@@ -106,13 +106,13 @@ const Welcome: React.FC = () => {
         {/* Points cles */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5 text-white/80">
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-xl font-semibold text-al-sky mb-1.5">IA Generative</div>
-            <p className="text-sm text-white/70">Pitch personnalises et insights intelligents</p>
+            <div className="text-xl font-semibold text-al-sky mb-1.5">IA Générative</div>
+            <p className="text-sm text-white/70">Pitch personnalisés et insights intelligents</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-xl font-semibold text-al-teal mb-1.5">Analyse Predictive</div>
-            <p className="text-sm text-white/70">Identification des opportunites prioritaires</p>
+            <div className="text-xl font-semibold text-al-teal mb-1.5">Analyse Prédictive</div>
+            <p className="text-sm text-white/70">Identification des opportunités prioritaires</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">

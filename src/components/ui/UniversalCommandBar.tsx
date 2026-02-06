@@ -468,10 +468,10 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
 
             {/* AI Processing */}
             {isProcessing && (
-              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100">
+              <div className="p-4 bg-gradient-to-r from-al-blue-50 to-sky-50 border-b border-al-blue-100">
                 <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
-                  <p className="text-purple-700">ARIA analyse votre question...</p>
+                  <Loader2 className="w-5 h-5 text-al-blue-500 animate-spin" />
+                  <p className="text-al-blue-700">ARIA analyse votre question...</p>
                 </div>
               </div>
             )}
@@ -546,7 +546,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
                           : 'bg-slate-100 text-slate-600'
                         : result.type === 'action'
                           ? 'bg-al-blue-100 text-al-blue-600'
-                          : 'bg-purple-100 text-purple-600'
+                          : 'bg-al-blue-100 text-al-blue-600'
                     }`}>
                       {result.icon}
                     </div>
@@ -585,7 +585,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
                 sélectionner
               </span>
               <span className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-purple-400" />
+                <Sparkles className="w-3 h-3 text-al-blue-400" />
                 Propulsé par ARIA
               </span>
             </div>

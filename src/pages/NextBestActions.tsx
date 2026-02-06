@@ -64,10 +64,10 @@ const ACTION_CONFIG = {
   },
   risk: {
     icon: TrendingDown,
-    color: 'from-purple-500 to-violet-500',
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    text: 'text-purple-700',
+    color: 'from-slate-600 to-slate-500',
+    bg: 'bg-slate-50',
+    border: 'border-slate-300',
+    text: 'text-slate-700',
     label: 'Risque churn'
   },
   followup: {
@@ -80,18 +80,18 @@ const ACTION_CONFIG = {
   },
   upsell: {
     icon: Award,
-    color: 'from-pink-500 to-rose-500',
-    bg: 'bg-pink-50',
-    border: 'border-pink-200',
-    text: 'text-pink-700',
+    color: 'from-al-teal to-emerald-500',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    text: 'text-emerald-700',
     label: 'Upsell'
   },
   competitor: {
     icon: Shield,
-    color: 'from-orange-500 to-red-500',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    text: 'text-orange-700',
+    color: 'from-amber-600 to-amber-500',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    text: 'text-amber-700',
     label: 'Concurrence'
   },
   publication: {
@@ -258,7 +258,7 @@ const ActionCard = ({
             {/* AI Summary */}
             <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-3 mb-3">
               <div className="flex items-start gap-2">
-                <Brain className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                <Brain className="w-4 h-4 text-al-blue-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-slate-700 leading-relaxed">
                   {action.aiJustification.summary}
                 </p>
@@ -456,7 +456,7 @@ const ActionCard = ({
                       </div>
                     )}
                     {action.aiJustification.trendAnalysis && (
-                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-700">
+                      <div className="bg-al-blue-50 border border-al-blue-200 rounded-lg p-3 text-sm text-al-blue-700">
                         {action.aiJustification.trendAnalysis}
                       </div>
                     )}
@@ -464,12 +464,12 @@ const ActionCard = ({
                 )}
 
                 {/* Suggested approach */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-100">
-                  <h4 className="text-sm font-semibold text-purple-700 mb-2 flex items-center gap-2">
+                <div className="bg-gradient-to-r from-al-blue-50 to-sky-50 rounded-lg p-4 border border-al-blue-100">
+                  <h4 className="text-sm font-semibold text-al-blue-700 mb-2 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     Approche suggérée par ARIA
                   </h4>
-                  <p className="text-sm text-purple-600 leading-relaxed">
+                  <p className="text-sm text-al-blue-600 leading-relaxed">
                     {action.aiJustification.suggestedApproach}
                   </p>
                 </div>
@@ -492,7 +492,7 @@ const ActionCard = ({
                   </button>
                   <button
                     onClick={() => navigate(`/visit-report?practitioner=${practitioner.id}`)}
-                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 text-slate-700 hover:text-purple-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-700 hover:text-al-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
                     Compte-rendu
@@ -641,7 +641,7 @@ export default function NextBestActions() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-purple-500" />
+              <FileText className="w-4 h-4 text-al-blue-500" />
               <span className="text-sm text-slate-600">
                 <strong className="text-slate-800">{userStats.reportsThisWeek}</strong> compte-rendus cette semaine
               </span>
@@ -749,18 +749,18 @@ export default function NextBestActions() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-5 border border-purple-200"
+        className="mt-8 bg-gradient-to-r from-al-blue-50 to-sky-50 rounded-xl p-5 border border-al-blue-200"
       >
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center flex-shrink-0 shadow-lg">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-purple-800 mb-2 flex items-center gap-2">
+            <p className="font-semibold text-al-blue-800 mb-2 flex items-center gap-2">
               Analyse ARIA
-              <span className="text-xs font-normal text-purple-500">Mise à jour en temps réel</span>
+              <span className="text-xs font-normal text-al-blue-500">Mise à jour en temps réel</span>
             </p>
-            <p className="text-sm text-purple-700 leading-relaxed">
+            <p className="text-sm text-al-blue-700 leading-relaxed">
               {stats.critical > 0
                 ? `Attention : ${stats.critical} action(s) critique(s) nécessitent votre attention immédiate. Ces KOLs représentent une part significative de votre volume et n'ont pas été vus depuis longtemps. L'analyse des tendances montre un risque de perte de relation si aucune action n'est entreprise cette semaine.`
                 : stats.byType.risk > 0

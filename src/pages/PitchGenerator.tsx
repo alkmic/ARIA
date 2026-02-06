@@ -42,38 +42,38 @@ import type { Practitioner } from '../types';
 const SECTION_STYLES: Record<string, { gradient: string; bg: string; icon: string; borderColor: string }> = {
   hook: { gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', icon: '1', borderColor: 'border-amber-200' },
   proposition: { gradient: 'from-blue-500 to-cyan-500', bg: 'bg-blue-50', icon: '2', borderColor: 'border-blue-200' },
-  competition: { gradient: 'from-purple-500 to-pink-500', bg: 'bg-purple-50', icon: '3', borderColor: 'border-purple-200' },
+  competition: { gradient: 'from-al-blue-600 to-al-blue-500', bg: 'bg-blue-50', icon: '3', borderColor: 'border-blue-200' },
   cta: { gradient: 'from-green-500 to-emerald-500', bg: 'bg-green-50', icon: '4', borderColor: 'border-green-200' },
   objections: { gradient: 'from-red-500 to-rose-500', bg: 'bg-red-50', icon: '5', borderColor: 'border-red-200' },
-  talking_points: { gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50', icon: '6', borderColor: 'border-indigo-200' },
+  talking_points: { gradient: 'from-al-navy to-al-blue-600', bg: 'bg-blue-50', icon: '6', borderColor: 'border-blue-200' },
 };
 
 // Produits Air Liquide disponibles
 const PRODUCTS = [
   { id: 'vitalaire', name: 'VitalAire Confort+', description: 'Concentrateur haut de gamme' },
-  { id: 'telesuivi', name: 'Telesuivi O2', description: 'Suivi a distance connecte' },
+  { id: 'telesuivi', name: 'Télésuivi O2', description: 'Suivi à distance connecté' },
   { id: 'extracteur', name: 'Station extracteur', description: 'Solution fixe performante' },
-  { id: 'portable', name: 'O2 liquide portable', description: 'Mobilite maximale' },
+  { id: 'portable', name: 'O2 liquide portable', description: 'Mobilité maximale' },
   { id: 'service247', name: 'Service 24/7', description: 'Assistance permanente' },
-  { id: 'formation', name: 'Formation patients', description: 'Education therapeutique' },
+  { id: 'formation', name: 'Formation patients', description: 'Éducation thérapeutique' },
 ];
 
 // Concurrents identifiés
 const COMPETITORS = [
   { id: 'vivisol', name: 'Vivisol' },
   { id: 'linde', name: 'Linde Healthcare' },
-  { id: 'sos', name: 'SOS Oxygene' },
+  { id: 'sos', name: 'SOS Oxygène' },
   { id: 'bastide', name: 'Bastide Medical' },
   { id: 'other', name: 'Autres' },
 ];
 
 // Options de focus
 const FOCUS_OPTIONS = [
-  { id: 'general', label: 'General', icon: Target, description: 'Approche equilibree' },
-  { id: 'service', label: 'Service', icon: Shield, description: 'Qualite et disponibilite' },
-  { id: 'innovation', label: 'Innovation', icon: Zap, description: 'Solutions connectees' },
-  { id: 'price', label: 'Prix', icon: TrendingDown, description: 'Rapport qualite-prix' },
-  { id: 'loyalty', label: 'Fidelite', icon: Award, description: 'Partenariat long terme' },
+  { id: 'general', label: 'Général', icon: Target, description: 'Approche équilibrée' },
+  { id: 'service', label: 'Service', icon: Shield, description: 'Qualité et disponibilité' },
+  { id: 'innovation', label: 'Innovation', icon: Zap, description: 'Solutions connectées' },
+  { id: 'price', label: 'Prix', icon: TrendingDown, description: 'Rapport qualité-prix' },
+  { id: 'loyalty', label: 'Fidélité', icon: Award, description: 'Partenariat long terme' },
 ];
 
 export function PitchGenerator() {
@@ -302,14 +302,14 @@ export function PitchGenerator() {
             </button>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center shadow-lg">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  Generateur de Pitch IA
+                <span className="bg-gradient-to-r from-al-blue-600 to-al-navy bg-clip-text text-transparent">
+                  Générateur de Pitch IA
                 </span>
               </h1>
-              <p className="text-slate-600 mt-1">Selectionnez un praticien pour generer un pitch personnalise</p>
+              <p className="text-slate-600 mt-1">Sélectionnez un praticien pour générer un pitch personnalisé</p>
             </div>
           </div>
 
@@ -324,7 +324,7 @@ export function PitchGenerator() {
                     placeholder="Rechercher par nom, ville..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
                   />
                 </div>
               </div>
@@ -332,17 +332,17 @@ export function PitchGenerator() {
               <select
                 value={filterSpecialty}
                 onChange={(e) => setFilterSpecialty(e.target.value)}
-                className="px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
               >
-                <option value="all">Toutes specialites</option>
+                <option value="all">Toutes spécialités</option>
                 <option value="Pneumologue">Pneumologues</option>
-                <option value="Medecin generaliste">Generalistes</option>
+                <option value="Médecin généraliste">Généralistes</option>
               </select>
 
               <select
                 value={filterKOL === null ? 'all' : filterKOL ? 'kol' : 'non-kol'}
                 onChange={(e) => setFilterKOL(e.target.value === 'all' ? null : e.target.value === 'kol')}
-                className="px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
               >
                 <option value="all">Tous</option>
                 <option value="kol">KOLs uniquement</option>
@@ -364,7 +364,7 @@ export function PitchGenerator() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleSelectPractitioner(p)}
-                  className="glass-card p-4 cursor-pointer hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-300"
+                  className="glass-card p-4 cursor-pointer hover:shadow-xl transition-all border-2 border-transparent hover:border-al-blue-300"
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
@@ -391,7 +391,7 @@ export function PitchGenerator() {
                       {(pubCount > 0 || noteCount > 0) && (
                         <div className="flex items-center gap-2 mt-2">
                           {pubCount > 0 && (
-                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-xs bg-al-blue-100 text-al-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <BookOpen className="w-3 h-3" />
                               {pubCount} pub
                             </span>
@@ -445,7 +445,7 @@ export function PitchGenerator() {
               <h1 className="text-2xl font-bold text-slate-800">
                 Pitch pour {selectedPractitioner.title} {selectedPractitioner.lastName}
               </h1>
-              <p className="text-slate-600">Verifiez les donnees disponibles avant de configurer le pitch</p>
+              <p className="text-slate-600">Vérifiez les données disponibles avant de configurer le pitch</p>
             </div>
           </div>
 
@@ -522,15 +522,15 @@ export function PitchGenerator() {
               {/* Publications */}
               <div className="glass-card p-4">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
-                  <BookOpen className="w-5 h-5 text-purple-500" />
+                  <BookOpen className="w-5 h-5 text-al-blue-500" />
                   Publications ({pubCount})
                 </h3>
                 {pubCount > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {profile?.news?.filter(n => n.type === 'publication').slice(0, 3).map((pub, idx) => (
-                      <div key={idx} className="bg-purple-50 rounded-lg p-3">
-                        <div className="font-medium text-sm text-purple-900">{pub.title}</div>
-                        <div className="text-xs text-purple-600 mt-1">{new Date(pub.date).toLocaleDateString('fr-FR')}</div>
+                      <div key={idx} className="bg-al-blue-50 rounded-lg p-3">
+                        <div className="font-medium text-sm text-al-blue-900">{pub.title}</div>
+                        <div className="text-xs text-al-blue-600 mt-1">{new Date(pub.date).toLocaleDateString('fr-FR')}</div>
                       </div>
                     ))}
                   </div>
@@ -645,7 +645,7 @@ export function PitchGenerator() {
               {/* Focus du pitch */}
               <div className="glass-card p-6">
                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-purple-500" />
+                  <Target className="w-5 h-5 text-al-blue-500" />
                   Focus du pitch
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -655,11 +655,11 @@ export function PitchGenerator() {
                       onClick={() => setConfig({ ...config, focusArea: opt.id as any })}
                       className={`p-3 rounded-lg border-2 text-left transition-all ${
                         config.focusArea === opt.id
-                          ? 'border-purple-500 bg-purple-50'
+                          ? 'border-al-blue-500 bg-al-blue-50'
                           : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <opt.icon className={`w-5 h-5 mb-1 ${config.focusArea === opt.id ? 'text-purple-600' : 'text-slate-500'}`} />
+                      <opt.icon className={`w-5 h-5 mb-1 ${config.focusArea === opt.id ? 'text-al-blue-600' : 'text-slate-500'}`} />
                       <div className="font-medium text-sm">{opt.label}</div>
                       <div className="text-xs text-slate-500">{opt.description}</div>
                     </button>
@@ -717,18 +717,18 @@ export function PitchGenerator() {
 
               {/* Options supplementaires */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Sections supplementaires</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Sections supplémentaires</h3>
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={config.includeObjections}
                       onChange={(e) => setConfig({ ...config, includeObjections: e.target.checked })}
-                      className="w-5 h-5 text-purple-500 rounded"
+                      className="w-5 h-5 text-al-blue-500 rounded"
                     />
                     <div>
                       <div className="font-medium">Gestion des objections</div>
-                      <div className="text-xs text-slate-500">Anticipe les objections courantes avec des reponses preparees</div>
+                      <div className="text-xs text-slate-500">Anticipe les objections courantes avec des réponses préparées</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -736,7 +736,7 @@ export function PitchGenerator() {
                       type="checkbox"
                       checked={config.includeTalkingPoints}
                       onChange={(e) => setConfig({ ...config, includeTalkingPoints: e.target.checked })}
-                      className="w-5 h-5 text-purple-500 rounded"
+                      className="w-5 h-5 text-al-blue-500 rounded"
                     />
                     <div>
                       <div className="font-medium">Points de discussion</div>
@@ -765,7 +765,7 @@ export function PitchGenerator() {
                             setConfig({ ...config, products: config.products.filter((p) => p !== product.name) });
                           }
                         }}
-                        className="w-4 h-4 mt-1 text-purple-500 rounded"
+                        className="w-4 h-4 mt-1 text-al-blue-500 rounded"
                       />
                       <div>
                         <div className="font-medium text-sm">{product.name}</div>
@@ -792,7 +792,7 @@ export function PitchGenerator() {
                             setConfig({ ...config, competitors: config.competitors.filter((c) => c !== competitor.name) });
                           }
                         }}
-                        className="w-4 h-4 text-purple-500 rounded"
+                        className="w-4 h-4 text-al-blue-500 rounded"
                       />
                       <span className="text-sm">{competitor.name}</span>
                     </label>
@@ -807,7 +807,7 @@ export function PitchGenerator() {
                   value={config.additionalInstructions}
                   onChange={(e) => setConfig({ ...config, additionalInstructions: e.target.value })}
                   placeholder="Ex: Insister sur le service 24/7, mentionner la nouvelle etude clinique, eviter de parler du prix..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-al-blue-500 focus:border-transparent"
                   rows={4}
                 />
               </div>
@@ -855,10 +855,10 @@ export function PitchGenerator() {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-sky flex items-center justify-center shadow-lg">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                Pitch genere
+                Pitch généré
               </h1>
               <p className="text-slate-600">
                 Pour {selectedPractitioner?.title} {selectedPractitioner?.firstName} {selectedPractitioner?.lastName}
@@ -922,7 +922,7 @@ export function PitchGenerator() {
                 className="btn-primary flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                Regenerer
+                Régénérer
               </button>
             </div>
           )}
@@ -938,11 +938,11 @@ export function PitchGenerator() {
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              <div className="flex items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+              <div className="flex items-center gap-3 mb-6 p-4 bg-al-blue-50 rounded-xl border border-al-blue-200">
+                <Loader2 className="w-6 h-6 text-al-blue-500 animate-spin" />
                 <div>
-                  <p className="font-medium text-purple-800">Generation en cours...</p>
-                  <p className="text-sm text-purple-600">L'IA cree votre pitch ultra-personnalise</p>
+                  <p className="font-medium text-al-blue-800">Génération en cours...</p>
+                  <p className="text-sm text-al-blue-600">L'IA crée votre pitch ultra-personnalisé</p>
                 </div>
               </div>
               {[1, 2, 3, 4].map((i) => (
@@ -992,10 +992,10 @@ export function PitchGenerator() {
                             setEditingSection(section.id);
                             setEditInstruction('');
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-purple-50"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-al-blue-50"
                           title="Modifier cette section"
                         >
-                          <RefreshCw className="w-4 h-4 text-purple-500" />
+                          <RefreshCw className="w-4 h-4 text-al-blue-500" />
                         </button>
                       </div>
                     </div>
@@ -1009,7 +1009,7 @@ export function PitchGenerator() {
                           value={editInstruction}
                           onChange={(e) => setEditInstruction(e.target.value)}
                           placeholder="Ex: Rendre plus percutant, ajouter des chiffres, raccourcir, etre plus technique..."
-                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-al-blue-500 focus:border-transparent"
                           rows={3}
                           autoFocus
                         />
@@ -1054,9 +1054,9 @@ export function PitchGenerator() {
               })}
 
               {isGenerating && sections.length > 0 && (
-                <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                  <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
-                  <span className="text-sm text-purple-700 font-medium">Generation des sections suivantes...</span>
+                <div className="flex items-center gap-3 p-4 bg-al-blue-50 rounded-xl border border-al-blue-200">
+                  <Loader2 className="w-5 h-5 text-al-blue-500 animate-spin" />
+                  <span className="text-sm text-al-blue-700 font-medium">Génération des sections suivantes...</span>
                 </div>
               )}
             </motion.div>
@@ -1072,9 +1072,9 @@ export function PitchGenerator() {
                   <Check className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-green-800">Pitch pret a l'emploi !</h3>
+                  <h3 className="font-bold text-lg text-green-800">Pitch prêt à l'emploi !</h3>
                   <p className="text-sm text-green-700">
-                    {sections.length} sections generees pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
+                    {sections.length} sections générées pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
                   </p>
                 </div>
               </div>
