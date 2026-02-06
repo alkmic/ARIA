@@ -215,9 +215,42 @@ export default function AICoach() {
   // NOTE: La génération de graphiques est maintenant gérée par agenticChartEngine.ts
   // avec les fonctions generateChartLocally() et interpretQuestionLocally()
 
+  // Extraire le dernier praticien discuté dans l'historique de conversation
+  const extractLastDiscussedPractitioner = (conversationMessages: Message[]): string | null => {
+    // Parcourir les messages récents (du plus récent au plus ancien)
+    const recentMessages = [...conversationMessages].reverse().slice(0, 10);
+
+    for (const msg of recentMessages) {
+      const text = msg.content;
+      // Chercher des noms de praticiens mentionnés dans les réponses de l'assistant
+      if (msg.role === 'assistant') {
+        // Chercher "Dr Prénom Nom" ou "**Dr Prénom Nom**"
+        const drMatch = text.match(/\*{0,2}Dr\.?\s+([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)\s+([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)\*{0,2}/);
+        if (drMatch) {
+          return `${drMatch[1]} ${drMatch[2]}`;
+        }
+      }
+      // Chercher aussi dans les questions utilisateur
+      if (msg.role === 'user') {
+        const drMatch = text.match(/Dr\.?\s+([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)\s+([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)/);
+        if (drMatch) {
+          return `${drMatch[1]} ${drMatch[2]}`;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Détecter si la question utilise des pronoms référençant un praticien précédent
+  const usesPractitionerPronoun = (question: string): boolean => {
+    const q = question.toLowerCase();
+    return /\bl['']|(?:^|\s)(le |la |l'|lui |elle |son |sa |ses |ce (praticien|médecin|docteur)|cette (praticienne|médecin))/.test(q) &&
+      /(visit|vu|tendance|volume|prescri|fidéli|fidelit|risque|adresse|contact|actualit|news|note|dernièr|dernier|augment|baiss|croiss)/.test(q);
+  };
+
   // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
   // et moteur de requêtes intelligent
-  const buildContext = (userQuestion?: string) => {
+  const buildContext = (userQuestion?: string, conversationMessages?: Message[]) => {
     // Calculer les métriques de la période sélectionnée
     const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
 
@@ -293,7 +326,35 @@ export default function AICoach() {
         queryContext = generateQueryContext(userQuestion);
       }
 
-      // 5. Fallback : si aucun praticien spécifique trouvé, essayer la recherche floue par mots capitalisés
+      // 5. Résolution de pronoms : si pas de praticien trouvé, chercher dans l'historique de conversation
+      if (!hasSpecificPractitioner && conversationMessages && usesPractitionerPronoun(userQuestion)) {
+        const lastDiscussed = extractLastDiscussedPractitioner(conversationMessages);
+        if (lastDiscussed) {
+          const nameParts = lastDiscussed.split(' ');
+          const allMatches = new Map<string, ReturnType<typeof DataService.getAllPractitioners>[0]>();
+          for (const part of nameParts) {
+            const matches = DataService.fuzzySearchPractitioner(part);
+            matches.forEach(m => allMatches.set(m.id, m));
+          }
+          // Refine to match ALL name parts
+          let finalMatches = Array.from(allMatches.values());
+          if (nameParts.length >= 2 && finalMatches.length > 1) {
+            const refined = finalMatches.filter(p => {
+              const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+              return nameParts.every(name => fullName.includes(name.toLowerCase()));
+            });
+            if (refined.length > 0) finalMatches = refined;
+          }
+          if (finalMatches.length > 0 && finalMatches.length <= 3) {
+            hasSpecificPractitioner = true;
+            specificPractitionerContext = finalMatches.map(p =>
+              DataService.getCompletePractitionerContext(p.id)
+            ).join('\n');
+          }
+        }
+      }
+
+      // 6. Fallback : si aucun praticien spécifique trouvé, essayer la recherche floue par mots capitalisés
       if (!hasSpecificPractitioner) {
         const capitalizedWords = userQuestion.match(/\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+\b/g) || [];
         const nameCandidate = capitalizedWords.filter(w =>
@@ -418,21 +479,17 @@ DONNÉES UTILISATEUR (rapports de visite et notes du délégué) :
 ${visitReports.length > 0 ? `- Derniers comptes-rendus : ${visitReports.slice(0, 3).map(r => `${r.practitionerName} (${r.date})`).join(', ')}` : '- Aucun compte-rendu enregistré'}
 
 INSTRUCTIONS IMPORTANTES :
-- Reponds de maniere concise et professionnelle avec des recommandations concretes
-- Prends en compte les comptes-rendus de visite et notes du délégué dans tes analyses
-- Utilise le format Markdown pour mettre en valeur les informations importantes (**gras**, *italique*)
-- Pour les questions sur des praticiens specifiques, utilise les donnees ci-dessus pour donner des reponses PRECISES
-- Si on demande "quel medecin dont le prenom est X a le plus de Y", cherche dans la base complete ci-dessus
-- Priorise par impact strategique : KOL > Volume > Urgence > Fidelite
-- Fournis des chiffres precis bases sur les donnees reelles
-- Adapte tes recommandations a la periode (${periodLabel})
+- Réponds UNIQUEMENT à ce qui est demandé — pas de bonus, pas de recommandations non sollicitées
+- Utilise le format Markdown pour mettre en valeur les informations (**gras**, *italique*)
+- Fournis des chiffres précis basés sur les données réelles ci-dessus
+- Si on demande une tendance de volumes, utilise l'ÉVOLUTION DES VOLUMES MENSUELS de la fiche
 ${hasSpecificPractitioner ? `
-IMPORTANT - PRATICIEN SPÉCIFIQUE IDENTIFIÉ :
-- La FICHE COMPLÈTE du praticien mentionné dans la question est fournie ci-dessus
-- Utilise TOUTES les informations de cette fiche pour répondre (actualités, notes, visites, métriques)
-- Si la question porte sur les actualités, liste TOUTES les actualités de la fiche
-- Si la question porte sur les notes de visite, détaille les notes de la fiche
-- Sois exhaustif dans ta réponse en utilisant les données de la fiche` : ''}`;
+PRATICIEN SPÉCIFIQUE IDENTIFIÉ — La FICHE COMPLÈTE est ci-dessus. Utilise-la pour répondre :
+- Question sur l'adresse → donne UNIQUEMENT l'adresse
+- Question sur les actualités → liste les actualités de la fiche
+- Question sur la tendance/volumes → utilise l'ÉVOLUTION DES VOLUMES MENSUELS
+- Question sur la dernière visite → utilise l'HISTORIQUE DE RELATION
+- NE RAJOUTE PAS de sections "Recommandations" ou "Métriques" non demandées` : ''}`;
   };
 
   // Détecter si la question demande une visualisation
@@ -484,7 +541,7 @@ IMPORTANT - PRATICIEN SPÉCIFIQUE IDENTIFIÉ :
         console.log('🔄 Mode suivi - question sur graphique précédent');
 
         const chartContext = buildChartContextForLLM();
-        const context = buildContext(question);
+        const context = buildContext(question, messages);
 
         // Construire le prompt avec contexte du graphique
         const followUpPrompt = `${context}
@@ -531,6 +588,65 @@ Réponds de manière précise et contextuelle.`;
       else if (wantsVisualization || wantsChartModification || isImplicitChartFollowUp) {
         console.log('🤖 Mode agentique activé - génération de graphique');
 
+        // FAST PATH: Si c'est une modification de format (type de chart) ET qu'on a un chart précédent,
+        // on modifie programmatiquement sans appeler le LLM
+        if (wantsChartModification && hasRecentChart) {
+          const lastChart = chartHistory[0];
+          const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          let newChartType: 'bar' | 'pie' | 'line' | 'composed' = lastChart.spec.chartType;
+
+          if (/camembert|pie|circulaire/.test(q)) newChartType = 'pie';
+          else if (/barres?|bar|histogramme/.test(q)) newChartType = 'bar';
+          else if (/courbe|ligne|line/.test(q)) newChartType = 'line';
+          else if (/compose|mixte/.test(q)) newChartType = 'composed';
+
+          if (newChartType !== lastChart.spec.chartType) {
+            const modifiedSpec: ChartSpec = {
+              ...lastChart.spec,
+              chartType: newChartType,
+              title: lastChart.spec.title.replace(
+                /en (camembert|barres?|courbe|ligne|histogramme)/i, ''
+              ).trim() + (newChartType === 'pie' ? ' en camembert' : ''),
+            };
+
+            const chartResult = generateChartFromSpec(modifiedSpec);
+            addToChartHistory({
+              question,
+              spec: chartResult.spec,
+              data: chartResult.data,
+              insights: chartResult.insights,
+              timestamp: new Date()
+            });
+
+            const dataInsight = chartResult.data.length > 0
+              ? `\n\n**Résumé des données :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}`
+              : '';
+
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: `**${modifiedSpec.title}**\n\n${modifiedSpec.description || ''}${dataInsight}`,
+              agenticChart: {
+                spec: chartResult.spec,
+                data: chartResult.data,
+                insights: chartResult.insights,
+                suggestions: chartResult.suggestions,
+                generatedByLLM: false
+              },
+              insights: chartResult.insights,
+              suggestions: chartResult.suggestions,
+              timestamp: new Date(),
+              isMarkdown: true,
+              source: 'agentic'
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
+            if (autoSpeak) speak(`${modifiedSpec.title}. ${chartResult.insights.join('. ')}`);
+            setIsTyping(false);
+            return;
+          }
+        }
+
         const dataContext = getDataContextForLLM();
         const extractedParams = extractQueryParameters(question);
 
@@ -550,13 +666,13 @@ Réponds de manière précise et contextuelle.`;
         let previousChartContext = '';
         if (hasRecentChart) {
           const lastChart = chartHistory[0];
-          previousChartContext = `\n\n## GRAPHIQUE PRÉCÉDENT (à modifier si l'utilisateur le demande)
+          previousChartContext = `\n\n## GRAPHIQUE PRÉCÉDENT — REPRENDS CETTE QUERY SI MODIFICATION DEMANDÉE
 Question originale: "${lastChart.question}"
-Spec JSON du graphique précédent:
+Spec JSON du graphique précédent (à COPIER si modification de format) :
 \`\`\`json
 ${JSON.stringify({ chartType: lastChart.spec.chartType, title: lastChart.spec.title, query: lastChart.spec.query, formatting: lastChart.spec.formatting }, null, 2)}
 \`\`\`
-Si l'utilisateur demande de modifier ce graphique (changer le type, le format, etc.), REPRENDS la même query et change uniquement ce qui est demandé.`;
+⚠️ SI l'utilisateur demande un changement de FORMAT (camembert, barres, etc.), tu DOIS copier la query ci-dessus EXACTEMENT et ne changer QUE le chartType.`;
         }
 
         // Pour les suivis implicites, ajouter des instructions d'expansion
@@ -646,7 +762,7 @@ Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les p
       // MODE 3: Conversation textuelle classique
       // ============================================
       else {
-        const context = buildContext(question);
+        const context = buildContext(question, messages);
         const chartContext = hasRecentChart ? buildChartContextForLLM() : '';
 
         const conversationHistory = messages
@@ -663,7 +779,7 @@ ${conversationHistory}
 QUESTION ACTUELLE :
 ${question}
 
-Réponds de manière précise et professionnelle en utilisant le format Markdown. Si la question concerne des données précises, utilise les informations disponibles.`;
+RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, donne l'adresse. Si on demande une tendance, décris la tendance. Ne rajoute PAS d'informations non demandées.`;
 
         const aiResponse = await complete([{ role: 'user', content: prompt }]);
 

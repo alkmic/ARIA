@@ -58,6 +58,26 @@ export class DataService {
   }
 
   /**
+   * Génère l'historique mensuel des volumes pour un praticien (déterministe via ID)
+   * Identique à la logique de PractitionerProfile.tsx pour cohérence
+   */
+  static generateVolumeHistory(annualVolume: number, practitionerId: string): Array<{ month: string; volume: number; vingtileAvg: number }> {
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const monthlyBase = annualVolume / 12;
+    const vingtileAvg = monthlyBase * 0.95;
+    const seed = practitionerId.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const pseudoRandom = (i: number) => {
+      const x = Math.sin(seed * 31 + i * 17) * 10000;
+      return x - Math.floor(x);
+    };
+    return months.map((month, i) => ({
+      month,
+      volume: Math.round(monthlyBase * (0.85 + pseudoRandom(i) * 0.3)),
+      vingtileAvg: Math.round(vingtileAvg * (0.95 + pseudoRandom(i + 100) * 0.1))
+    }));
+  }
+
+  /**
    * Récupère le contexte complet d'un praticien pour le LLM
    */
   static getCompletePractitionerContext(practitionerId: string): string {
@@ -72,6 +92,15 @@ export class DataService {
       ? Math.floor((today.getTime() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
       : 999;
 
+    // Calculer la tendance depuis potentialGrowth
+    const trend = p.metrics.potentialGrowth > 15 ? 'hausse' :
+                  p.metrics.potentialGrowth < 5 ? 'baisse' : 'stable';
+    const trendPercent = p.metrics.potentialGrowth > 15 ? `+${Math.round(p.metrics.potentialGrowth * 0.8)}%` :
+                         p.metrics.potentialGrowth < 5 ? `-${Math.round((10 - p.metrics.potentialGrowth) * 0.8)}%` : '~0%';
+
+    // Générer l'historique mensuel des volumes
+    const volumeHistory = DataService.generateVolumeHistory(p.metrics.volumeL, p.id);
+
     let context = `
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║ FICHE COMPLÈTE - ${p.title} ${p.firstName} ${p.lastName}
@@ -84,7 +113,6 @@ INFORMATIONS PERSONNELLES :
 
 ADRESSE & CONTACT :
 - Adresse complète : ${p.address.street}, ${p.address.postalCode} ${p.address.city}
-- Coordonnées GPS : ${p.address.coords.lat.toFixed(6)}, ${p.address.coords.lng.toFixed(6)}
 - Email : ${p.contact.email}
 - Téléphone : ${p.contact.phone}${p.contact.mobile ? `\n- Mobile : ${p.contact.mobile}` : ''}
 
@@ -94,6 +122,10 @@ MÉTRIQUES BUSINESS :
 - Vingtile : ${p.metrics.vingtile} (${p.metrics.vingtile <= 5 ? 'TOP PRESCRIPTEUR' : p.metrics.vingtile <= 10 ? 'Gros prescripteur' : 'Prescripteur moyen'})
 - Potentiel de croissance : +${p.metrics.potentialGrowth}%
 - Risque de churn : ${p.metrics.churnRisk === 'low' ? 'FAIBLE' : p.metrics.churnRisk === 'medium' ? 'MOYEN' : 'ÉLEVÉ'}
+- Tendance prescription O2 : ${trend} (${trendPercent} vs période précédente)
+
+ÉVOLUTION DES VOLUMES MENSUELS (litres O2) :
+${volumeHistory.map(m => `- ${m.month}: ${m.volume} L (moyenne vingtile: ${m.vingtileAvg} L)`).join('\n')}
 
 HISTORIQUE DE RELATION :
 - Dernière visite : ${lastVisit} (il y a ${daysSinceVisit} jours)

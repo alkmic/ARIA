@@ -71,7 +71,7 @@ export default function PractitionerProfile() {
   }
 
   // Générer l'historique de volumes si absent
-  const volumeHistory = practitioner.volumeHistory || generateVolumeHistory(practitioner.volumeL, practitioner.id);
+  const volumeHistory = practitioner.volumeHistory || DataService.generateVolumeHistory(practitioner.volumeL, practitioner.id);
 
   const tabs = [
     { id: 'synthesis', label: 'Synthèse IA', icon: Sparkles },
@@ -920,21 +920,4 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
   );
 }
 
-// Helper to generate deterministic volume history
-function generateVolumeHistory(annualVolume: number, practitionerId: string) {
-  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-  const monthlyBase = annualVolume / 12;
-  const vingtileAvg = monthlyBase * 0.95;
-  // Seed from practitioner ID for deterministic output
-  const seed = practitionerId.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  const pseudoRandom = (i: number) => {
-    const x = Math.sin(seed * 31 + i * 17) * 10000;
-    return x - Math.floor(x);
-  };
-
-  return months.map((month, i) => ({
-    month,
-    volume: Math.round(monthlyBase * (0.85 + pseudoRandom(i) * 0.3)),
-    vingtileAvg: Math.round(vingtileAvg * (0.95 + pseudoRandom(i + 100) * 0.1))
-  }));
-}
+// Volume history generation is now centralized in DataService.generateVolumeHistory()
