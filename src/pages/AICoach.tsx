@@ -64,6 +64,8 @@ import {
   type ChartSpec
 } from '../services/agenticChartEngine';
 import { useUserDataStore } from '../stores/useUserDataStore';
+import { useDocumentStore } from '../stores/useDocumentStore';
+import { buildRAGContext } from '../services/ragService';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
@@ -105,6 +107,7 @@ export default function AICoach() {
   const navigate = useNavigate();
   const { complete, error: groqError } = useGroq();
   const { visitReports, userNotes } = useUserDataStore();
+  const documentChunks = useDocumentStore(s => s.chunks);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -472,6 +475,7 @@ ${queryContext}
 ${specificPractitionerContext}
 ${fullSiteContext}
 ${fullDataCtx}
+${userQuestion ? buildRAGContext(userQuestion, documentChunks, 5) : ''}
 
 DONNÉES UTILISATEUR (rapports de visite et notes du délégué) :
 - Nombre de comptes-rendus de visite : ${visitReports.length}

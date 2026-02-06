@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, User, Bell, Key, Database, HelpCircle, Check, ExternalLink, Info } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Key, Database, HelpCircle, Check, ExternalLink, Info, BookOpen } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
+import { DocumentManager } from '../components/settings/DocumentManager';
 
 export function Settings() {
   const { currentUser } = useAppStore();
@@ -248,6 +249,26 @@ export function Settings() {
           </div>
         </motion.div>
       </div>
+
+      {/* Documents d'entreprise (RAG) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2.5 bg-gradient-to-br from-al-blue-500 to-al-navy rounded-xl">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Documents d'entreprise</h2>
+            <p className="text-xs text-slate-500">Base de connaissances RAG pour le Coach IA</p>
+          </div>
+        </div>
+
+        <DocumentManager />
+      </motion.div>
 
       {/* Help Section */}
       <motion.div

@@ -206,7 +206,12 @@ CONTEXTE MÉTIER:
 - Volume en litres d'O2 par an — indicateur clé de prescription
 - L'ÉVOLUTION DES VOLUMES MENSUELS montre la tendance réelle de prescription mois par mois
 - Fidélité sur 10 — mesure la solidité de la relation
-- Risque de churn: low/medium/high`;
+- Risque de churn: low/medium/high
+
+BASE DE CONNAISSANCES ENTREPRISE (RAG):
+Tu disposes d'une base de connaissances enrichie avec des documents d'entreprise (Air Liquide, BPCO, réglementation, concurrence).
+Si une section "BASE DE CONNAISSANCES ENTREPRISE (RAG)" apparaît dans le contexte, utilise ces informations pour enrichir tes réponses.
+Cite les sources quand tu utilises des informations de la base de connaissances.`;
 }
 
 /**
