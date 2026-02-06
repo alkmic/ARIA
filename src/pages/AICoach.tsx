@@ -95,29 +95,60 @@ interface Message {
 // Couleurs pour les graphiques
 const CHART_COLORS = DEFAULT_CHART_COLORS;
 
+/** Label lisible pour les catégories RAG */
+function getCategoryLabel(category: string): string {
+  const labels: Record<string, string> = {
+    'air_liquide': 'Air Liquide',
+    'clinique': 'Données cliniques',
+    'reglementaire': 'Réglementaire',
+    'concurrence': 'Veille concurrentielle',
+    'epidemiologie': 'Épidémiologie',
+    'produit': 'Produit',
+    'interne': 'Document interne',
+  };
+  return labels[category] || category || 'Document';
+}
+
 /** Construit une réponse locale à partir des résultats de recherche RAG */
 function buildLocalRAGResponse(results: SearchResult[]): string {
   const parts: string[] = [
     `Voici ce que j'ai trouvé dans la **base de connaissances entreprise** :\n`
   ];
 
-  for (const result of results.slice(0, 3)) {
+  const topResults = results.slice(0, 3);
+  for (let i = 0; i < topResults.length; i++) {
+    const result = topResults[i];
     const source = result.chunk.metadata.source || 'Document interne';
     const section = result.chunk.metadata.section || '';
+    const category = result.chunk.metadata.category || '';
 
+    // Separator between sources
+    if (i > 0) parts.push('\n---\n');
+
+    // Section heading
     if (section) {
       parts.push(`### ${section}`);
     }
-    parts.push(`*Source : ${source}*\n`);
-    const content = result.chunk.content.length > 600
-      ? result.chunk.content.substring(0, 600) + '...'
-      : result.chunk.content;
-    parts.push(content);
+
+    // Source attribution as blockquote
+    const categoryLabel = getCategoryLabel(category);
+    parts.push(`> ${categoryLabel} — ${source}\n`);
+
+    // Content, removing the duplicate title that getBuiltinChunks() prepends
+    let content = result.chunk.content;
+    if (section && content.startsWith(section)) {
+      content = content.substring(section.length).replace(/^\n+/, '');
+    }
+
+    const truncated = content.length > 600
+      ? content.substring(0, 600) + '...'
+      : content;
+    parts.push(truncated);
     parts.push('');
   }
 
   if (results.length > 3) {
-    parts.push(`> *${results.length - 3} autre(s) source(s) pertinente(s) disponible(s). Posez une question plus précise pour affiner.*`);
+    parts.push(`\n> ${results.length - 3} autre(s) source(s) disponible(s) — posez une question plus précise pour affiner.`);
   }
 
   return parts.join('\n');

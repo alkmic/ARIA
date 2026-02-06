@@ -6,8 +6,9 @@ interface MarkdownTextProps {
 }
 
 /**
- * Simple markdown renderer for coach responses
- * Supports: **bold**, *italic*, _italic_, `code`, lists, and line breaks
+ * Rich markdown renderer for coach responses
+ * Supports: headings (#, ##, ###), **bold**, *italic*, _italic_, `code`,
+ * blockquotes (>), horizontal rules (---), bullet lists, and numbered lists
  */
 export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className = '' }) => {
   const renderMarkdown = (text: string): React.ReactNode[] => {
@@ -15,11 +16,49 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
     const result: React.ReactNode[] = [];
 
     lines.forEach((line, lineIndex) => {
-      // Check for list items
+      // Headings (most specific first to avoid partial matches)
+      const h3Match = line.match(/^###\s+(.*)$/);
+      const h2Match = !h3Match ? line.match(/^##\s+(.*)$/) : null;
+      const h1Match = !h3Match && !h2Match ? line.match(/^#\s+(.*)$/) : null;
+
+      // Horizontal rules and blockquotes
+      const hrMatch = line.match(/^(-{3,}|\*{3,}|_{3,})$/);
+      const blockquoteMatch = !hrMatch ? line.match(/^>\s*(.*)$/) : null;
+
+      // List items
       const bulletMatch = line.match(/^(\s*)[•\-\*]\s+(.*)$/);
       const numberedMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
 
-      if (bulletMatch) {
+      if (h3Match) {
+        result.push(
+          <h3 key={lineIndex} className="text-[15px] font-semibold text-slate-800 mt-3 mb-1 flex items-center gap-2">
+            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-al-blue-400 to-al-sky flex-shrink-0" />
+            {renderInlineMarkdown(h3Match[1])}
+          </h3>
+        );
+      } else if (h2Match) {
+        result.push(
+          <h2 key={lineIndex} className="text-base font-bold text-slate-900 mt-4 mb-1.5 pb-1.5 border-b border-slate-200">
+            {renderInlineMarkdown(h2Match[1])}
+          </h2>
+        );
+      } else if (h1Match) {
+        result.push(
+          <h1 key={lineIndex} className="text-lg font-bold text-slate-900 mt-4 mb-2">
+            {renderInlineMarkdown(h1Match[1])}
+          </h1>
+        );
+      } else if (hrMatch) {
+        result.push(
+          <hr key={lineIndex} className="my-3 border-slate-200" />
+        );
+      } else if (blockquoteMatch) {
+        result.push(
+          <div key={lineIndex} className="pl-3 py-1 my-1 border-l-2 border-al-blue-200 bg-slate-50/80 rounded-r text-sm text-slate-500 italic">
+            {renderInlineMarkdown(blockquoteMatch[1])}
+          </div>
+        );
+      } else if (bulletMatch) {
         const indent = bulletMatch[1].length;
         const content = bulletMatch[2];
         result.push(
@@ -28,7 +67,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
             className={`flex items-start gap-2 ${indent > 0 ? 'ml-4' : ''}`}
             style={{ marginLeft: indent > 3 ? '1rem' : 0 }}
           >
-            <span className="text-al-blue-500 font-bold mt-0.5">•</span>
+            <span className="text-al-blue-500 font-bold mt-0.5 flex-shrink-0">•</span>
             <span>{renderInlineMarkdown(content)}</span>
           </div>
         );
@@ -41,7 +80,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
             key={lineIndex}
             className={`flex items-start gap-2 ${indent > 0 ? 'ml-4' : ''}`}
           >
-            <span className="text-al-blue-600 font-semibold min-w-[1.5rem]">{num}.</span>
+            <span className="text-al-blue-600 font-semibold min-w-[1.5rem] flex-shrink-0">{num}.</span>
             <span className="flex-1">{renderInlineMarkdown(content)}</span>
           </div>
         );
@@ -90,14 +129,14 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
       } else if (match[4]) {
         // *italic*
         parts.push(
-          <em key={key++} className="italic text-slate-700">
+          <em key={key++} className="italic text-slate-600">
             {match[4]}
           </em>
         );
       } else if (match[6]) {
         // _italic_
         parts.push(
-          <em key={key++} className="italic text-slate-700">
+          <em key={key++} className="italic text-slate-600">
             {match[6]}
           </em>
         );
@@ -139,7 +178,7 @@ export const InsightBox: React.FC<{
   variant?: 'info' | 'warning' | 'success' | 'error';
 }> = ({ children, variant = 'info' }) => {
   const variantStyles = {
-    info: 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-900',
+    info: 'bg-gradient-to-r from-al-blue-50 to-sky-50 border-al-blue-200 text-al-blue-900',
     warning: 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 text-amber-900',
     success: 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-900',
     error: 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-900',
