@@ -215,7 +215,7 @@ export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ classN
         if (cmd.type === 'pitch' && match[1]) {
           const practitioners = quickSearch(match[1], 1);
           if (practitioners.length > 0) {
-            navigate(`/pitch?practitioner=${practitioners[0].id}`);
+            navigate(`/pitch?practitionerId=${practitioners[0].id}`);
             setIsOpen(false);
             setQuery('');
             return;
@@ -311,7 +311,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
           icon: action.icon,
           action: () => {
             if (action.requiresPractitioner && practitioners.length > 0) {
-              navigate(`${action.path}?practitioner=${practitioners[0].id}`);
+              navigate(`${action.path}?practitionerId=${practitioners[0].id}`);
             } else {
               navigate(action.path);
             }

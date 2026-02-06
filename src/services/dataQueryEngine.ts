@@ -45,30 +45,39 @@ export function analyzeQuestion(question: string): {
   aggregationType?: 'count' | 'sum' | 'avg' | 'max' | 'min';
   groupBy?: 'city' | 'specialty' | 'vingtile';
 } {
-  const q = question.toLowerCase();
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const filters: any = {};
 
-  // Détection de prénoms français courants
-  const prenomsMasculins = ['jean', 'pierre', 'louis', 'michel', 'paul', 'andré', 'françois', 'philippe', 'antoine', 'marc', 'alain', 'jacques', 'henri', 'bernard', 'christophe', 'éric', 'gérard'];
-  const prenomsFeminins = ['marie', 'sophie', 'catherine', 'anne', 'isabelle', 'claire', 'nathalie', 'sylvie', 'françoise', 'hélène', 'valérie', 'monique', 'brigitte', 'élise', 'charlotte'];
-  const allPrenoms = [...prenomsMasculins, ...prenomsFeminins];
+  // Detecter les prenoms dynamiquement depuis la base de donnees reelle
+  const allPractitioners = DataService.getAllPractitioners();
+  const dbFirstNames = [...new Set(allPractitioners.map(p => p.firstName))];
+  const dbLastNames = [...new Set(allPractitioners.map(p => p.lastName))];
 
-  // Chercher un prénom mentionné
+  // Prenoms supplementaires courants (au cas ou la question mentionne un prenom absent de la DB)
+  const extraPrenoms = ['jean', 'pierre', 'louis', 'michel', 'paul', 'andre', 'francois', 'philippe', 'antoine', 'marc', 'alain', 'jacques', 'henri', 'bernard', 'christophe', 'eric', 'gerard', 'marie', 'sophie', 'catherine', 'anne', 'isabelle', 'claire', 'nathalie', 'sylvie', 'francoise', 'helene', 'valerie', 'monique', 'brigitte', 'elise', 'charlotte'];
+  const allPrenoms = [...new Set([...dbFirstNames.map(n => n.toLowerCase()), ...extraPrenoms])];
+
+  // Chercher un prenom mentionne (normalise pour accents)
   for (const prenom of allPrenoms) {
-    if (q.includes(prenom) || q.includes(`prénom ${prenom}`) || q.includes(`prenom ${prenom}`)) {
-      filters.firstName = prenom;
+    const prenomNorm = prenom.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (q.includes(prenomNorm) || q.includes(`prenom ${prenomNorm}`) || q.includes(`prenom est ${prenomNorm}`)) {
+      // Retrouver le prenom original avec accents depuis la DB
+      const original = dbFirstNames.find(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === prenomNorm);
+      filters.firstName = original || prenom;
       break;
     }
   }
 
-  // Détection de noms de famille courants
-  const noms = ['martin', 'bernard', 'dubois', 'thomas', 'robert', 'richard', 'petit', 'durand', 'leroy', 'moreau', 'simon', 'laurent', 'lefebvre', 'michel', 'garcia', 'david', 'bertrand', 'roux', 'vincent', 'fournier', 'morel', 'girard', 'andré', 'lefèvre', 'mercier', 'dupont', 'lambert', 'bonnet', 'françois', 'martinez', 'legrand', 'garnier', 'faure', 'rousseau', 'blanc', 'guerin', 'muller', 'henry', 'roussel', 'nicolas', 'perrin', 'morin', 'mathieu', 'clement', 'gauthier', 'dumont', 'lopez', 'fontaine', 'chevalier', 'robin', 'denis', 'barbier', 'meunier'];
+  // Detecter les noms de famille dynamiquement depuis la DB
+  const allNoms = [...new Set(dbLastNames.map(n => n.toLowerCase()))];
 
-  for (const nom of noms) {
-    // Vérifier que ce n'est pas un prénom déjà détecté
-    if (filters.firstName?.toLowerCase() === nom) continue;
-    if (q.includes(`nom ${nom}`) || q.includes(`dr ${nom}`) || q.includes(`docteur ${nom}`)) {
-      filters.lastName = nom;
+  for (const nom of allNoms) {
+    const nomNorm = nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    // Verifier que ce n'est pas un prenom deja detecte
+    if (filters.firstName?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === nomNorm) continue;
+    if (q.includes(`nom ${nomNorm}`) || q.includes(`dr ${nomNorm}`) || q.includes(`docteur ${nomNorm}`) || q.includes(`dr. ${nomNorm}`)) {
+      const original = dbLastNames.find(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === nomNorm);
+      filters.lastName = original || nom;
       break;
     }
   }
@@ -371,7 +380,7 @@ export function generateFullSiteContext(): string {
     byFirstName[p.firstName] = (byFirstName[p.firstName] || 0) + 1;
   });
 
-  let context = `
+  const context = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    CONTEXTE COMPLET DE LA BASE DE DONNÉES                    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝

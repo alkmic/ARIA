@@ -162,25 +162,25 @@ export const KOLPlanningPage: React.FC = () => {
           <div className="flex-1">
             <h3 className="font-bold text-lg text-slate-800 mb-2">Analyse IA - Recommandations Stratégiques</h3>
             <p className="text-slate-700 leading-relaxed">
-              L'analyse prédictive identifie ces {kolsAnalysis.length} KOLs comme prioritaires basé sur <strong>7 critères</strong> :
-              ancienneté de la dernière visite, volume de prescription, influence régionale, engagement historique,
-              potentiel de croissance, risque concurrentiel et opportunités de collaboration.
-              Le modèle estime une <strong className="text-purple-600">probabilité de 87%</strong> d'augmentation
-              du volume prescrit de <strong>+{(kolsAnalysis.reduce((s, k) => s + k.volumeL, 0) / 1000000 * 0.15).toFixed(1)}M litres/an</strong> si
-              ces visites sont réalisées dans les 14 prochains jours.
+              Ces {kolsAnalysis.length} KOLs sont identifies comme prioritaires selon <strong>7 criteres</strong> :
+              anciennete de la derniere visite, volume de prescription, influence regionale, engagement historique,
+              potentiel de croissance, risque concurrentiel et opportunites de collaboration.
+              En visitant ces KOLs dans les 14 prochains jours, vous pourriez consolider un volume total de{' '}
+              <strong className="text-purple-600">{(kolsAnalysis.reduce((s, k) => s + k.volumeL, 0) / 1000).toFixed(0)}K litres/an</strong> et
+              renforcer la relation avec vos prescripteurs les plus influents.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1">
                 <Target className="w-3 h-3" />
-                Précision du modèle : 92%
+                {kolsAnalysis.length} KOLs a recontacter
               </span>
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
-                Basé sur 2 847 interactions historiques
+                Analyse basee sur les donnees du territoire
               </span>
               <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                Confiance : Très élevée
+                Criteres : volume, fidelite, delai de visite
               </span>
             </div>
           </div>

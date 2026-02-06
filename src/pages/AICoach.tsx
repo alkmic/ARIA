@@ -44,6 +44,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
 import { DataService } from '../services/dataService';
+import { generateCoachSystemPrompt, generateCompactContext } from '../services/llmDataContext';
 import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
 import { universalSearch, getFullDatabaseContext } from '../services/universalSearch';
 import {
@@ -107,13 +108,13 @@ export default function AICoach() {
   // Suggestions contextuelles - Talk to My Data (approche agentique)
   const SUGGESTION_CHIPS = [
     "Montre-moi un graphique des volumes par ville",
-    "Quelle est la répartition des praticiens par niveau de risque ?",
+    "Quel medecin dont le prenom est Bernard a le plus de publications ?",
     "Compare les KOLs aux autres praticiens en volume",
-    "Top 10 prescripteurs avec leur fidélité",
-    "Distribution des praticiens par ancienneté de visite",
-    "Analyse les pneumologues vs généralistes",
+    "Top 10 prescripteurs avec leur fidelite",
+    "Quels pneumologues a Lyon ont un risque de churn eleve ?",
+    "Analyse les pneumologues vs generalistes",
     "Camembert des segments par vingtile",
-    `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
+    `Qui dois-je voir en priorite ${periodLabel.toLowerCase()} ?`,
   ];
 
   // Auto-scroll vers le bas
@@ -266,14 +267,10 @@ export default function AICoach() {
     // Générer le contexte complet du site pour les questions générales
     const fullSiteContext = userQuestion ? getFullDatabaseContext() : generateFullSiteContext();
 
-    return `Tu es un assistant stratégique expert pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
+    // Generer le contexte complet de la DB pour les questions specifiques
+    const fullDataCtx = userQuestion ? generateCompactContext(userQuestion) : '';
 
-Tu as accès à la BASE DE DONNÉES COMPLÈTE des praticiens et peux répondre à N'IMPORTE QUELLE question sur les données, incluant :
-- Questions sur des praticiens spécifiques (par nom, prénom, ville, spécialité)
-- Questions sur les publications, actualités, certifications
-- Questions statistiques (combien de..., qui a le plus de..., moyenne de...)
-- Questions géographiques (praticiens par ville)
-- Questions sur les KOLs, vingtiles, volumes
+    return `${generateCoachSystemPrompt()}
 
 CONTEXTE TERRITOIRE (${periodLabel}) :
 - Nombre total de praticiens : ${stats.totalPractitioners} (${stats.pneumologues} pneumologues, ${stats.generalistes} médecins généralistes)
@@ -311,16 +308,16 @@ ${universalSearchContext}
 ${queryContext}
 ${specificPractitionerContext}
 ${fullSiteContext}
+${fullDataCtx}
 
 INSTRUCTIONS IMPORTANTES :
-- Réponds de manière concise et professionnelle avec des recommandations concrètes
+- Reponds de maniere concise et professionnelle avec des recommandations concretes
 - Utilise le format Markdown pour mettre en valeur les informations importantes (**gras**, *italique*)
-- Pour les questions sur des praticiens spécifiques, utilise les données ci-dessus pour donner des réponses PRÉCISES
-- Si on demande "quel médecin dont le prénom est X a le plus de Y", cherche dans la base complète ci-dessus
-- Priorise par impact stratégique : KOL > Volume > Urgence > Fidélité
-- Fournis des chiffres précis basés sur les données réelles
-- Sois encourageant et positif
-- Adapte tes recommandations à la période (${periodLabel})`;
+- Pour les questions sur des praticiens specifiques, utilise les donnees ci-dessus pour donner des reponses PRECISES
+- Si on demande "quel medecin dont le prenom est X a le plus de Y", cherche dans la base complete ci-dessus
+- Priorise par impact strategique : KOL > Volume > Urgence > Fidelite
+- Fournis des chiffres precis bases sur les donnees reelles
+- Adapte tes recommandations a la periode (${periodLabel})`;
   };
 
   // Détecter si la question demande une visualisation

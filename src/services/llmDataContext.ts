@@ -1,0 +1,190 @@
+/**
+ * Service de contexte de donnees pour le LLM
+ * Genere un dump structuree de TOUTES les donnees du site
+ * pour que le LLM puisse repondre a n'importe quelle question
+ */
+
+import { DataService } from './dataService';
+import type { PractitionerProfile } from '../types/database';
+
+/**
+ * Genere le contexte complet de la base de donnees praticiens
+ * Format compact mais exhaustif pour le LLM
+ */
+export function generateFullDataContext(): string {
+  const allPractitioners = DataService.getAllPractitioners();
+  const stats = DataService.getGlobalStats();
+
+  const lines: string[] = [];
+
+  // En-tete
+  lines.push('=== BASE DE DONNEES ARIA - TERRITOIRE RHONE-ALPES ===');
+  lines.push('');
+
+  // Statistiques globales
+  lines.push(`STATISTIQUES GLOBALES:`);
+  lines.push(`- Total praticiens: ${stats.totalPractitioners}`);
+  lines.push(`- Pneumologues: ${stats.pneumologues}`);
+  lines.push(`- Medecins generalistes: ${stats.generalistes}`);
+  lines.push(`- KOLs (Key Opinion Leaders): ${stats.totalKOLs}`);
+  lines.push(`- Volume total annuel: ${(stats.totalVolume / 1000).toFixed(0)}K litres O2`);
+  lines.push(`- Fidelite moyenne: ${stats.averageLoyalty.toFixed(1)}/10`);
+  lines.push('');
+
+  // Repartition par ville
+  const byCity: Record<string, { count: number; pneumo: number; gp: number; kols: number; totalVolume: number }> = {};
+  allPractitioners.forEach(p => {
+    const city = p.address.city;
+    if (!byCity[city]) byCity[city] = { count: 0, pneumo: 0, gp: 0, kols: 0, totalVolume: 0 };
+    byCity[city].count++;
+    if (p.specialty === 'Pneumologue') byCity[city].pneumo++;
+    else byCity[city].gp++;
+    if (p.metrics.isKOL) byCity[city].kols++;
+    byCity[city].totalVolume += p.metrics.volumeL;
+  });
+
+  lines.push('REPARTITION PAR VILLE:');
+  Object.entries(byCity)
+    .sort((a, b) => b[1].count - a[1].count)
+    .forEach(([city, data]) => {
+      lines.push(`- ${city}: ${data.count} praticiens (${data.pneumo} pneumo, ${data.gp} GP, ${data.kols} KOLs) - ${(data.totalVolume / 1000).toFixed(0)}K L/an`);
+    });
+  lines.push('');
+
+  // Liste complete des praticiens
+  lines.push('LISTE COMPLETE DES PRATICIENS:');
+  lines.push('(Format: ID | Titre Prenom Nom | Specialite | Ville | Volume L/an | Fidelite/10 | Vingtile | KOL | Risque | Dernier visite | Publications)');
+  lines.push('');
+
+  allPractitioners
+    .sort((a, b) => b.metrics.volumeL - a.metrics.volumeL)
+    .forEach(p => {
+      const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
+      const lastVisit = p.lastVisitDate
+        ? new Date(p.lastVisitDate).toLocaleDateString('fr-FR')
+        : 'Jamais';
+      const daysSince = p.lastVisitDate
+        ? Math.floor((Date.now() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+
+      lines.push(
+        `${p.id} | ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | ` +
+        `${p.metrics.volumeL} L/an | Fidelite:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile} | ` +
+        `${p.metrics.isKOL ? 'KOL' : '-'} | Risque:${p.metrics.churnRisk} | ` +
+        `Visite:${lastVisit} (${daysSince}j) | ${pubCount} pub`
+      );
+    });
+
+  lines.push('');
+
+  // Publications detaillees
+  const practitionersWithPubs = allPractitioners
+    .filter(p => p.news?.some(n => n.type === 'publication'))
+    .sort((a, b) => {
+      const pubA = a.news?.filter(n => n.type === 'publication').length || 0;
+      const pubB = b.news?.filter(n => n.type === 'publication').length || 0;
+      return pubB - pubA;
+    });
+
+  if (practitionersWithPubs.length > 0) {
+    lines.push('PUBLICATIONS PAR PRATICIEN:');
+    practitionersWithPubs.forEach(p => {
+      const pubs = p.news?.filter(n => n.type === 'publication') || [];
+      lines.push(`- ${p.title} ${p.firstName} ${p.lastName} (${pubs.length} publications):`);
+      pubs.forEach(pub => {
+        lines.push(`  * "${pub.title}" (${new Date(pub.date).toLocaleDateString('fr-FR')})`);
+      });
+    });
+    lines.push('');
+  }
+
+  // KOLs detailles
+  const kols = allPractitioners.filter(p => p.metrics.isKOL);
+  if (kols.length > 0) {
+    lines.push('DETAILS KOLs:');
+    kols.sort((a, b) => b.metrics.volumeL - a.metrics.volumeL).forEach(p => {
+      const daysSince = p.lastVisitDate
+        ? Math.floor((Date.now() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+      const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
+      lines.push(
+        `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | ` +
+        `${(p.metrics.volumeL / 1000).toFixed(0)}K L/an | Fidelite:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile} | ` +
+        `Derniere visite: ${daysSince}j | ${pubCount} pub | Croissance:+${p.metrics.potentialGrowth}%`
+      );
+    });
+    lines.push('');
+  }
+
+  // Notes de visite recentes
+  lines.push('HISTORIQUE VISITES RECENT (dernieres notes):');
+  const recentNotes: { practitioner: PractitionerProfile; note: PractitionerProfile['notes'][0] }[] = [];
+  allPractitioners.forEach(p => {
+    p.notes?.slice(0, 2).forEach(note => {
+      recentNotes.push({ practitioner: p, note });
+    });
+  });
+  recentNotes
+    .sort((a, b) => new Date(b.note.date).getTime() - new Date(a.note.date).getTime())
+    .slice(0, 30)
+    .forEach(({ practitioner: p, note }) => {
+      lines.push(`- ${p.title} ${p.firstName} ${p.lastName} (${new Date(note.date).toLocaleDateString('fr-FR')}): ${note.content.substring(0, 120)}`);
+    });
+
+  return lines.join('\n');
+}
+
+/**
+ * Genere le prompt systeme pour le coach IA
+ */
+export function generateCoachSystemPrompt(): string {
+  return `Tu es ARIA, un assistant intelligent pour delegues pharmaceutiques chez Air Liquide Sante.
+Tu aides a analyser les donnees du territoire Rhone-Alpes (praticiens, visites, volumes de prescription O2).
+
+REGLES IMPORTANTES:
+- Reponds TOUJOURS en francais
+- Sois precis et base tes reponses sur les donnees fournies
+- Utilise le format Markdown pour structurer tes reponses
+- Quand on te demande des praticiens, donne leurs noms complets, ville, specialite et metriques
+- Si la question porte sur un prenom ou nom, cherche dans la liste complete des praticiens
+- Si tu ne trouves pas l'information, dis-le clairement
+- Utilise les donnees reelles fournies, ne fabrique jamais de donnees
+
+CONTEXTE METIER:
+- Vingtile: classement de 1 (meilleur prescripteur) a 20 (plus faible). V1-5 = Top quartile.
+- KOL = Key Opinion Leader, praticien influent
+- Volume en litres d'O2 par an
+- Fidelite sur 10
+- Risque de churn: low/medium/high
+
+Tu peux repondre a TOUTES les questions portant sur:
+- Recherche de praticiens par nom, prenom, ville, specialite
+- Publications et activites academiques
+- Volumes de prescription et classements
+- KOLs et leur suivi
+- Risques et opportunites
+- Statistiques par ville, specialite, vingtile
+- Historique de visites
+- Toute question croisant plusieurs criteres`;
+}
+
+/**
+ * Genere le contexte compact pour une question specifique
+ * (optimise pour limiter les tokens)
+ */
+export function generateCompactContext(_question: string): string {
+  // Fournit le contexte complet de la DB pour que le LLM puisse repondre
+  const fullContext = generateFullDataContext();
+
+  // Pour les questions courtes ou specifiques, on peut tronquer
+  if (fullContext.length > 12000) {
+    // Tronquer les notes de visite pour garder l'essentiel
+    const contextParts = fullContext.split('HISTORIQUE VISITES RECENT');
+    if (contextParts.length > 1) {
+      return contextParts[0] + 'HISTORIQUE VISITES RECENT (tronque pour optimisation):\n' +
+        contextParts[1].split('\n').slice(0, 15).join('\n');
+    }
+  }
+
+  return fullContext;
+}

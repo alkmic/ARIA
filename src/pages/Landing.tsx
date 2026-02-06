@@ -43,13 +43,13 @@ export function Landing() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="text-center mb-3"
         >
-          <h1 className="text-5xl sm:text-6xl font-black text-white tracking-tight">
+          <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
             ARIA
           </h1>
-          <div className="flex items-center justify-center gap-2 text-airLiquide-teal text-sm sm:text-base font-medium mt-1">
-            <Sparkles className="w-4 h-4" />
-            <span>Assistant Intelligent pour Représentants</span>
-            <Sparkles className="w-4 h-4" />
+          <div className="flex items-center justify-center gap-2 text-airLiquide-teal text-sm font-medium mt-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Assistant Intelligent pour Representants</span>
+            <Sparkles className="w-3.5 h-3.5" />
           </div>
         </motion.div>
 
@@ -114,7 +114,7 @@ export function Landing() {
         className="relative z-10 pb-4 text-center"
       >
         <span className="text-white/30 text-xs">
-          v1.0 · Propulsé par Groq Llama 3.3 70B
+          v1.0 · Propulse par IA generative
         </span>
       </motion.div>
     </div>

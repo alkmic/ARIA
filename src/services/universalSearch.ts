@@ -688,7 +688,7 @@ export function getFullDatabaseContext(): string {
     byCity[p.address.city] = (byCity[p.address.city] || 0) + 1;
   });
 
-  let context = `
+  const context = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    BASE DE DONNÉES ARIA - CONTEXTE COMPLET                    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -707,13 +707,17 @@ ${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `•
 RÉPARTITION PAR PRÉNOM (Top 15):
 ${Object.entries(byFirstName).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([name, count]) => `• ${name}: ${count}`).join('\n')}
 
-TOP 10 PRATICIENS AVEC PUBLICATIONS:
-${topPublishers.map((p, i) => `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}, ${p.address.city}) - ${p.pubCount} publication(s)`).join('\n')}
+TOP PRATICIENS AVEC PUBLICATIONS:
+${topPublishers.map((p, i) => {
+  const pubs = p.news?.filter((n: any) => n.type === 'publication') || [];
+  return `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}, ${p.address.city}) - ${p.pubCount} pub(s)${pubs.length > 0 ? ': ' + pubs.map((pub: any) => `"${pub.title}"`).join(', ') : ''}`;
+}).join('\n')}
 
-BASE COMPLÈTE (${allPractitioners.length} praticiens):
+BASE COMPLETE (${allPractitioners.length} praticiens):
 ${allPractitioners.map(p => {
   const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
-  return `• ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}${pubCount > 0 ? ` | ${pubCount} pub` : ''}`;
+  const daysSince = p.lastVisitDate ? Math.floor((Date.now() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24)) : 999;
+  return `• ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''} | Visite:${daysSince}j${pubCount > 0 ? ` | ${pubCount} pub` : ''}`;
 }).join('\n')}
 
 `;

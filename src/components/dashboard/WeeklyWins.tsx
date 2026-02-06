@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, UserPlus, Star, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../../stores/useAppStore';
+import { calculateWeeklyMetrics } from '../../services/metricsCalculator';
 
 interface Win {
   icon: React.ReactNode;
@@ -11,16 +14,22 @@ interface Win {
 
 export function WeeklyWins() {
   const navigate = useNavigate();
+  const { practitioners, upcomingVisits } = useAppStore();
+
+  const weeklyMetrics = useMemo(
+    () => calculateWeeklyMetrics(practitioners, upcomingVisits),
+    [practitioners, upcomingVisits]
+  );
 
   const wins: Win[] = [
-    { icon: <CheckCircle className="w-5 h-5" />, label: 'Visites réalisées', value: '8', color: 'text-green-600 bg-green-100' },
-    { icon: <UserPlus className="w-5 h-5" />, label: 'Nouveaux prescripteurs', value: '2', color: 'text-blue-600 bg-blue-100' },
-    { icon: <Star className="w-5 h-5" />, label: 'KOL reconquis', value: '1', color: 'text-amber-600 bg-amber-100' },
+    { icon: <CheckCircle className="w-5 h-5" />, label: 'Visites realisees', value: String(weeklyMetrics.visitsCompleted), color: 'text-green-600 bg-green-100' },
+    { icon: <UserPlus className="w-5 h-5" />, label: 'Nouveaux prescripteurs', value: String(weeklyMetrics.newPrescribers), color: 'text-blue-600 bg-blue-100' },
+    { icon: <Star className="w-5 h-5" />, label: 'KOL reconquis', value: String(weeklyMetrics.kolReconquered), color: 'text-amber-600 bg-amber-100' },
   ];
 
   const pending = [
-    { label: 'Propositions en attente de réponse', value: '3' },
-    { label: 'Relances à effectuer', value: '5' },
+    { label: 'Propositions en attente de reponse', value: String(weeklyMetrics.pendingResponses) },
+    { label: 'Relances a effectuer', value: String(weeklyMetrics.followUpsNeeded) },
   ];
 
   return (

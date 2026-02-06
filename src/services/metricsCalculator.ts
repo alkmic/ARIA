@@ -1,9 +1,16 @@
 import type { TimePeriod } from '../contexts/TimePeriodContext';
 import type { Practitioner, UpcomingVisit } from '../types';
+import {
+  VISIT_THRESHOLDS,
+  LOYALTY_THRESHOLDS,
+  VOLUME_THRESHOLDS,
+  VISIT_OBJECTIVES,
+  PERIOD_THRESHOLDS,
+} from '../config/thresholds';
 
 /**
- * Calcule les métriques pour une période donnée de manière cohérente
- * GARANTIE : visites mensuelles ≤ visites trimestrielles ≤ visites annuelles
+ * Calcule les metriques pour une periode donnee de maniere coherente
+ * GARANTIE : visites mensuelles <= visites trimestrielles <= visites annuelles
  */
 
 export interface PeriodMetrics {
@@ -15,12 +22,20 @@ export interface PeriodMetrics {
   kolCount: number;
   undervisitedKOLs: number;
   atRiskPractitioners: number;
-  volumeGrowth: number; // Pourcentage vs période précédente
+  volumeGrowth: number;
   visitGrowth: number;
 }
 
+export interface WeeklyMetrics {
+  visitsCompleted: number;
+  newPrescribers: number;
+  kolReconquered: number;
+  pendingResponses: number;
+  followUpsNeeded: number;
+}
+
 /**
- * Calcule le début et la fin de la période sélectionnée
+ * Calcule le debut et la fin de la periode selectionnee
  */
 export function getPeriodDates(period: TimePeriod): { start: Date; end: Date } {
   const now = new Date();
@@ -28,14 +43,11 @@ export function getPeriodDates(period: TimePeriod): { start: Date; end: Date } {
   let start = new Date(now);
 
   if (period === 'month') {
-    // Du 1er du mois actuel à aujourd'hui
     start = new Date(now.getFullYear(), now.getMonth(), 1);
   } else if (period === 'quarter') {
-    // Du début du trimestre à aujourd'hui
     const currentQuarter = Math.floor(now.getMonth() / 3);
     start = new Date(now.getFullYear(), currentQuarter * 3, 1);
   } else {
-    // De janvier à aujourd'hui
     start = new Date(now.getFullYear(), 0, 1);
   }
 
@@ -43,7 +55,7 @@ export function getPeriodDates(period: TimePeriod): { start: Date; end: Date } {
 }
 
 /**
- * Filtre les visites par période
+ * Filtre les visites par periode
  */
 export function filterVisitsByPeriod(visits: UpcomingVisit[], period: TimePeriod): UpcomingVisit[] {
   const { start, end } = getPeriodDates(period);
@@ -55,8 +67,22 @@ export function filterVisitsByPeriod(visits: UpcomingVisit[], period: TimePeriod
 }
 
 /**
- * Génère des métriques cohérentes basées sur les vrais praticiens
- * Utilise une approche déterministe et cohérente entre les périodes
+ * Compte les jours ouvres entre deux dates (exclut samedi/dimanche)
+ */
+function getWorkingDaysInMonth(year: number, month: number, upToDay?: number): number {
+  const lastDay = upToDay || new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= lastDay; d++) {
+    const date = new Date(year, month, d);
+    const day = date.getDay();
+    if (day !== 0 && day !== 6) count++;
+  }
+  return count;
+}
+
+/**
+ * Genere des metriques coherentes basees sur les vrais praticiens
+ * Utilise une approche deterministe et coherente entre les periodes
  */
 export function calculatePeriodMetrics(
   practitioners: Practitioner[],
@@ -69,40 +95,25 @@ export function calculatePeriodMetrics(
   const currentMonth = now.getMonth();
   const currentQuarter = Math.floor(currentMonth / 3);
 
-  // Objectifs par période
-  const baseMonthlyObjective = 60;
+  // Objectifs par periode (coherents : mois * 3 = trimestre, mois * 12 = annee)
+  const baseMonthlyObjective = VISIT_OBJECTIVES.monthlyTarget;
   const visitsObjective =
     period === 'year' ? baseMonthlyObjective * 12 :
     period === 'quarter' ? baseMonthlyObjective * 3 :
     baseMonthlyObjective;
 
-  // Calculer les visites de manière COHÉRENTE entre les périodes
-  // Principe : on simule des visites passées réalistes
-
-  // Performance factor stable pour l'année (basé sur l'année courante)
+  // Performance factor stable pour l'annee
   const yearSeed = now.getFullYear();
-  const performanceFactor = 0.88 + ((yearSeed % 10) / 100); // 88% à 97%
+  const performanceFactor = 0.88 + ((yearSeed % 10) / 100); // 88% a 97%
 
-  // Visites par jour ouvré moyen
-  const avgVisitsPerWorkday = 3; // ~3 visites/jour
+  // Visites par jour ouvre moyen
+  const avgVisitsPerWorkday = VISIT_OBJECTIVES.avgPerWorkday;
 
-  // Calculer les jours ouvrés écoulés pour chaque période
-  const getWorkingDaysInMonth = (year: number, month: number, upToDay?: number): number => {
-    const lastDay = upToDay || new Date(year, month + 1, 0).getDate();
-    let count = 0;
-    for (let d = 1; d <= lastDay; d++) {
-      const date = new Date(year, month, d);
-      const day = date.getDay();
-      if (day !== 0 && day !== 6) count++;
-    }
-    return count;
-  };
-
-  // Visites du mois en cours (jusqu'à aujourd'hui)
+  // Visites du mois en cours (jusqu'a aujourd'hui)
   const workingDaysThisMonth = getWorkingDaysInMonth(now.getFullYear(), currentMonth, dayOfMonth);
   const monthVisits = Math.floor(workingDaysThisMonth * avgVisitsPerWorkday * performanceFactor);
 
-  // Visites des mois passés ce trimestre (mois complets)
+  // Visites des mois passes ce trimestre (mois complets)
   let quarterVisits = monthVisits;
   const quarterStartMonth = currentQuarter * 3;
   for (let m = quarterStartMonth; m < currentMonth; m++) {
@@ -110,14 +121,14 @@ export function calculatePeriodMetrics(
     quarterVisits += Math.floor(fullMonthWorkdays * avgVisitsPerWorkday * performanceFactor);
   }
 
-  // Visites des mois passés cette année (mois complets)
+  // Visites des mois passes cette annee (mois complets)
   let yearVisits = monthVisits;
   for (let m = 0; m < currentMonth; m++) {
     const fullMonthWorkdays = getWorkingDaysInMonth(now.getFullYear(), m);
     yearVisits += Math.floor(fullMonthWorkdays * avgVisitsPerWorkday * performanceFactor);
   }
 
-  // Sélectionner les visites selon la période
+  // Selectionner les visites selon la periode - GARANTI coherent
   const visitsCount =
     period === 'year' ? yearVisits :
     period === 'quarter' ? quarterVisits :
@@ -126,39 +137,40 @@ export function calculatePeriodMetrics(
   // Volume total des praticiens (annuel)
   const totalAnnualVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0);
 
-  // Volume pour la période (proportionnel au temps écoulé)
-  const yearProgress = dayOfYear / 365;
-  const quarterProgress = (dayOfYear - (currentQuarter * 91)) / 91;
-  const monthProgress = dayOfMonth / new Date(now.getFullYear(), currentMonth + 1, 0).getDate();
+  // Volume pour la periode (proportionnel au temps ecoule)
+  const daysInMonth = new Date(now.getFullYear(), currentMonth + 1, 0).getDate();
+  const monthProgress = dayOfMonth / daysInMonth;
+  const quarterDays = currentQuarter === 0 ? 90 : currentQuarter === 1 ? 91 : currentQuarter === 2 ? 92 : 92;
+  const dayInQuarter = dayOfYear - (currentQuarter === 0 ? 0 : currentQuarter === 1 ? 90 : currentQuarter === 2 ? 181 : 273);
+  const quarterProgress = Math.max(0.05, dayInQuarter / quarterDays);
+  const yearProgress = Math.max(0.01, dayOfYear / 365);
 
   const totalVolume =
     period === 'year' ? Math.round(totalAnnualVolume * yearProgress) :
-    period === 'quarter' ? Math.round(totalAnnualVolume * 0.25 * Math.max(0.1, quarterProgress)) :
-    Math.round(totalAnnualVolume / 12 * Math.max(0.1, monthProgress));
+    period === 'quarter' ? Math.round(totalAnnualVolume * 0.25 * quarterProgress) :
+    Math.round(totalAnnualVolume / 12 * monthProgress);
 
-  // Nouveaux prescripteurs (cohérents entre périodes)
+  // Nouveaux prescripteurs (coherents : mois <= trimestre <= annee)
   const monthlyNewPrescribers = Math.max(1, Math.floor(2 * monthProgress * performanceFactor));
-  const quarterlyNewPrescribers = monthlyNewPrescribers + (currentMonth > quarterStartMonth ? Math.floor(2 * (currentMonth - quarterStartMonth)) : 0);
-  const yearlyNewPrescribers = monthlyNewPrescribers + Math.floor(2 * currentMonth * performanceFactor);
+  const pastMonthsInQuarter = currentMonth - quarterStartMonth;
+  const quarterlyNewPrescribers = monthlyNewPrescribers + (pastMonthsInQuarter > 0 ? pastMonthsInQuarter * 2 : 0);
+  const yearlyNewPrescribers = monthlyNewPrescribers + currentMonth * 2;
 
   const newPrescribers =
     period === 'year' ? yearlyNewPrescribers :
-    period === 'quarter' ? quarterlyNewPrescribers :
-    monthlyNewPrescribers;
+    period === 'quarter' ? Math.min(quarterlyNewPrescribers, yearlyNewPrescribers) :
+    Math.min(monthlyNewPrescribers, quarterlyNewPrescribers);
 
-  // Loyauté moyenne
+  // Loyaute moyenne
   const avgLoyalty = practitioners.length > 0
     ? practitioners.reduce((sum, p) => sum + p.loyaltyScore, 0) / practitioners.length
     : 0;
 
-  // KOLs dans le réseau
+  // KOLs dans le reseau
   const kolCount = practitioners.filter(p => p.isKOL).length;
 
-  // KOLs non visités selon la période
-  const daysThreshold =
-    period === 'month' ? 30 :
-    period === 'quarter' ? 60 :
-    90;
+  // KOLs non visites selon la periode (utilise les seuils centralises)
+  const daysThreshold = PERIOD_THRESHOLDS[period].kolVisitDays;
 
   const undervisitedKOLs = practitioners.filter(p => {
     if (!p.isKOL) return false;
@@ -169,23 +181,24 @@ export function calculatePeriodMetrics(
     return daysSince > daysThreshold;
   }).length;
 
-  // Praticiens à risque (fidélité faible + volume significatif)
+  // Praticiens a risque (utilise les seuils centralises)
   const atRiskPractitioners = practitioners.filter(p =>
-    (p.loyaltyScore < 6 && p.volumeL > 30000) || (p.isKOL && p.loyaltyScore < 7)
+    (p.loyaltyScore < LOYALTY_THRESHOLDS.atRiskGeneral && p.volumeL > VOLUME_THRESHOLDS.significant)
+    || (p.isKOL && p.loyaltyScore < LOYALTY_THRESHOLDS.kolChurnRisk)
   ).length;
 
-  // Croissance simulée (réaliste et cohérente)
-  const baseVolumeGrowth = 15; // 15% annuel
+  // Croissance simulee (coherente par periode)
+  const baseVolumeGrowth = VISIT_OBJECTIVES.annualVolumeGrowth;
   const volumeGrowth =
     period === 'year' ? baseVolumeGrowth :
-    period === 'quarter' ? Math.round(baseVolumeGrowth / 4) :
-    Math.round(baseVolumeGrowth / 12);
+    period === 'quarter' ? +(baseVolumeGrowth / 4).toFixed(1) :
+    +(baseVolumeGrowth / 12).toFixed(1);
 
-  const baseVisitGrowth = 12;
+  const baseVisitGrowth = VISIT_OBJECTIVES.annualVisitGrowth;
   const visitGrowth =
     period === 'year' ? baseVisitGrowth :
-    period === 'quarter' ? Math.round(baseVisitGrowth / 4) :
-    Math.round(baseVisitGrowth / 12);
+    period === 'quarter' ? +(baseVisitGrowth / 4).toFixed(1) :
+    +(baseVisitGrowth / 12).toFixed(1);
 
   return {
     visitsCount,
@@ -202,7 +215,61 @@ export function calculatePeriodMetrics(
 }
 
 /**
- * Filtre les praticiens par période basé sur leur activité
+ * Calcule les metriques hebdomadaires dynamiques (pour WeeklyWins)
+ */
+export function calculateWeeklyMetrics(
+  practitioners: Practitioner[],
+  _visits: UpcomingVisit[]
+): WeeklyMetrics {
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay() + 1); // Lundi
+  weekStart.setHours(0, 0, 0, 0);
+
+  // Visites completees cette semaine (basees sur les jours ouvres ecoules)
+  const dayOfWeek = now.getDay() === 0 ? 5 : Math.min(now.getDay(), 5); // max 5 jours ouvres
+  const yearSeed = now.getFullYear();
+  const weekSeed = Math.floor(now.getTime() / (7 * 24 * 60 * 60 * 1000));
+  const seededRandom = (idx: number) => {
+    const x = Math.sin(yearSeed + weekSeed + idx * 9999) * 10000;
+    return x - Math.floor(x);
+  };
+  const performanceFactor = 0.85 + seededRandom(0) * 0.15;
+  const visitsCompleted = Math.floor(dayOfWeek * VISIT_OBJECTIVES.avgPerWorkday * performanceFactor);
+
+  // Nouveaux prescripteurs cette semaine (0-2 realiste)
+  const newPrescribers = dayOfWeek >= 3 ? Math.floor(seededRandom(1) * 2) + (seededRandom(2) > 0.6 ? 1 : 0) : 0;
+
+  // KOLs reconquis (0-1 par semaine)
+  const kolsNotSeen = practitioners.filter(p => {
+    if (!p.isKOL) return false;
+    if (!p.lastVisitDate) return false;
+    const lastVisit = new Date(p.lastVisitDate);
+    const daysSince = Math.floor((now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+    return daysSince > VISIT_THRESHOLDS.kolUrgent && daysSince <= VISIT_THRESHOLDS.kolCritical + 14;
+  }).length;
+  const kolReconquered = kolsNotSeen > 0 && seededRandom(3) > 0.5 ? 1 : 0;
+
+  // Propositions en attente (2-5 realiste)
+  const pendingResponses = 2 + Math.floor(seededRandom(4) * 3);
+
+  // Relances a effectuer (basees sur les praticiens a risque)
+  const atRiskCount = practitioners.filter(p =>
+    p.loyaltyScore < LOYALTY_THRESHOLDS.atRiskGeneral && p.volumeL > VOLUME_THRESHOLDS.significant
+  ).length;
+  const followUpsNeeded = Math.min(atRiskCount, 3 + Math.floor(seededRandom(5) * 4));
+
+  return {
+    visitsCompleted,
+    newPrescribers,
+    kolReconquered,
+    pendingResponses,
+    followUpsNeeded,
+  };
+}
+
+/**
+ * Filtre les praticiens par periode basee sur leur activite
  */
 export function filterPractitionersByPeriod(
   practitioners: Practitioner[],
@@ -212,7 +279,7 @@ export function filterPractitionersByPeriod(
 }
 
 /**
- * Calcule les top praticiens pour une période
+ * Calcule les top praticiens pour une periode
  */
 export function getTopPractitioners(
   practitioners: Practitioner[],
@@ -225,14 +292,13 @@ export function getTopPractitioners(
 }
 
 /**
- * Calcule les données de performance par mois pour les graphiques
+ * Calcule les donnees de performance par mois pour les graphiques
  */
 export function getPerformanceDataForPeriod(period: TimePeriod) {
-  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+  const months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aout', 'Sep', 'Oct', 'Nov', 'Dec'];
   const now = new Date();
   const currentMonth = now.getMonth();
 
-  // Utiliser une seed déterministe pour des valeurs stables
   const seed = now.getFullYear();
   const seededRandom = (index: number) => {
     const x = Math.sin(seed + index * 9999) * 10000;
@@ -240,7 +306,6 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
   };
 
   if (period === 'month') {
-    // Pour le mois, afficher les 4 dernières semaines
     return Array.from({ length: 4 }, (_, i) => ({
       month: `S${i + 1}`,
       actual: 12 + Math.floor(seededRandom(i) * 8),
@@ -250,7 +315,6 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
       teamAverage: 35000 + Math.floor(seededRandom(i + 300) * 15000),
     }));
   } else if (period === 'quarter') {
-    // Pour le trimestre, afficher les 3 mois
     const quarterStart = Math.floor(currentMonth / 3) * 3;
     return Array.from({ length: 3 }, (_, i) => {
       const monthIndex = quarterStart + i;
@@ -264,7 +328,6 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
       };
     });
   } else {
-    // Pour l'année, afficher tous les mois jusqu'au mois actuel
     return Array.from({ length: currentMonth + 1 }, (_, i) => ({
       month: months[i],
       actual: 45 + Math.floor(seededRandom(i) * 20),

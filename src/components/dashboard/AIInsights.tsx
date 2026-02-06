@@ -165,7 +165,7 @@ export const AIInsights: React.FC = () => {
 
   const handleAction = (insight: AIInsight) => {
     if (insight.actionLabel === 'Préparer visite' && insight.practitionerId) {
-      navigate(`/pitch?practitioner=${insight.practitionerId}`);
+      navigate(`/pitch?practitionerId=${insight.practitionerId}`);
     } else if (insight.actionLabel === 'Planifier visites' || insight.actionLabel === 'Planifier tournée') {
       navigate('/tour-optimization');
     } else if (insight.actionLabel === 'Voir les détails') {

@@ -323,7 +323,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
           >
             {/* New Report Button */}
             <button
-              onClick={() => navigate(`/voice-report?practitioner=${practitioner.id}`)}
+              onClick={() => navigate(`/voice-report?practitionerId=${practitioner.id}`)}
               className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition-all"
             >
               <Mic className="w-5 h-5" />

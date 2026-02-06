@@ -70,7 +70,7 @@ export default function VoiceVisitReport() {
 
   // Auto-select from URL param or today's visit
   useEffect(() => {
-    const practitionerId = searchParams.get('practitioner');
+    const practitionerId = searchParams.get('practitionerId') || searchParams.get('practitioner');
     if (practitionerId) {
       const p = DataService.getPractitionerById(practitionerId);
       if (p) {
