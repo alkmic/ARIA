@@ -356,16 +356,22 @@ export const TourOptimizationPage: React.FC = () => {
     return bestRoute;
   };
 
-  // Calcul de la distance totale d'un parcours naïf (ordre de sélection, sans optimisation)
-  const calculateNaiveRoute = (practs: PractitionerWithCoords[], start: [number, number]) => {
-    let dist = 0;
-    let prev = start;
-    for (const p of practs) {
-      dist += calculateDistance(prev, p.coords);
-      prev = p.coords;
+  // Calcul de la distance totale d'un parcours naïf (ordre de sélection, multi-jours avec retour)
+  const calculateNaiveRoute = (practs: PractitionerWithCoords[], start: [number, number], perDay: number) => {
+    let totalDist = 0;
+    const pool = [...practs];
+    while (pool.length > 0) {
+      const remainingDays = Math.ceil(pool.length / perDay);
+      const chunk = Math.ceil(pool.length / remainingDays);
+      const dayPracts = pool.splice(0, chunk);
+      let prev = start;
+      for (const p of dayPracts) {
+        totalDist += calculateDistance(prev, p.coords);
+        prev = p.coords;
+      }
+      totalDist += calculateDistance(prev, start); // retour à la base
     }
-    dist += calculateDistance(prev, start); // retour
-    return dist;
+    return totalDist;
   };
 
   // Lancer l'optimisation
@@ -396,8 +402,8 @@ export const TourOptimizationPage: React.FC = () => {
       setProgress(Math.min(currentProgress, 100));
     }
 
-    // Calculer la distance naïve AVANT optimisation (ordre de sélection original)
-    const naiveDistance = calculateNaiveRoute(selectedPractitioners, start);
+    // Calculer la distance naïve AVANT optimisation (ordre de sélection original, multi-jours)
+    const naiveDistance = calculateNaiveRoute(selectedPractitioners, start, visitsPerDay);
     const naiveTravelTime = Math.ceil(naiveDistance / AVG_SPEED_KM_MIN);
 
     // Trier selon critère
