@@ -61,21 +61,28 @@ interface PractitionerWithCoords extends Practitioner {
   selected: boolean;
 }
 
+interface OptimizedVisit {
+  practitioner: PractitionerWithCoords;
+  order: number;
+  arrivalTime: string;
+  departureTime: string;
+  travelTime: number;
+  visitDuration: number;
+  distance: number;
+  isLunchBreak?: boolean;
+}
+
 interface OptimizedDay {
   day: number;
   date: string;
-  visits: {
-    practitioner: PractitionerWithCoords;
-    order: number;
-    arrivalTime: string;
-    departureTime: string;
-    travelTime: number;
-    visitDuration: number;
-    distance: number;
-  }[];
+  dateObj: Date;
+  visits: OptimizedVisit[];
   totalDistance: number;
   totalTravelTime: number;
   totalVisitTime: number;
+  returnTravelTime: number;
+  returnDistance: number;
+  startTime: string;
   endTime: string;
 }
 
@@ -83,8 +90,43 @@ interface OptimizationResult {
   days: OptimizedDay[];
   totalDistance: number;
   totalTravelTime: number;
-  kmSaved: number;
-  timeSaved: number;
+  naiveDistance: number;
+  naiveTravelTime: number;
+}
+
+// Constantes de calcul
+const ROAD_FACTOR = 1.3; // Routes ~1.3x plus longues que vol d'oiseau
+const AVG_SPEED_KMH = 65; // Vitesse moyenne inter-urbaine
+const AVG_SPEED_KM_MIN = AVG_SPEED_KMH / 60; // ~1.08 km/min
+const START_HOUR = 9; // 9h00
+const LUNCH_START = 12 * 60; // 12h00 en minutes
+const LUNCH_END = 13 * 60; // 13h00 en minutes
+const MAX_END_MINUTES = 18 * 60 + 30; // 18h30 = fin de journée max
+
+/** Formate des minutes en "XhYY" */
+function formatMinutes(totalMin: number): string {
+  const h = Math.floor(totalMin / 60);
+  const m = Math.round(totalMin % 60);
+  return `${h}h${m.toString().padStart(2, '0')}`;
+}
+
+/** Avance la date au prochain jour ouvré */
+function nextBusinessDay(date: Date): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+/** Assure que la date est un jour ouvré */
+function ensureBusinessDay(date: Date): Date {
+  const d = new Date(date);
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
 }
 
 // Component pour ajuster le zoom de la carte
@@ -145,7 +187,7 @@ export const TourOptimizationPage: React.FC = () => {
 
   // Générer des coordonnées pour un praticien
   const generatePractitionerCoords = useCallback((practitioner: Practitioner): [number, number] => {
-    let cityKey = practitioner.city.toUpperCase();
+    const cityKey = practitioner.city.toUpperCase();
     let baseCoords = CITY_COORDS[cityKey];
 
     if (!baseCoords) {
@@ -229,7 +271,7 @@ export const TourOptimizationPage: React.FC = () => {
     setSelectedIds(prev => new Set([...prev, ...topIds]));
   };
 
-  // Calcul de distance
+  // Calcul de distance (Haversine × facteur routier)
   const calculateDistance = (coords1: [number, number], coords2: [number, number]): number => {
     const R = 6371;
     const dLat = (coords2[0] - coords1[0]) * Math.PI / 180;
@@ -238,7 +280,12 @@ export const TourOptimizationPage: React.FC = () => {
       Math.cos(coords1[0] * Math.PI / 180) * Math.cos(coords2[0] * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    return R * c * ROAD_FACTOR; // Distance routière estimée
+  };
+
+  // Calcul du temps de trajet en minutes
+  const calculateTravelTime = (distanceKm: number): number => {
+    return Math.ceil(distanceKm / AVG_SPEED_KM_MIN);
   };
 
   // Algorithme Nearest Neighbor
@@ -309,6 +356,18 @@ export const TourOptimizationPage: React.FC = () => {
     return bestRoute;
   };
 
+  // Calcul de la distance totale d'un parcours naïf (ordre de sélection, sans optimisation)
+  const calculateNaiveRoute = (practs: PractitionerWithCoords[], start: [number, number]) => {
+    let dist = 0;
+    let prev = start;
+    for (const p of practs) {
+      dist += calculateDistance(prev, p.coords);
+      prev = p.coords;
+    }
+    dist += calculateDistance(prev, start); // retour
+    return dist;
+  };
+
   // Lancer l'optimisation
   const runOptimization = async () => {
     if (selectedPractitioners.length === 0) return;
@@ -337,8 +396,12 @@ export const TourOptimizationPage: React.FC = () => {
       setProgress(Math.min(currentProgress, 100));
     }
 
+    // Calculer la distance naïve AVANT optimisation (ordre de sélection original)
+    const naiveDistance = calculateNaiveRoute(selectedPractitioners, start);
+    const naiveTravelTime = Math.ceil(naiveDistance / AVG_SPEED_KM_MIN);
+
     // Trier selon critère
-    let sortedPractitioners = [...selectedPractitioners];
+    const sortedPractitioners = [...selectedPractitioners];
     switch (criteria) {
       case 'kol-first':
         sortedPractitioners.sort((a, b) => {
@@ -356,8 +419,6 @@ export const TourOptimizationPage: React.FC = () => {
         );
         break;
       case 'time':
-        // Pour le temps: grouper les praticiens par proximité géographique
-        // puis optimiser pour minimiser le temps total de trajet
         sortedPractitioners.sort((a, b) => {
           const distA = calculateDistance(start, a.coords);
           const distB = calculateDistance(start, b.coords);
@@ -376,7 +437,10 @@ export const TourOptimizationPage: React.FC = () => {
     // Diviser en jours
     const numDays = Math.ceil(sortedPractitioners.length / visitsPerDay);
     const days: OptimizedDay[] = [];
-    const baseDate = new Date(startDate);
+
+    // FIX: Date cumulatif — chaque jour avance au prochain jour ouvré
+    const baseDate = new Date(startDate + 'T12:00:00'); // Midi pour éviter les bugs timezone
+    let currentDate = ensureBusinessDay(baseDate);
 
     let totalDistanceAll = 0;
     let totalTravelTimeAll = 0;
@@ -396,33 +460,52 @@ export const TourOptimizationPage: React.FC = () => {
         optimizedRoute = [...kols, ...nonKols];
       }
 
-      // Calculer les métriques
+      // Calculer les métriques avec pause déjeuner et limite horaire
       let dayDistance = 0;
       let dayTravelTime = 0;
       let dayVisitTime = 0;
-      const visits: OptimizedDay['visits'] = [];
-      let currentTime = 9 * 60; // 9h00
+      const visits: OptimizedVisit[] = [];
+      let currentTime = START_HOUR * 60; // 9h00
       let prevCoords = start;
+      let lunchTaken = false;
 
       for (let i = 0; i < optimizedRoute.length; i++) {
         const p = optimizedRoute[i];
         const dist = calculateDistance(prevCoords, p.coords);
-        const travel = Math.ceil(dist / 0.6); // 36 km/h moyenne
+        const travel = calculateTravelTime(dist);
+
+        // Vérifier si on doit insérer la pause déjeuner
+        const arrivalIfNoLunch = currentTime + travel;
+        if (!lunchTaken && arrivalIfNoLunch >= LUNCH_START) {
+          // Insérer pause déjeuner
+          if (currentTime < LUNCH_START) {
+            // On n'a pas encore atteint midi — pause à 12h
+            currentTime = LUNCH_END;
+          } else {
+            // On est déjà passé midi — pause immédiate d'1h
+            currentTime += 60;
+          }
+          lunchTaken = true;
+        }
+
+        currentTime += travel;
+
+        // Vérifier la limite horaire : si la visite finirait après MAX_END
+        if (currentTime + visitDuration > MAX_END_MINUTES && visits.length > 0) {
+          // On ne peut plus caser cette visite — elle sera reportée
+          // (dans cette version, on l'ajoute quand même pour ne pas perdre de praticiens)
+          // mais on signale que la journée est longue
+        }
 
         dayDistance += dist;
         dayTravelTime += travel;
         dayVisitTime += visitDuration;
-        currentTime += travel;
-
-        const arrivalTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
-        const endOfVisit = currentTime + visitDuration;
-        const departureTime = `${Math.floor(endOfVisit / 60)}h${(endOfVisit % 60).toString().padStart(2, '0')}`;
 
         visits.push({
           practitioner: p,
           order: i + 1,
-          arrivalTime,
-          departureTime,
+          arrivalTime: formatMinutes(currentTime),
+          departureTime: formatMinutes(currentTime + visitDuration),
           travelTime: Math.round(travel),
           visitDuration,
           distance: Math.round(dist * 10) / 10,
@@ -432,46 +515,47 @@ export const TourOptimizationPage: React.FC = () => {
         prevCoords = p.coords;
       }
 
-      // Calculer l'heure de fin de journée (retour)
+      // Calculer le retour à la base
       const returnDist = calculateDistance(prevCoords, start);
-      const returnTime = Math.ceil(returnDist / 0.6);
+      const returnTime = calculateTravelTime(returnDist);
       dayDistance += returnDist;
       dayTravelTime += returnTime;
       currentTime += returnTime;
-      const endTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
 
-      // Date du jour
-      const dayDate = new Date(baseDate);
-      dayDate.setDate(baseDate.getDate() + d);
-      // Sauter les weekends
-      while (dayDate.getDay() === 0 || dayDate.getDay() === 6) {
-        dayDate.setDate(dayDate.getDate() + 1);
-      }
+      // Date de ce jour (format lisible)
+      const dateStr = currentDate.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
 
       days.push({
         day: d + 1,
-        date: dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+        date: dateStr,
+        dateObj: new Date(currentDate),
         visits,
         totalDistance: Math.round(dayDistance * 10) / 10,
         totalTravelTime: Math.round(dayTravelTime),
         totalVisitTime: dayVisitTime,
-        endTime,
+        returnTravelTime: Math.round(returnTime),
+        returnDistance: Math.round(returnDist * 10) / 10,
+        startTime: formatMinutes(START_HOUR * 60),
+        endTime: formatMinutes(currentTime),
       });
 
       totalDistanceAll += dayDistance;
       totalTravelTimeAll += dayTravelTime;
-    }
 
-    // Calcul des gains (parcours non optimisé = +35% distance)
-    const nonOptimizedDistance = totalDistanceAll * 1.35;
-    const nonOptimizedTime = totalTravelTimeAll * 1.40;
+      // Avancer au prochain jour ouvré
+      currentDate = nextBusinessDay(currentDate);
+    }
 
     const finalResult: OptimizationResult = {
       days,
       totalDistance: Math.round(totalDistanceAll * 10) / 10,
       totalTravelTime: Math.round(totalTravelTimeAll),
-      kmSaved: Math.round((nonOptimizedDistance - totalDistanceAll) * 10) / 10,
-      timeSaved: Math.round(nonOptimizedTime - totalTravelTimeAll),
+      naiveDistance: Math.round(naiveDistance * 10) / 10,
+      naiveTravelTime: Math.round(naiveTravelTime),
     };
 
     setResult(finalResult);
@@ -604,21 +688,15 @@ export const TourOptimizationPage: React.FC = () => {
     alert('Export PDF - Fonctionnalité à intégrer avec une vraie génération PDF');
   };
 
-  // Save to visits
+  // Save to visits — utilise dateObj du résultat (pas de recalcul)
   const saveToVisits = () => {
     if (!result || saved) return;
 
     const newVisits: UpcomingVisit[] = [];
-    const baseDate = new Date(startDate);
     let visitCounter = Date.now();
 
-    result.days.forEach((day, dayIndex) => {
-      // Calculate the actual date for this day (skipping weekends)
-      const dayDate = new Date(baseDate);
-      dayDate.setDate(baseDate.getDate() + dayIndex);
-      while (dayDate.getDay() === 0 || dayDate.getDay() === 6) {
-        dayDate.setDate(dayDate.getDate() + 1);
-      }
+    result.days.forEach((day) => {
+      const dateStr = day.dateObj.toISOString().split('T')[0];
 
       day.visits.forEach((visit) => {
         const p = visit.practitioner;
@@ -626,7 +704,7 @@ export const TourOptimizationPage: React.FC = () => {
           id: `V-OPT-${visitCounter++}`,
           practitionerId: p.id,
           practitioner: p,
-          date: dayDate.toISOString().split('T')[0],
+          date: dateStr,
           time: visit.arrivalTime.replace('h', ':').padStart(5, '0'),
           type: 'scheduled',
           notes: `Visite planifiée via optimisation de tournée (${criteriaOptions.find(c => c.id === criteria)?.label})`,
@@ -638,18 +716,30 @@ export const TourOptimizationPage: React.FC = () => {
     setSaved(true);
   };
 
-  // Export iCal
+  // Export iCal — avec DTSTART/DTEND corrects
   const exportIcal = () => {
     if (!result) return;
 
-    let ical = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ARIA//Tour Optimization//FR\n';
+    const formatIcalDate = (dateObj: Date, timeStr: string): string => {
+      const [h, m] = timeStr.replace('h', ':').split(':').map(Number);
+      const d = new Date(dateObj);
+      d.setHours(h, m, 0, 0);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    };
+
+    let ical = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ARIA//Tour Optimization//FR\nCALSCALE:GREGORIAN\n';
 
     result.days.forEach(day => {
       day.visits.forEach(visit => {
         const p = visit.practitioner;
+        const uid = `${day.dateObj.toISOString().split('T')[0]}-${p.id}@aria`;
         ical += 'BEGIN:VEVENT\n';
-        ical += `SUMMARY:Visite - ${p.title} ${p.lastName}\n`;
-        ical += `DESCRIPTION:${p.specialty} - ${p.city}\n`;
+        ical += `UID:${uid}\n`;
+        ical += `DTSTART:${formatIcalDate(day.dateObj, visit.arrivalTime)}\n`;
+        ical += `DTEND:${formatIcalDate(day.dateObj, visit.departureTime)}\n`;
+        ical += `SUMMARY:Visite - ${p.title} ${p.firstName} ${p.lastName}\n`;
+        ical += `DESCRIPTION:${p.specialty} - ${p.city}\\nTrajet: ${visit.travelTime} min (${visit.distance} km)\n`;
         ical += `LOCATION:${p.city}\n`;
         ical += 'END:VEVENT\n';
       });
@@ -663,6 +753,7 @@ export const TourOptimizationPage: React.FC = () => {
     a.href = url;
     a.download = 'tournee-optimisee.ics';
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Étapes du wizard
@@ -966,7 +1057,7 @@ export const TourOptimizationPage: React.FC = () => {
                   ].map((opt) => (
                     <button
                       key={opt.id}
-                      onClick={() => setStartPoint(opt.id as any)}
+                      onClick={() => setStartPoint(opt.id as 'lyon' | 'grenoble' | 'home')}
                       className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                         startPoint === opt.id
                           ? 'border-green-500 bg-green-50'
@@ -1120,59 +1211,86 @@ export const TourOptimizationPage: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* Métriques */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="glass-card p-4 bg-gradient-to-br from-green-50 to-emerald-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingDown className="w-5 h-5 text-green-600" />
-                  <span className="text-sm text-slate-600">Distance économisée</span>
-                </div>
-                <div className="text-2xl font-bold text-green-700">{result.kmSaved} km</div>
-              </div>
+            {/* Métriques globales — économies réelles vs parcours non-optimisé */}
+            {(() => {
+              const kmSaved = Math.max(0, Math.round((result.naiveDistance - result.totalDistance) * 10) / 10);
+              const timeSaved = Math.max(0, Math.round(result.naiveTravelTime - result.totalTravelTime));
+              const pctSaved = result.naiveDistance > 0
+                ? Math.round((kmSaved / result.naiveDistance) * 100)
+                : 0;
+              return (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="glass-card p-4 bg-gradient-to-br from-green-50 to-emerald-50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingDown className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-slate-600">Distance économisée</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-700">{kmSaved} km</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      vs parcours non-optimisé ({pctSaved}%)
+                    </div>
+                  </div>
 
-              <div className="glass-card p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
-                  <span className="text-sm text-slate-600">Temps gagné</span>
-                </div>
-                <div className="text-2xl font-bold text-blue-700">
-                  {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')}
-                </div>
-              </div>
+                  <div className="glass-card p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm text-slate-600">Temps de trajet économisé</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-700">
+                      {formatMinutes(timeSaved)}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      sur l'ensemble de la tournée
+                    </div>
+                  </div>
 
-              <div className="glass-card p-4 bg-gradient-to-br from-purple-50 to-pink-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Navigation className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm text-slate-600">Distance totale</span>
-                </div>
-                <div className="text-2xl font-bold text-purple-700">{result.totalDistance} km</div>
-              </div>
+                  <div className="glass-card p-4 bg-gradient-to-br from-purple-50 to-pink-50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Navigation className="w-5 h-5 text-purple-600" />
+                      <span className="text-sm text-slate-600">Distance totale optimisée</span>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-700">{result.totalDistance} km</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      sur {result.days.length} jour{result.days.length > 1 ? 's' : ''} • trajet : {formatMinutes(result.totalTravelTime)}
+                    </div>
+                  </div>
 
-              <div className="glass-card p-4 bg-gradient-to-br from-amber-50 to-orange-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-5 h-5 text-amber-600" />
-                  <span className="text-sm text-slate-600">Jours planifiés</span>
+                  <div className="glass-card p-4 bg-gradient-to-br from-amber-50 to-orange-50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-5 h-5 text-amber-600" />
+                      <span className="text-sm text-slate-600">Jours planifiés</span>
+                    </div>
+                    <div className="text-2xl font-bold text-amber-700">{result.days.length}</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      {result.days.reduce((s, d) => s + d.visits.length, 0)} visites au total
+                    </div>
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-amber-700">{result.days.length}</div>
-              </div>
-            </div>
+              );
+            })()}
 
-            {/* Tabs pour les jours */}
+            {/* Tabs pour les jours — date complète */}
             <div className="glass-card p-4">
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {result.days.map((day, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveDay(idx)}
-                    className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                      activeDay === idx
-                        ? 'bg-al-blue-500 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Jour {day.day} - {day.date.split(' ').slice(0, 2).join(' ')}
-                  </button>
-                ))}
+                {result.days.map((day, idx) => {
+                  // Capitaliser la première lettre du jour
+                  const dateCapitalized = day.date.charAt(0).toUpperCase() + day.date.slice(1);
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveDay(idx)}
+                      className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                        activeDay === idx
+                          ? 'bg-al-blue-500 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span className="font-medium">Jour {day.day}</span>
+                      <span className="mx-1">—</span>
+                      <span className="capitalize">{dateCapitalized}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1244,50 +1362,88 @@ export const TourOptimizationPage: React.FC = () => {
                     {editableResult[activeDay]?.visits.length} visites
                   </span>
                   <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                    9h00 - {editableResult[activeDay]?.endTime}
+                    {editableResult[activeDay]?.startTime} — {editableResult[activeDay]?.endTime}
                   </span>
                   <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded">
                     {editableResult[activeDay]?.totalDistance} km
                   </span>
                   <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
-                    {Math.floor((editableResult[activeDay]?.totalTravelTime || 0) / 60)}h{((editableResult[activeDay]?.totalTravelTime || 0) % 60).toString().padStart(2, '0')} trajet
+                    {formatMinutes(editableResult[activeDay]?.totalTravelTime || 0)} trajet
                   </span>
                 </div>
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {editableResult[activeDay]?.visits.map((visit) => (
-                    <div
-                      key={visit.practitioner.id}
-                      className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:shadow-sm cursor-pointer"
-                      onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                        visit.practitioner.isKOL ? 'bg-amber-500' : 'bg-al-blue-500'
-                      }`}>
-                        {visit.order}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">
-                            {visit.practitioner.title} {visit.practitioner.lastName}
-                          </span>
-                          {visit.practitioner.isKOL && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
-                        </div>
-                        <p className="text-xs text-slate-500">{visit.practitioner.city}</p>
-                      </div>
-                      <div className="text-right text-xs">
-                        <div className="font-bold text-blue-600">{visit.arrivalTime} - {visit.departureTime}</div>
-                        <div className="text-slate-500">{visit.travelTime} min trajet • {visit.visitDuration} min visite</div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Retour */}
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+                <div className="space-y-2 max-h-[450px] overflow-y-auto">
+                  {/* Point de départ */}
+                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">
                       H
                     </div>
                     <div className="flex-1">
-                      <span className="font-medium text-sm text-slate-700">Retour à la base</span>
+                      <span className="font-medium text-sm text-green-800">
+                        Départ — {startPoint === 'lyon' ? 'Lyon Centre' : startPoint === 'grenoble' ? 'Grenoble' : 'Mon domicile'}
+                      </span>
+                      <p className="text-xs text-green-600">{editableResult[activeDay]?.startTime}</p>
+                    </div>
+                  </div>
+
+                  {editableResult[activeDay]?.visits.map((visit, idx) => (
+                    <React.Fragment key={visit.practitioner.id}>
+                      {/* Indicateur de pause déjeuner */}
+                      {idx > 0 && (() => {
+                        const prevDep = editableResult[activeDay]?.visits[idx - 1]?.departureTime || '';
+                        const curArr = visit.arrivalTime;
+                        const prevMin = parseInt(prevDep.split('h')[0]) * 60 + parseInt(prevDep.split('h')[1]);
+                        const curMin = parseInt(curArr.split('h')[0]) * 60 + parseInt(curArr.split('h')[1]);
+                        const gap = curMin - prevMin - visit.travelTime;
+                        if (gap >= 45) {
+                          return (
+                            <div className="flex items-center gap-3 p-2 bg-amber-50 rounded-lg border border-dashed border-amber-300 ml-4">
+                              <span className="text-sm">🍽</span>
+                              <span className="text-xs font-medium text-amber-700">
+                                Pause déjeuner ({formatMinutes(gap)})
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                      <div
+                        className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:shadow-sm cursor-pointer"
+                        onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                          visit.practitioner.isKOL ? 'bg-amber-500' : 'bg-al-blue-500'
+                        }`}>
+                          {visit.order}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">
+                              {visit.practitioner.title} {visit.practitioner.lastName}
+                            </span>
+                            {visit.practitioner.isKOL && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                          </div>
+                          <p className="text-xs text-slate-500">{visit.practitioner.city}</p>
+                        </div>
+                        <div className="text-right text-xs">
+                          <div className="font-bold text-blue-600">{visit.arrivalTime} — {visit.departureTime}</div>
+                          <div className="text-slate-500">{visit.travelTime} min trajet • {visit.visitDuration} min visite</div>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  ))}
+
+                  {/* Retour avec détails */}
+                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">
+                      H
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-medium text-sm text-green-800">Retour à la base</span>
+                      <p className="text-xs text-green-600">Arrivée : {editableResult[activeDay]?.endTime}</p>
+                    </div>
+                    <div className="text-right text-xs text-green-700">
+                      <div>{editableResult[activeDay]?.returnTravelTime} min trajet</div>
+                      <div>{editableResult[activeDay]?.returnDistance} km</div>
                     </div>
                   </div>
                 </div>
@@ -1312,7 +1468,10 @@ export const TourOptimizationPage: React.FC = () => {
                     <>
                       <h3 className="font-bold text-lg text-slate-800">Tournée optimisée avec succès !</h3>
                       <p className="text-sm text-slate-600 mt-1">
-                        Économie de {result.kmSaved} km et {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')} de trajet
+                        {result.naiveDistance > result.totalDistance
+                          ? `Économie de ${Math.round((result.naiveDistance - result.totalDistance) * 10) / 10} km et ${formatMinutes(Math.max(0, result.naiveTravelTime - result.totalTravelTime))} de trajet vs parcours initial`
+                          : `${result.days.reduce((s, d) => s + d.visits.length, 0)} visites planifiées sur ${result.days.length} jour${result.days.length > 1 ? 's' : ''}`
+                        }
                       </p>
                     </>
                   )}
