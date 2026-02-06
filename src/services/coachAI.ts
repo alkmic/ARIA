@@ -126,7 +126,7 @@ function handlePractitionerNewsQuery(queryResult: ReturnType<typeof executeQuery
         const typeLabel = n.type === 'publication' ? 'Publication' :
                           n.type === 'conference' ? 'Conférence' :
                           n.type === 'certification' ? 'Certification' :
-                          n.type === 'distinction' ? 'Distinction' : 'Événement';
+                          n.type === 'award' ? 'Distinction' : 'Événement';
         parts.push(`${i + 1}. **[${typeLabel}]** ${n.title}`);
         parts.push(`   _${new Date(n.date).toLocaleDateString('fr-FR')}_ — ${n.content}`);
         if (n.relevance) parts.push(`   → ${n.relevance}`);
