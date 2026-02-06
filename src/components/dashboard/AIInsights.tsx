@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Sparkles, AlertTriangle, TrendingUp, Star, Clock, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
+import { useUserDataStore } from '../../stores/useUserDataStore';
 import { DataService } from '../../services/dataService';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -10,6 +11,7 @@ import type { AIInsight } from '../../types';
 
 export const AIInsights: React.FC = () => {
   const { practitioners, upcomingVisits } = useAppStore();
+  const { visitReports, userNotes } = useUserDataStore();
   const navigate = useNavigate();
 
   // Generate dynamic insights based on real data
@@ -140,8 +142,65 @@ export const AIInsights: React.FC = () => {
       });
     }
 
+    // 7. New practitioners never visited
+    const newToTerritory = allPractitioners.filter(p =>
+      !p.lastVisitDate && p.visitHistory.length === 0
+    );
+    if (newToTerritory.length > 0) {
+      const best = newToTerritory.sort((a, b) => b.metrics.volumeL - a.metrics.volumeL)[0];
+      insights.push({
+        id: 'new-practitioner',
+        type: 'opportunity',
+        title: `${newToTerritory.length} nouveau(x) praticien(s) détecté(s)`,
+        message: `${best.title} ${best.firstName} ${best.lastName} (${(best.metrics.volumeL / 1000).toFixed(0)}K L/an) n'a jamais été visité. Planifiez une première visite.`,
+        priority: newToTerritory.some(p => p.metrics.vingtile <= 5) ? 'high' : 'medium',
+        actionLabel: 'Voir les actions',
+        practitionerId: best.id,
+      });
+    }
+
+    // 8. Recent visit report follow-ups
+    const recentReports = visitReports
+      .filter(r => {
+        const reportDate = new Date(r.date);
+        const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return reportDate >= sevenDaysAgo;
+      })
+      .filter(r => r.extractedInfo.nextActions.length > 0);
+
+    if (recentReports.length > 0) {
+      const report = recentReports[0];
+      insights.push({
+        id: 'visit-followup',
+        type: 'reminder',
+        title: `Suivi post-visite : ${report.practitionerName}`,
+        message: `Action en attente : ${report.extractedInfo.nextActions[0]}`,
+        priority: 'medium',
+        actionLabel: 'Voir le profil',
+        practitionerId: report.practitionerId,
+      });
+    }
+
+    // 9. Competitor alerts from user notes
+    const competitorNotes = userNotes.filter(n => n.type === 'competitive');
+    if (competitorNotes.length > 0) {
+      const recent = competitorNotes.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      const practitioner = allPractitioners.find(p => p.id === recent.practitionerId);
+      if (practitioner) {
+        insights.push({
+          id: 'competitor-alert',
+          type: 'alert',
+          title: 'Alerte concurrence',
+          message: `${practitioner.title} ${practitioner.lastName} : ${recent.content.substring(0, 100)}`,
+          priority: 'high',
+          actionLabel: 'Voir le profil',
+          practitionerId: recent.practitionerId,
+        });
+      }
+    }
+
     return insights.slice(0, 5); // Max 5 insights
-  }, [practitioners, upcomingVisits]);
+  }, [practitioners, upcomingVisits, visitReports, userNotes]);
 
   const priorityColors = {
     high: 'danger' as const,

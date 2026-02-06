@@ -9,6 +9,7 @@
  */
 
 import { DataService } from './dataService';
+import { useUserDataStore } from '../stores/useUserDataStore';
 import type { PractitionerProfile, PractitionerNote, PractitionerNews } from '../types/database';
 
 // Types de résultats de recherche
@@ -454,8 +455,54 @@ export function universalSearch(question: string): UniversalSearchResult {
     summary: `${p.title} ${p.firstName} ${p.lastName} - ${p.specialty} à ${p.address.city}`
   }));
 
+  // Search in user-created visit reports and notes
+  const { visitReports, userNotes } = useUserDataStore.getState();
+  const userReportResults: SearchResult[] = [];
+
+  visitReports.forEach(report => {
+    const searchableText = [
+      report.transcript,
+      ...report.extractedInfo.keyPoints,
+      ...report.extractedInfo.nextActions,
+      ...report.extractedInfo.topics,
+      ...report.extractedInfo.competitorsMentioned,
+    ].join(' ').toLowerCase();
+
+    let score = 0;
+    analysis.keywords.forEach(kw => {
+      if (searchableText.includes(kw.toLowerCase())) score += 30;
+    });
+    if (score > 0) {
+      const practitioner = allPractitioners.find(p => p.id === report.practitionerId);
+      userReportResults.push({
+        type: 'note' as const,
+        relevance: Math.min(100, score),
+        practitioner: practitioner || undefined,
+        data: report,
+        summary: `Compte-rendu ${report.date} — ${report.practitionerName}: ${report.extractedInfo.keyPoints.slice(0, 2).join(', ')}`,
+      });
+    }
+  });
+
+  userNotes.forEach(note => {
+    let score = 0;
+    analysis.keywords.forEach(kw => {
+      if (note.content.toLowerCase().includes(kw.toLowerCase())) score += 30;
+    });
+    if (score > 0) {
+      const practitioner = allPractitioners.find(p => p.id === note.practitionerId);
+      userReportResults.push({
+        type: 'note' as const,
+        relevance: Math.min(100, score),
+        practitioner: practitioner || undefined,
+        data: note,
+        summary: `Note ${note.type} — ${note.content.substring(0, 100)}`,
+      });
+    }
+  });
+
   // Combiner et trier tous les résultats
-  const allResults = [...practitionerResults, ...noteResults, ...newsResults, ...visitResults]
+  const allResults = [...practitionerResults, ...noteResults, ...newsResults, ...visitResults, ...userReportResults]
     .sort((a, b) => b.relevance - a.relevance);
 
   // Calculer les agrégations

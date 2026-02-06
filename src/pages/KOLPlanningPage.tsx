@@ -3,16 +3,21 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, AlertTriangle, Star, TrendingUp, MapPin, Clock, CheckCircle, Sparkles, ArrowLeft, Users, Droplets, FileText, Target, Shield } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
+import { useUserDataStore } from '../stores/useUserDataStore';
+import { DataService } from '../services/dataService';
 import type { Practitioner } from '../types';
 
 export const KOLPlanningPage: React.FC = () => {
   const navigate = useNavigate();
   const { practitioners, upcomingVisits } = useAppStore();
   const [selectedKOL, setSelectedKOL] = useState<string | null>(null);
+  const { visitReports, userNotes } = useUserDataStore();
+
+  // Compute today once (avoids React compiler purity issues)
+  const today = useMemo(() => new Date(), []);
 
   // Identifier les KOLs urgents (>90 jours sans visite)
   const urgentKOLs = useMemo(() => {
-    const today = new Date();
     const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
 
     return practitioners
@@ -31,11 +36,11 @@ export const KOLPlanningPage: React.FC = () => {
       })
       .sort((a, b) => b.volumeL - a.volumeL)
       .slice(0, 3);
-  }, [practitioners, upcomingVisits]);
+  }, [practitioners, upcomingVisits, today]);
 
-  // Analyse IA pour chaque KOL (déterministe basé sur les données)
+  // Analyse IA pour chaque KOL (basé sur les données réelles enrichies)
   const getKOLAnalysis = (kol: Practitioner, index: number) => {
-    const daysSinceLastVisit = Math.floor((Date.now() - new Date(kol.lastVisitDate || 0).getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceLastVisit = Math.floor((today.getTime() - new Date(kol.lastVisitDate || 0).getTime()) / (1000 * 60 * 60 * 24));
     const volumeRank = practitioners.filter(p => p.volumeL > kol.volumeL).length + 1;
     const avgVolume = practitioners.reduce((sum, p) => sum + p.volumeL, 0) / practitioners.length;
     const volumeVsAvg = ((kol.volumeL / avgVolume - 1) * 100).toFixed(0);
@@ -47,11 +52,104 @@ export const KOLPlanningPage: React.FC = () => {
 
     // Dates suggérées déterministes (basées sur l'index du KOL)
     const daysOffset = 5 + (index * 3);
-    const suggestedDate = new Date(Date.now() + daysOffset * 24 * 60 * 60 * 1000);
+    const suggestedDate = new Date(today.getTime() + daysOffset * 24 * 60 * 60 * 1000);
 
     // Temps de trajet basé sur le hash de l'ID (déterministe)
     const idHash = kol.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const travelTime = 20 + (idHash % 25);
+
+    // === Build data-driven topics, risks, opportunities from real data ===
+    const enrichedProfile = DataService.getPractitionerById(kol.id);
+    const kolReports = visitReports.filter(r => r.practitionerId === kol.id);
+    const kolNotes = userNotes.filter(n => n.practitionerId === kol.id);
+
+    // Key topics from real notes and publications
+    const keyTopics: string[] = [];
+    if (enrichedProfile) {
+      // From recent publications
+      const pubs = enrichedProfile.news.filter(n => n.type === 'publication');
+      if (pubs.length > 0) {
+        keyTopics.push(`Discuter de sa publication : "${pubs[0].title}"`);
+      }
+      // From recent conferences
+      const confs = enrichedProfile.news.filter(n => n.type === 'conference');
+      if (confs.length > 0) {
+        keyTopics.push(`Revenir sur la conférence : ${confs[0].title}`);
+      }
+      // From latest note's next action
+      if (enrichedProfile.notes.length > 0 && enrichedProfile.notes[0].nextAction) {
+        keyTopics.push(`Suivi : ${enrichedProfile.notes[0].nextAction}`);
+      }
+      // From visit history products
+      if (enrichedProfile.visitHistory.length > 0) {
+        const products = enrichedProfile.visitHistory[0].productsDiscussed;
+        if (products && products.length > 0) {
+          keyTopics.push(`Point sur ${products[0]} (discuté précédemment)`);
+        }
+      }
+    }
+    // From user reports
+    if (kolReports.length > 0) {
+      kolReports[0].extractedInfo.nextActions.slice(0, 1).forEach(a => keyTopics.push(a));
+    }
+    // Fill with defaults if needed
+    while (keyTopics.length < 3) {
+      const defaults = [
+        'Nouvelles solutions O2 domicile',
+        'Programme de suivi patient personnalisé',
+        'Formation équipe soignante',
+      ];
+      keyTopics.push(defaults[keyTopics.length] || 'Point relation et besoins actuels');
+    }
+
+    // Risks from real data
+    const risks: string[] = [];
+    if (daysSinceLastVisit > 120) {
+      risks.push(`Risque de désengagement élevé (${daysSinceLastVisit} jours sans visite)`);
+    } else if (daysSinceLastVisit > 90) {
+      risks.push('Suivi à renforcer rapidement');
+    }
+    // Competitor risks from notes
+    const competitors = ['Vivisol', 'Linde', 'SOS Oxygène', 'Bastide', 'Orkyn'];
+    const detectedCompetitors = new Set<string>();
+    if (enrichedProfile) {
+      enrichedProfile.notes.forEach(note => {
+        competitors.forEach(c => {
+          if (note.content.toLowerCase().includes(c.toLowerCase())) detectedCompetitors.add(c);
+        });
+      });
+    }
+    kolNotes.filter(n => n.type === 'competitive').forEach(n => {
+      competitors.forEach(c => {
+        if (n.content.toLowerCase().includes(c.toLowerCase())) detectedCompetitors.add(c);
+      });
+    });
+    if (detectedCompetitors.size > 0) {
+      risks.push(`Concurrence détectée : ${[...detectedCompetitors].join(', ')}`);
+    }
+    if (kol.trend === 'down') {
+      risks.push('Volume en baisse — investiguer les causes');
+    }
+    if (kol.loyaltyScore < 7) {
+      risks.push(`Fidélité à surveiller (${kol.loyaltyScore}/10)`);
+    }
+    if (risks.length === 0) {
+      risks.push('Aucun risque majeur identifié — maintenir le contact');
+    }
+
+    // Opportunities from real data
+    const opportunities: string[] = [];
+    opportunities.push(`Leader d'opinion dans ${kol.city}`);
+    opportunities.push(kol.volumeL > 500000 ? 'Top prescripteur régional' : 'Prescripteur important');
+    if (enrichedProfile && enrichedProfile.metrics.potentialGrowth > 20) {
+      opportunities.push(`Potentiel de croissance +${enrichedProfile.metrics.potentialGrowth}%`);
+    }
+    if (enrichedProfile && enrichedProfile.news.filter(n => n.type === 'publication').length > 2) {
+      opportunities.push('Activité académique intense — opportunité de collaboration');
+    }
+    if (kolReports.length > 0 && kolReports[0].extractedInfo.opportunities.length > 0) {
+      opportunities.push(kolReports[0].extractedInfo.opportunities[0]);
+    }
 
     return {
       urgencyScore: Math.min(100, Math.floor((daysSinceLastVisit / 180) * 100)),
@@ -63,23 +161,9 @@ export const KOLPlanningPage: React.FC = () => {
       estimatedInfluence: kol.vingtile <= 2 ? 'Très élevée' : kol.vingtile <= 5 ? 'Élevée' : 'Moyenne',
       suggestedDate,
       travelTime,
-      keyTopics: [
-        'Nouvelles solutions O2 domicile',
-        'Études cliniques récentes GOLD 2025',
-        'Programme de suivi patient personnalisé',
-        'Formation équipe soignante'
-      ],
-      risks: [
-        daysSinceLastVisit > 120 ? 'Risque de désengagement élevé' : 'Suivi à renforcer',
-        'Concurrence active sur ce prescripteur',
-        'Budget à renouveler ce trimestre'
-      ],
-      opportunities: [
-        `Leader d'opinion dans ${kol.city}`,
-        `${kol.volumeL > 500000 ? 'Top prescripteur régional' : 'Prescripteur important'}`,
-        'Potentiel de recommandation à ses pairs',
-        'Participation possible aux études cliniques'
-      ]
+      keyTopics: keyTopics.slice(0, 4),
+      risks: risks.slice(0, 3),
+      opportunities: opportunities.slice(0, 4),
     };
   };
 

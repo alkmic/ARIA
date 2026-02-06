@@ -7,6 +7,7 @@ import type { Practitioner } from '../types';
 import type { PitchConfig } from '../types/pitch';
 import { DataService } from './dataService';
 import type { PractitionerProfile } from '../types/database';
+import { useUserDataStore } from '../stores/useUserDataStore';
 
 const LENGTH_WORDS = {
   short: 200,
@@ -206,6 +207,45 @@ export function buildEnhancedUserPrompt(practitioner: Practitioner, config: Pitc
     .slice(0, 3)
     .map(([product]) => product);
 
+  // Get user-created visit reports for this practitioner
+  const { visitReports: allReports, userNotes: allNotes } = useUserDataStore.getState();
+  const myReports = allReports.filter(r => r.practitionerId === practitioner.id);
+  const myNotes = allNotes.filter(n => n.practitionerId === practitioner.id);
+
+  // Build user data context
+  let userDataSection = '';
+  if (myReports.length > 0) {
+    userDataSection += `\n═══════════════════════════════════════════════════════════════════════════
+COMPTES-RENDUS DE VISITE DU DÉLÉGUÉ
+═══════════════════════════════════════════════════════════════════════════\n`;
+    myReports.slice(0, 3).forEach(report => {
+      userDataSection += `\n**${report.date} (${report.extractedInfo.sentiment}):**\n`;
+      if (report.extractedInfo.keyPoints.length > 0) {
+        userDataSection += `Points clés: ${report.extractedInfo.keyPoints.join(', ')}\n`;
+      }
+      if (report.extractedInfo.nextActions.length > 0) {
+        userDataSection += `Actions suivantes: ${report.extractedInfo.nextActions.join(', ')}\n`;
+      }
+      if (report.extractedInfo.objections.length > 0) {
+        userDataSection += `Objections exprimées: ${report.extractedInfo.objections.join(', ')}\n`;
+      }
+      if (report.extractedInfo.opportunities.length > 0) {
+        userDataSection += `Opportunités: ${report.extractedInfo.opportunities.join(', ')}\n`;
+      }
+      if (report.extractedInfo.competitorsMentioned.length > 0) {
+        userDataSection += `Concurrents mentionnés: ${report.extractedInfo.competitorsMentioned.join(', ')}\n`;
+      }
+    });
+  }
+  if (myNotes.length > 0) {
+    userDataSection += `\n═══════════════════════════════════════════════════════════════════════════
+NOTES STRATÉGIQUES DU DÉLÉGUÉ
+═══════════════════════════════════════════════════════════════════════════\n`;
+    myNotes.slice(0, 5).forEach(note => {
+      userDataSection += `- [${note.type.toUpperCase()}] ${note.content}\n`;
+    });
+  }
+
   return `Génère un pitch ULTRA-PERSONNALISÉ pour ce praticien en utilisant TOUTES les informations ci-dessous:
 
 ═══════════════════════════════════════════════════════════════════════════
@@ -265,7 +305,11 @@ ${config.additionalInstructions ? `**INSTRUCTIONS SPÉCIALES DU COMMERCIAL:**\n$
 
 ═══════════════════════════════════════════════════════════════════════════
 
+${userDataSection}
+
 IMPORTANT: Utilise les publications récentes et l'historique des visites pour personnaliser l'accroche.
+${myReports.length > 0 ? 'UTILISE les comptes-rendus de visite du délégué pour adapter le ton et aborder les sujets en cours.' : ''}
+${myReports.some(r => r.extractedInfo.objections.length > 0) ? 'ATTENTION: Des objections ont été relevées lors de visites précédentes - adresse-les proactivement dans le pitch.' : ''}
 ${profile.metrics.isKOL ? 'Ce praticien est un KOL - sois particulièrement attentif et professionnel.' : ''}
 ${profile.metrics.churnRisk === 'high' ? 'ATTENTION: Risque de churn élevé - le pitch doit être particulièrement convaincant et adresser les éventuelles frustrations.' : ''}
 ${totalPublications > 0 ? `Mentionne si possible une de ses ${totalPublications} publication(s) dans l'accroche.` : ''}
