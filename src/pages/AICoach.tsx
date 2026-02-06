@@ -180,6 +180,91 @@ function buildLocalRAGResponse(results: SearchResult[]): string {
   return parts.join('\n');
 }
 
+/** Enrichit une question de suivi avec le contexte conversationnel */
+function enrichQueryWithContext(
+  question: string,
+  previousMessages: Message[]
+): { query: string; pointExtract?: { num: number; content: string } } {
+  const lastAssistant = [...previousMessages].reverse().find(m => m.role === 'assistant');
+  if (!lastAssistant?.content) return { query: question };
+
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Numbered point reference: "point 7", "développe le 7", "détaille le n°3"
+  const pointMatch = q.match(/(?:point|numero|n[°o]|le|du)\s*(\d+)/);
+  if (pointMatch) {
+    const pointNum = parseInt(pointMatch[1]);
+    const lineMatch = lastAssistant.content.match(new RegExp(`${pointNum}\\.\\s*(.+?)(?:\\n|$)`));
+    if (lineMatch) {
+      const pointContent = lineMatch[1].trim();
+      return {
+        query: pointContent,
+        pointExtract: { num: pointNum, content: pointContent }
+      };
+    }
+  }
+
+  // General short follow-up: enrich with previous heading/topic
+  if (question.length < 80) {
+    const followUpPattern = /developpe|explique|detaille|precise|plus de detail|approfondi|c.est quoi|comment|pourquoi|et pour|et concernant|parle/;
+    if (followUpPattern.test(q)) {
+      // Try ### heading
+      const headingMatch = lastAssistant.content.match(/###\s+(.+)/);
+      if (headingMatch) {
+        return { query: `${question} ${headingMatch[1]}` };
+      }
+      // Try **bold heading** at start of message
+      const boldMatch = lastAssistant.content.match(/^\*\*(.+?)\*\*/);
+      if (boldMatch) {
+        return { query: `${question} ${boldMatch[1]}` };
+      }
+    }
+  }
+
+  return { query: question };
+}
+
+/** Construit une réponse ciblée pour un drill-down sur un point numéroté */
+function buildPointFollowUpResponse(
+  pointExtract: { num: number; content: string },
+  results: SearchResult[]
+): string {
+  const parts: string[] = [];
+
+  parts.push(`**Point ${pointExtract.num}** — ${pointExtract.content}\n`);
+
+  if (results.length > 0) {
+    parts.push(`Voici des informations complémentaires de la **base de connaissances** :\n`);
+
+    for (let i = 0; i < Math.min(results.length, 2); i++) {
+      const result = results[i];
+      const section = result.chunk.metadata.section || '';
+      const source = result.chunk.metadata.source || '';
+      const category = getCategoryLabel(result.chunk.metadata.category || '');
+
+      if (i > 0) parts.push('\n---\n');
+
+      if (section) parts.push(`### ${section}`);
+      parts.push(`> ${category} — ${source}\n`);
+
+      let content = result.chunk.content;
+      if (section && content.startsWith(section)) {
+        content = content.substring(section.length).replace(/^\n+/, '');
+      }
+
+      const isBuiltin = result.chunk.documentId === 'builtin';
+      if (!isBuiltin && content.length > 1200) {
+        content = content.substring(0, 1200) + '...';
+      }
+      parts.push(content);
+    }
+  } else {
+    parts.push(`Pour des détails approfondis sur ce point, consultez les recommandations officielles ou configurez une clé API LLM dans les paramètres.`);
+  }
+
+  return parts.join('\n');
+}
+
 export default function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -951,9 +1036,12 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
           }
         }
       } else {
-        // Search RAG knowledge base for relevant answers
+        // Enrich follow-up questions with conversation context
+        const { query: searchQuery, pointExtract } = enrichQueryWithContext(question, messages);
+
+        // Search RAG knowledge base with enriched query
         const builtinChunks = getBuiltinChunks();
-        const ragResults = searchChunks(question, documentChunks, builtinChunks, 5);
+        const ragResults = searchChunks(searchQuery, documentChunks, builtinChunks, 5);
 
         // Try local practitioner handler
         const localResponse = generateCoachResponse(
@@ -968,7 +1056,11 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
           && ragResults[0].score > 0.5;
 
         if (useRAG) {
-          const ragContent = buildLocalRAGResponse(ragResults);
+          // Use focused response for numbered point drill-downs
+          const ragContent = pointExtract
+            ? buildPointFollowUpResponse(pointExtract, ragResults)
+            : buildLocalRAGResponse(ragResults);
+
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
