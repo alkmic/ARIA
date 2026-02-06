@@ -131,6 +131,52 @@ export function generateFullDataContext(): string {
       lines.push(`- ${p.title} ${p.firstName} ${p.lastName} (${new Date(note.date).toLocaleDateString('fr-FR')}): ${note.content.substring(0, 120)}`);
     });
 
+  // Données utilisateur (comptes-rendus de visite et notes créés par l'utilisateur)
+  // Ce bloc sera enrichi dynamiquement via injectUserData()
+  lines.push('');
+  lines.push('NOTES ET COMPTES-RENDUS UTILISATEUR:');
+  lines.push('(Ces données sont ajoutées dynamiquement via la fonction injectUserData)');
+
+  return lines.join('\n');
+}
+
+/**
+ * Injecte les données utilisateur (notes et comptes-rendus) dans un contexte existant
+ * Appelé depuis le composant qui a accès au store Zustand
+ */
+export function injectUserData(
+  baseContext: string,
+  userNotes: Array<{ practitionerId: string; content: string; type: string; createdAt: string }>,
+  visitReports: Array<{ practitionerId: string; practitionerName: string; date: string; transcript: string; extractedInfo: { topics: string[]; sentiment: string; nextActions: string[]; keyPoints: string[] } }>
+): string {
+  const lines: string[] = [baseContext];
+
+  // Replace the placeholder section
+  const placeholderIdx = baseContext.indexOf('NOTES ET COMPTES-RENDUS UTILISATEUR:');
+  if (placeholderIdx >= 0) {
+    const before = baseContext.substring(0, placeholderIdx);
+    lines.length = 0;
+    lines.push(before);
+  }
+
+  if (userNotes.length > 0 || visitReports.length > 0) {
+    lines.push('NOTES ET COMPTES-RENDUS UTILISATEUR (données récentes):');
+
+    if (visitReports.length > 0) {
+      lines.push('  Comptes-rendus de visite:');
+      visitReports.slice(0, 20).forEach(r => {
+        lines.push(`  - ${r.practitionerName} (${r.date}): Sentiment=${r.extractedInfo.sentiment}. Points clés: ${r.extractedInfo.keyPoints.join('; ') || 'Aucun'}. Actions: ${r.extractedInfo.nextActions.join('; ') || 'Aucune'}`);
+      });
+    }
+
+    if (userNotes.length > 0) {
+      lines.push('  Notes stratégiques:');
+      userNotes.slice(0, 30).forEach(n => {
+        lines.push(`  - [${n.type}] ${n.content.substring(0, 150)}`);
+      });
+    }
+  }
+
   return lines.join('\n');
 }
 

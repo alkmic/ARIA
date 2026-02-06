@@ -23,7 +23,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Loader2,
-  FileText
+  FileText,
+  Eye
 } from 'lucide-react';
 import { useGroq } from '../hooks/useGroq';
 import { quickSearch } from '../services/universalSearch';
@@ -48,6 +49,14 @@ interface ExtractedInfo {
   opportunities: string[];
 }
 
+// Catégories de mises à jour proposées par l'IA
+interface ProposedProfileUpdate {
+  category: 'observation' | 'strategy' | 'competitive' | 'reminder';
+  title: string;
+  content: string;
+  enabled: boolean; // L'utilisateur peut désactiver
+}
+
 export default function VoiceVisitReport() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -64,6 +73,7 @@ export default function VoiceVisitReport() {
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
   const [editedNotes, setEditedNotes] = useState('');
   const [_isSaved, setIsSaved] = useState(false);
+  const [proposedUpdates, setProposedUpdates] = useState<ProposedProfileUpdate[]>([]);
 
   const recognitionRef = useRef<any>(null);
   const interimTranscriptRef = useRef('');
@@ -213,6 +223,44 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
               objections: parsed.objections || [],
               opportunities: parsed.opportunities || []
             });
+            // Generate proposed profile updates from extracted data
+            const updates: ProposedProfileUpdate[] = [];
+            const parsed2 = parsed;
+
+            if (parsed2.keyPoints?.length > 0) {
+              updates.push({
+                category: 'observation',
+                title: 'Points clés de la visite',
+                content: `Visite du ${new Date().toLocaleDateString('fr-FR')} :\n${parsed2.keyPoints.map((p: string) => `• ${p}`).join('\n')}`,
+                enabled: true,
+              });
+            }
+            if (parsed2.opportunities?.length > 0) {
+              updates.push({
+                category: 'strategy',
+                title: 'Opportunités détectées',
+                content: `Opportunités identifiées le ${new Date().toLocaleDateString('fr-FR')} :\n${parsed2.opportunities.map((o: string) => `• ${o}`).join('\n')}`,
+                enabled: true,
+              });
+            }
+            if (parsed2.competitorsMentioned?.length > 0) {
+              updates.push({
+                category: 'competitive',
+                title: 'Intelligence concurrentielle',
+                content: `Concurrents mentionnés le ${new Date().toLocaleDateString('fr-FR')} : ${parsed2.competitorsMentioned.join(', ')}.\n${parsed2.objections?.length > 0 ? `Objections exprimées : ${parsed2.objections.join('; ')}` : ''}`,
+                enabled: true,
+              });
+            }
+            if (parsed2.nextActions?.length > 0) {
+              updates.push({
+                category: 'reminder',
+                title: 'Actions de suivi',
+                content: `Actions à mener suite à la visite du ${new Date().toLocaleDateString('fr-FR')} :\n${parsed2.nextActions.map((a: string) => `• ${a}`).join('\n')}`,
+                enabled: true,
+              });
+            }
+
+            setProposedUpdates(updates);
             setEditedNotes(transcript);
             setStep('review');
           }
@@ -289,32 +337,14 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       }
     });
 
-    // If there are key points, save them as strategic notes
-    if (extractedInfo.keyPoints.length > 0) {
+    // Save only the user-validated proposed updates
+    proposedUpdates.filter(u => u.enabled).forEach(update => {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Points clés de la visite du ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.keyPoints.map(p => `• ${p}`).join('\n')}`,
-        type: 'observation'
+        content: update.content,
+        type: update.category,
       });
-    }
-
-    // If there are opportunities, save them as strategy notes
-    if (extractedInfo.opportunities.length > 0) {
-      addUserNote({
-        practitionerId: selectedPractitioner.id,
-        content: `Opportunités détectées le ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.opportunities.map(o => `• ${o}`).join('\n')}`,
-        type: 'strategy'
-      });
-    }
-
-    // If competitors were mentioned, save as competitive intelligence
-    if (extractedInfo.competitorsMentioned.length > 0) {
-      addUserNote({
-        practitionerId: selectedPractitioner.id,
-        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\nConcurrents mentionnés: ${extractedInfo.competitorsMentioned.join(', ')}`,
-        type: 'competitive'
-      });
-    }
+    });
 
     console.log('Saved report to store:', savedReport.id);
     setIsSaved(true);
@@ -756,6 +786,64 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 </div>
               )}
             </div>
+
+            {/* Proposed Profile Updates — user validates before saving */}
+            {proposedUpdates.length > 0 && (
+              <div className="glass-card p-4 border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-teal-50/50">
+                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-emerald-500" />
+                  Mises à jour proposées pour le profil
+                  <span className="text-xs font-normal text-slate-500 ml-2">
+                    Validez les éléments à enregistrer dans la fiche du praticien
+                  </span>
+                </h4>
+                <div className="space-y-3">
+                  {proposedUpdates.map((update, idx) => {
+                    const categoryIcons = {
+                      observation: { icon: Eye, color: 'text-blue-500', bg: 'bg-blue-100' },
+                      strategy: { icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-100' },
+                      competitive: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-100' },
+                      reminder: { icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-100' },
+                    };
+                    const config = categoryIcons[update.category];
+                    const Icon = config.icon;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                          update.enabled
+                            ? 'bg-white border-slate-200'
+                            : 'bg-slate-50 border-slate-100 opacity-60'
+                        }`}
+                      >
+                        <button
+                          onClick={() => {
+                            const newUpdates = [...proposedUpdates];
+                            newUpdates[idx] = { ...newUpdates[idx], enabled: !newUpdates[idx].enabled };
+                            setProposedUpdates(newUpdates);
+                          }}
+                          className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all ${
+                            update.enabled
+                              ? 'bg-emerald-500 text-white'
+                              : 'border-2 border-slate-300'
+                          }`}
+                        >
+                          {update.enabled && <Check className="w-3 h-3" />}
+                        </button>
+                        <div className={`p-1.5 rounded ${config.bg} flex-shrink-0`}>
+                          <Icon className={`w-4 h-4 ${config.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-slate-700">{update.title}</p>
+                          <p className="text-xs text-slate-500 mt-1 whitespace-pre-line">{update.content}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Editable Notes */}
             <div className="glass-card p-4">

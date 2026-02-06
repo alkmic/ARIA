@@ -44,7 +44,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
 import { DataService } from '../services/dataService';
-import { generateCoachSystemPrompt, generateCompactContext } from '../services/llmDataContext';
+import { generateCoachSystemPrompt, generateCompactContext, injectUserData } from '../services/llmDataContext';
 import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
 import { universalSearch, getFullDatabaseContext } from '../services/universalSearch';
 import {
@@ -62,6 +62,7 @@ import {
   clearChartHistory,
   type ChartSpec
 } from '../services/agenticChartEngine';
+import { useUserDataStore } from '../stores/useUserDataStore';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
@@ -102,6 +103,7 @@ export default function AICoach() {
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
   const { complete, error: groqError } = useGroq();
+  const { visitReports, userNotes } = useUserDataStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -268,7 +270,32 @@ export default function AICoach() {
     const fullSiteContext = userQuestion ? getFullDatabaseContext() : generateFullSiteContext();
 
     // Generer le contexte complet de la DB pour les questions specifiques
-    const fullDataCtx = userQuestion ? generateCompactContext(userQuestion) : '';
+    let fullDataCtx = userQuestion ? generateCompactContext(userQuestion) : '';
+
+    // Injecter les données utilisateur (notes et comptes-rendus de visite) dans le contexte
+    if (fullDataCtx && (userNotes.length > 0 || visitReports.length > 0)) {
+      fullDataCtx = injectUserData(
+        fullDataCtx,
+        userNotes.map(n => ({
+          practitionerId: n.practitionerId,
+          content: n.content,
+          type: n.type,
+          createdAt: n.createdAt,
+        })),
+        visitReports.map(r => ({
+          practitionerId: r.practitionerId,
+          practitionerName: r.practitionerName,
+          date: r.date,
+          transcript: r.transcript,
+          extractedInfo: {
+            topics: r.extractedInfo.topics,
+            sentiment: r.extractedInfo.sentiment,
+            nextActions: r.extractedInfo.nextActions,
+            keyPoints: r.extractedInfo.keyPoints,
+          },
+        }))
+      );
+    }
 
     return `${generateCoachSystemPrompt()}
 
@@ -310,8 +337,14 @@ ${specificPractitionerContext}
 ${fullSiteContext}
 ${fullDataCtx}
 
+DONNÉES UTILISATEUR (rapports de visite et notes du délégué) :
+- Nombre de comptes-rendus de visite : ${visitReports.length}
+- Nombre de notes stratégiques : ${userNotes.length}
+${visitReports.length > 0 ? `- Derniers comptes-rendus : ${visitReports.slice(0, 3).map(r => `${r.practitionerName} (${r.date})`).join(', ')}` : '- Aucun compte-rendu enregistré'}
+
 INSTRUCTIONS IMPORTANTES :
 - Reponds de maniere concise et professionnelle avec des recommandations concretes
+- Prends en compte les comptes-rendus de visite et notes du délégué dans tes analyses
 - Utilise le format Markdown pour mettre en valeur les informations importantes (**gras**, *italique*)
 - Pour les questions sur des praticiens specifiques, utilise les donnees ci-dessus pour donner des reponses PRECISES
 - Si on demande "quel medecin dont le prenom est X a le plus de Y", cherche dans la base complete ci-dessus
@@ -438,7 +471,7 @@ Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les p
 
         if (chartResponse) {
           // Parser la réponse du LLM pour extraire la spec
-          let spec = parseLLMChartResponse(chartResponse);
+          const spec = parseLLMChartResponse(chartResponse);
 
           if (spec) {
             // Forcer le limit si extrait de la question mais pas dans la spec

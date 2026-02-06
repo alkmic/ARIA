@@ -162,6 +162,12 @@ function calculateScores(
       impact = 60;
       probability = 70;
       break;
+
+    case 'new_practitioner':
+      urgency = 60 + context.volumePercentile / 3;
+      impact = context.volumePercentile + (p.metrics.isKOL ? 20 : 0);
+      probability = 70;
+      break;
   }
 
   // Normalisation
@@ -389,6 +395,59 @@ export function generateIntelligentActions(
 
   practitioners.forEach(p => {
     const context = analyzePractitionerContext(p);
+
+    // 0. Nouveau praticien détecté sur le territoire (jamais visité)
+    if (context.daysSinceVisit >= 999 || (!p.lastVisitDate && p.visitHistory.length === 0)) {
+      const type: AIAction['type'] = 'new_practitioner';
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
+
+        // Score élevé pour les gros prescripteurs jamais visités
+        const urgency = Math.min(100, 60 + context.volumePercentile / 2);
+        const impact = context.volumePercentile + (p.metrics.isKOL ? 20 : 0);
+        const probability = 70; // Bonne probabilité car premier contact
+        const overall = Math.round(urgency * 0.35 + impact * 0.40 + probability * 0.25);
+        const scores = { urgency, impact, probability, overall };
+
+        const priority = p.metrics.isKOL ? 'critical' as const
+          : p.metrics.vingtile <= 5 ? 'high' as const
+          : 'medium' as const;
+
+        const volumeK = (p.metrics.volumeL / 1000).toFixed(0);
+        const stats = DataService.getGlobalStats();
+        const volumeShare = ((p.metrics.volumeL / stats.totalVolume) * 100).toFixed(1);
+
+        actions.push({
+          type,
+          priority,
+          practitionerId: p.id,
+          title: `Nouveau praticien à rencontrer`,
+          reason: `${p.specialty} à ${p.address.city} — ${volumeK}K L/an — jamais visité`,
+          aiJustification: {
+            summary: `${p.title} ${p.lastName} est un ${p.specialty.toLowerCase()} à ${p.address.city} qui n'a encore jamais été visité par notre équipe. ${p.metrics.isKOL ? 'C\'est un KOL — la prise de contact est prioritaire.' : `Avec ${volumeK}K L/an, c'est un prescripteur à fort potentiel.`}`,
+            metrics: [
+              `Volume : ${volumeK}K L/an (${volumeShare}% du territoire)`,
+              `Vingtile ${p.metrics.vingtile}/20`,
+              `Potentiel de croissance : +${p.metrics.potentialGrowth}%`,
+              `Aucune visite enregistrée`,
+            ],
+            risks: [
+              'Prescripteur non couvert — risque de captation par un concurrent',
+              p.metrics.volumeL > 50000 ? `Volume significatif non sécurisé (${volumeK}K L)` : 'Potentiel non exploité',
+            ],
+            opportunities: [
+              'Premier contact — possibilité de créer une relation de confiance durable',
+              'Présenter l\'ensemble de notre gamme et nos services différenciants',
+              p.metrics.isKOL ? 'KOL : potentiel d\'influence sur d\'autres prescripteurs' : 'Développement du portefeuille territorial',
+            ],
+            suggestedApproach: `Préparez une visite de présentation complète d'Air Liquide Santé. Apportez de la documentation sur nos services (SAV 24/7, monitoring connecté, éducation thérapeutique). Renseignez-vous sur ses besoins actuels et ses éventuels prestataires.`,
+          },
+          scores,
+          suggestedDate: priority === 'critical' ? 'Cette semaine' : 'Sous 2 semaines',
+        });
+      }
+    }
 
     // 1. KOL à visiter (priorité maximale)
     if (p.metrics.isKOL && context.daysSinceVisit > kolVisitDays) {

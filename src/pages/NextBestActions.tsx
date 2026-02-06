@@ -28,7 +28,8 @@ import {
   Newspaper,
   XCircle,
   Timer,
-  Brain
+  Brain,
+  UserPlus
 } from 'lucide-react';
 import { DataService } from '../services/dataService';
 import { generateIntelligentActions } from '../services/actionIntelligence';
@@ -100,6 +101,14 @@ const ACTION_CONFIG = {
     border: 'border-cyan-200',
     text: 'text-cyan-700',
     label: 'Publication'
+  },
+  new_practitioner: {
+    icon: UserPlus,
+    color: 'from-teal-500 to-emerald-500',
+    bg: 'bg-teal-50',
+    border: 'border-teal-200',
+    text: 'text-teal-700',
+    label: 'Nouveau praticien'
   }
 };
 
@@ -573,6 +582,7 @@ export default function NextBestActions() {
         upsell: active.filter(a => a.type === 'upsell').length,
         competitor: active.filter(a => a.type === 'competitor').length,
         publication: active.filter(a => a.type === 'publication').length,
+        new_practitioner: active.filter(a => a.type === 'new_practitioner').length,
       }
     };
   }, [storedActions, getActiveActions]); // eslint-disable-line react-hooks/exhaustive-deps
