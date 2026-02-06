@@ -46,7 +46,7 @@ import { calculatePeriodMetrics, getTopPractitioners } from '../services/metrics
 import { DataService } from '../services/dataService';
 import { generateCoachSystemPrompt, generateCompactContext, injectUserData } from '../services/llmDataContext';
 import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
-import { universalSearch, getFullDatabaseContext } from '../services/universalSearch';
+import { universalSearch, getFullDatabaseContext, analyzeQuery } from '../services/universalSearch';
 import {
   CHART_GENERATION_PROMPT,
   getDataContextForLLM,
@@ -242,60 +242,134 @@ export default function AICoach() {
     let queryContext = '';
     let specificPractitionerContext = '';
     let universalSearchContext = '';
+    let hasSpecificPractitioner = false;
 
     if (userQuestion) {
-      // Utiliser la recherche universelle pour des résultats complets
+      // 1. Analyse sémantique pour extraire les noms de la question
+      const queryAnalysis = analyzeQuery(userQuestion);
+      const extractedNames = queryAnalysis.entities.names;
+
+      // 2. Recherche de praticiens spécifiques par noms extraits
+      if (extractedNames.length > 0) {
+        // Recherche ciblée avec chaque nom extrait
+        const allMatches: Map<string, typeof practitioners[0] extends never ? never : ReturnType<typeof DataService.getAllPractitioners>[0]> = new Map();
+
+        for (const name of extractedNames) {
+          const matches = DataService.fuzzySearchPractitioner(name);
+          matches.forEach(m => allMatches.set(m.id, m));
+        }
+
+        // Si plusieurs noms extraits, filtrer pour garder ceux qui matchent TOUS les noms
+        let finalMatches = Array.from(allMatches.values());
+        if (extractedNames.length >= 2 && finalMatches.length > 1) {
+          const refined = finalMatches.filter(p => {
+            const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+            return extractedNames.every(name =>
+              fullName.includes(name.toLowerCase())
+            );
+          });
+          if (refined.length > 0) {
+            finalMatches = refined;
+          }
+        }
+
+        if (finalMatches.length > 0 && finalMatches.length <= 5) {
+          hasSpecificPractitioner = true;
+          specificPractitionerContext = finalMatches.map(p =>
+            DataService.getCompletePractitionerContext(p.id)
+          ).join('\n');
+        }
+      }
+
+      // 3. Utiliser la recherche universelle pour des résultats complets
       const universalResult = universalSearch(userQuestion);
       if (universalResult.results.length > 0) {
         universalSearchContext = universalResult.context;
       }
 
-      // Exécuter aussi la requête classique pour compatibilité
+      // 4. Exécuter aussi la requête classique pour compatibilité
       const queryResult = executeQuery(userQuestion);
-
-      // Si des résultats spécifiques sont trouvés, générer le contexte de requête
       if (queryResult.practitioners.length > 0 && queryResult.practitioners.length < practitioners.length) {
         queryContext = generateQueryContext(userQuestion);
       }
 
-      // Recherche floue additionnelle pour le contexte de praticien spécifique
-      const matches = DataService.fuzzySearchPractitioner(userQuestion);
-      if (matches.length > 0 && matches.length <= 3) {
-        specificPractitionerContext = matches.map(p =>
-          DataService.getCompletePractitionerContext(p.id)
-        ).join('\n');
+      // 5. Fallback : si aucun praticien spécifique trouvé, essayer la recherche floue par mots capitalisés
+      if (!hasSpecificPractitioner) {
+        const capitalizedWords = userQuestion.match(/\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+\b/g) || [];
+        const nameCandidate = capitalizedWords.filter(w =>
+          !['Dr', 'Docteur', 'Pr', 'Professeur', 'Quelles', 'Quels', 'Quel', 'Quelle', 'Comment', 'Pourquoi', 'Est'].includes(w)
+        );
+
+        if (nameCandidate.length > 0) {
+          const allMatches = new Map<string, ReturnType<typeof DataService.getAllPractitioners>[0]>();
+          for (const word of nameCandidate) {
+            const matches = DataService.fuzzySearchPractitioner(word);
+            matches.forEach(m => allMatches.set(m.id, m));
+          }
+
+          let finalMatches = Array.from(allMatches.values());
+          if (nameCandidate.length >= 2 && finalMatches.length > 1) {
+            const refined = finalMatches.filter(p => {
+              const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+              return nameCandidate.some(name =>
+                fullName.includes(name.toLowerCase())
+              );
+            });
+            if (refined.length > 0 && refined.length <= 5) {
+              finalMatches = refined;
+            }
+          }
+
+          if (finalMatches.length > 0 && finalMatches.length <= 5) {
+            hasSpecificPractitioner = true;
+            specificPractitionerContext = finalMatches.map(p =>
+              DataService.getCompletePractitionerContext(p.id)
+            ).join('\n');
+          }
+        }
       }
     }
 
-    // Générer le contexte complet du site pour les questions générales
-    const fullSiteContext = userQuestion ? getFullDatabaseContext() : generateFullSiteContext();
+    // Générer le contexte selon la spécificité de la question
+    // Si un praticien spécifique est identifié, SKIP les dumps massifs de DB
+    // pour garder le prompt dans les limites du LLM
+    let fullSiteContext = '';
+    let fullDataCtx = '';
 
-    // Generer le contexte complet de la DB pour les questions specifiques
-    let fullDataCtx = userQuestion ? generateCompactContext(userQuestion) : '';
+    if (hasSpecificPractitioner) {
+      // Question ciblée : pas besoin du dump complet, le contexte praticien suffit
+      // On ajoute juste un mini résumé du territoire
+      fullSiteContext = '';
+      fullDataCtx = '';
+    } else {
+      // Question générale : inclure le contexte complet
+      fullSiteContext = userQuestion ? getFullDatabaseContext() : generateFullSiteContext();
+      fullDataCtx = userQuestion ? generateCompactContext(userQuestion) : '';
 
-    // Injecter les données utilisateur (notes et comptes-rendus de visite) dans le contexte
-    if (fullDataCtx && (userNotes.length > 0 || visitReports.length > 0)) {
-      fullDataCtx = injectUserData(
-        fullDataCtx,
-        userNotes.map(n => ({
-          practitionerId: n.practitionerId,
-          content: n.content,
-          type: n.type,
-          createdAt: n.createdAt,
-        })),
-        visitReports.map(r => ({
-          practitionerId: r.practitionerId,
-          practitionerName: r.practitionerName,
-          date: r.date,
-          transcript: r.transcript,
-          extractedInfo: {
-            topics: r.extractedInfo.topics,
-            sentiment: r.extractedInfo.sentiment,
-            nextActions: r.extractedInfo.nextActions,
-            keyPoints: r.extractedInfo.keyPoints,
-          },
-        }))
-      );
+      // Injecter les données utilisateur (notes et comptes-rendus de visite) dans le contexte
+      if (fullDataCtx && (userNotes.length > 0 || visitReports.length > 0)) {
+        fullDataCtx = injectUserData(
+          fullDataCtx,
+          userNotes.map(n => ({
+            practitionerId: n.practitionerId,
+            content: n.content,
+            type: n.type,
+            createdAt: n.createdAt,
+          })),
+          visitReports.map(r => ({
+            practitionerId: r.practitionerId,
+            practitionerName: r.practitionerName,
+            date: r.date,
+            transcript: r.transcript,
+            extractedInfo: {
+              topics: r.extractedInfo.topics,
+              sentiment: r.extractedInfo.sentiment,
+              nextActions: r.extractedInfo.nextActions,
+              keyPoints: r.extractedInfo.keyPoints,
+            },
+          }))
+        );
+      }
     }
 
     return `${generateCoachSystemPrompt()}
@@ -351,7 +425,14 @@ INSTRUCTIONS IMPORTANTES :
 - Si on demande "quel medecin dont le prenom est X a le plus de Y", cherche dans la base complete ci-dessus
 - Priorise par impact strategique : KOL > Volume > Urgence > Fidelite
 - Fournis des chiffres precis bases sur les donnees reelles
-- Adapte tes recommandations a la periode (${periodLabel})`;
+- Adapte tes recommandations a la periode (${periodLabel})
+${hasSpecificPractitioner ? `
+IMPORTANT - PRATICIEN SPÉCIFIQUE IDENTIFIÉ :
+- La FICHE COMPLÈTE du praticien mentionné dans la question est fournie ci-dessus
+- Utilise TOUTES les informations de cette fiche pour répondre (actualités, notes, visites, métriques)
+- Si la question porte sur les actualités, liste TOUTES les actualités de la fiche
+- Si la question porte sur les notes de visite, détaille les notes de la fiche
+- Sois exhaustif dans ta réponse en utilisant les données de la fiche` : ''}`;
   };
 
   // Détecter si la question demande une visualisation

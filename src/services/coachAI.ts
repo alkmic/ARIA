@@ -34,6 +34,10 @@ export function generateSmartResponse(
 
   // 1. Questions sur des praticiens spécifiques (nom, prénom)
   if (analysis.filters.firstName || analysis.filters.lastName) {
+    // Détecter si c'est une question sur les actualités/news d'un praticien
+    if (q.includes('actualit') || q.includes('news') || q.includes('nouveaut') || q.includes('récent') || q.includes('recent') || q.includes('dernièr') || q.includes('dernier')) {
+      return handlePractitionerNewsQuery(queryResult, analysis, question);
+    }
     return handlePractitionerSearch(queryResult, analysis, question);
   }
 
@@ -93,6 +97,65 @@ export function generateSmartResponse(
   }
 
   return getHelpResponse();
+}
+
+function handlePractitionerNewsQuery(queryResult: ReturnType<typeof executeQuery>, analysis: ReturnType<typeof analyzeQuestion>, _question: string): CoachResponse {
+  if (queryResult.practitioners.length === 0) {
+    const nameHint = [analysis.filters.firstName, analysis.filters.lastName].filter(Boolean).join(' ');
+    return {
+      message: `Je n'ai trouvé aucun praticien correspondant à **${nameHint}**. Vérifiez l'orthographe ou essayez avec un autre critère.`,
+      insights: ['Conseil : Essayez avec juste le prénom ou le nom de famille'],
+      isMarkdown: true
+    };
+  }
+
+  // Focus sur les actualités des praticiens trouvés
+  const results = queryResult.practitioners.slice(0, 3);
+  const parts: string[] = [];
+
+  for (const p of results) {
+    const news = p.news || [];
+    const notes = p.notes || [];
+
+    parts.push(`## ${p.title} ${p.firstName} ${p.lastName}`);
+    parts.push(`*${p.specialty} à ${p.address.city}*\n`);
+
+    if (news.length > 0) {
+      parts.push(`**Actualités récentes (${news.length}) :**\n`);
+      news.slice(0, 5).forEach((n, i) => {
+        const typeLabel = n.type === 'publication' ? 'Publication' :
+                          n.type === 'conference' ? 'Conférence' :
+                          n.type === 'certification' ? 'Certification' :
+                          n.type === 'distinction' ? 'Distinction' : 'Événement';
+        parts.push(`${i + 1}. **[${typeLabel}]** ${n.title}`);
+        parts.push(`   _${new Date(n.date).toLocaleDateString('fr-FR')}_ — ${n.content}`);
+        if (n.relevance) parts.push(`   → ${n.relevance}`);
+      });
+    } else {
+      parts.push('Aucune actualité récente enregistrée pour ce praticien.');
+    }
+
+    if (notes.length > 0) {
+      parts.push(`\n**Dernières notes de visite :**\n`);
+      notes.slice(0, 3).forEach(note => {
+        parts.push(`- _${new Date(note.date).toLocaleDateString('fr-FR')}_ : ${note.content.substring(0, 150)}`);
+        if (note.nextAction) parts.push(`  → Action : ${note.nextAction}`);
+      });
+    }
+  }
+
+  return {
+    message: parts.join('\n'),
+    practitioners: results.slice(0, 5).map(p => ({
+      ...adaptPractitionerProfile(p),
+      daysSinceVisit: daysSince(p.lastVisitDate || null)
+    })),
+    insights: results.length === 1 ? [
+      `Volume: ${(results[0].metrics.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${results[0].metrics.loyaltyScore}/10`,
+      results[0].metrics.isKOL ? 'Key Opinion Leader' : `Vingtile: ${results[0].metrics.vingtile}`
+    ] : undefined,
+    isMarkdown: true
+  };
 }
 
 function handlePractitionerSearch(queryResult: ReturnType<typeof executeQuery>, analysis: ReturnType<typeof analyzeQuestion>, question: string): CoachResponse {

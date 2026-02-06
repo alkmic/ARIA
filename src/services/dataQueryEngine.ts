@@ -75,7 +75,9 @@ export function analyzeQuestion(question: string): {
     const nomNorm = nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     // Verifier que ce n'est pas un prenom deja detecte
     if (filters.firstName?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === nomNorm) continue;
-    if (q.includes(`nom ${nomNorm}`) || q.includes(`dr ${nomNorm}`) || q.includes(`docteur ${nomNorm}`) || q.includes(`dr. ${nomNorm}`)) {
+    // Chercher le nom dans des contextes typiques (Dr X, nom X) OU comme mot isolé dans la question
+    const wordBoundaryRegex = new RegExp(`(?:^|\\s|')${nomNorm}(?:\\s|$|[?.!,;])`, 'i');
+    if (q.includes(`nom ${nomNorm}`) || q.includes(`dr ${nomNorm}`) || q.includes(`docteur ${nomNorm}`) || q.includes(`dr. ${nomNorm}`) || wordBoundaryRegex.test(q)) {
       const original = dbLastNames.find(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === nomNorm);
       filters.lastName = original || nom;
       break;
