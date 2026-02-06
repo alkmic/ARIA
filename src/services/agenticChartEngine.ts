@@ -147,6 +147,8 @@ Champs disponibles :
 - loyaltyScore gte 7
 - daysSinceVisit gt 60
 - city contains "Lyon"
+- lastName eq "Vincent" (insensible à la casse)
+- firstName contains "Marie"
 `;
 
 // Prompt système AMÉLIORÉ pour la génération de graphiques
@@ -236,6 +238,15 @@ NE PAS inclure "insights" ni "suggestions" dans le JSON — ils seront généré
 - chartType: "pie"
 - sortBy: "Volume (K L)"
 - sortOrder: "desc"
+
+**"Volumes des médecins dont le nom est Vincent"** :
+- filters: [{ field: "lastName", operator: "eq", value: "Vincent" }]
+- groupBy: null (pas de groupement → chaque praticien individuellement avec son nom complet)
+- metrics: [{ name: "Volume (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
+- chartType: "bar"
+
+**IMPORTANT** : Pour afficher des praticiens individuellement (pas groupés par ville/spécialité), utiliser groupBy: null.
+Ne JAMAIS utiliser groupBy: "id" — utiliser null pour que les noms complets s'affichent.
 `;
 
 // Prompt pour l'analyse conversationnelle (réponse aux questions de suivi)
@@ -393,7 +404,12 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
       filteredData = filteredData.filter(item => {
         const value = (item as Record<string, unknown>)[filter.field];
         switch (filter.operator) {
-          case 'eq': return value === filter.value;
+          case 'eq':
+            // Case-insensitive comparison for strings
+            if (typeof value === 'string' && typeof filter.value === 'string') {
+              return value.toLowerCase() === filter.value.toLowerCase();
+            }
+            return value === filter.value;
           case 'ne': return value !== filter.value;
           case 'gt': return typeof value === 'number' && value > (filter.value as number);
           case 'gte': return typeof value === 'number' && value >= (filter.value as number);
@@ -509,7 +525,7 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
   // Sans groupBy, retourner les items individuels (top N)
   const results: ChartDataPoint[] = filteredData.map(item => {
     const point: ChartDataPoint = {
-      name: `${item.title} ${item.lastName}`
+      name: `${item.title} ${item.firstName} ${item.lastName}`
     };
 
     for (const metric of query.metrics) {
@@ -586,6 +602,11 @@ export function parseLLMChartResponse(response: string): ChartSpec | null {
     const validTypes = ['bar', 'pie', 'line', 'composed'];
     if (!validTypes.includes(parsed.chartType)) {
       parsed.chartType = 'bar';
+    }
+
+    // Normaliser groupBy: "id" → null (pour que les individus montrent leur nom, pas l'ID)
+    if (parsed.query.groupBy === 'id' || parsed.query.groupBy === 'firstName' || parsed.query.groupBy === 'lastName') {
+      parsed.query.groupBy = null;
     }
 
     return parsed as ChartSpec;

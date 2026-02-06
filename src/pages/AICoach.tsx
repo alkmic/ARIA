@@ -389,11 +389,17 @@ INSTRUCTIONS IMPORTANTES :
     const chartHistory = getChartHistory();
     const hasRecentChart = chartHistory.length > 0;
 
+    // Détecter les suivis implicites de graphique ("et pour Vincent ?", "et les pneumologues ?")
+    const trimmedQ = question.trim().toLowerCase();
+    const isImplicitChartFollowUp = hasRecentChart && !wantsVisualization && !wantsChartModification &&
+      question.trim().split(/\s+/).length <= 10 &&
+      /^(et\s|pareil|meme\s?chose|même\s?chose|idem|pour\s|et\s+les\s|et\s+pour\s|et\s+à\s|et\s+a\s)/i.test(trimmedQ);
+
     try {
       // ============================================
       // MODE 1: Question de suivi TEXTUELLE sur un graphique (pas une modification)
       // ============================================
-      if (isFollowUp && hasRecentChart && !wantsVisualization && !wantsChartModification) {
+      if (isFollowUp && hasRecentChart && !wantsVisualization && !wantsChartModification && !isImplicitChartFollowUp) {
         console.log('🔄 Mode suivi - question sur graphique précédent');
 
         const chartContext = buildChartContextForLLM();
@@ -439,9 +445,9 @@ Réponds de manière précise et contextuelle.`;
         }
       }
       // ============================================
-      // MODE 2: Demande de visualisation/graphique (ou modification)
+      // MODE 2: Demande de visualisation/graphique (ou modification/suivi implicite)
       // ============================================
-      else if (wantsVisualization || wantsChartModification) {
+      else if (wantsVisualization || wantsChartModification || isImplicitChartFollowUp) {
         console.log('🤖 Mode agentique activé - génération de graphique');
 
         const dataContext = getDataContextForLLM();
@@ -472,6 +478,15 @@ ${JSON.stringify({ chartType: lastChart.spec.chartType, title: lastChart.spec.ti
 Si l'utilisateur demande de modifier ce graphique (changer le type, le format, etc.), REPRENDS la même query et change uniquement ce qui est demandé.`;
         }
 
+        // Pour les suivis implicites, ajouter des instructions d'expansion
+        let implicitFollowUpHint = '';
+        if (isImplicitChartFollowUp && hasRecentChart) {
+          const lastChart = chartHistory[0];
+          implicitFollowUpHint = `\n⚠️ SUIVI IMPLICITE : L'utilisateur demande "${question}" en référence à son graphique précédent : "${lastChart.question}".
+Cela signifie qu'il veut le MÊME TYPE de graphique avec le MÊME type de métriques, mais en changeant le SUJET/FILTRE selon sa nouvelle demande.
+Garde le même chartType (${lastChart.spec.chartType}), les mêmes métriques, et adapte les filtres selon la nouvelle demande.`;
+        }
+
         const chartPrompt = `${CHART_GENERATION_PROMPT}
 ${previousChartContext}
 
@@ -479,7 +494,7 @@ ${dataContext}
 
 DEMANDE DE L'UTILISATEUR :
 "${question}"
-${paramHints}
+${paramHints}${implicitFollowUpHint}
 
 Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les paramètres demandés (nombre d'éléments, filtres, etc.).`;
 
