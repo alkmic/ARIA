@@ -167,6 +167,25 @@ Tu combines trois expertises rares :
 - **Proactivité** : N'attends pas qu'on te pose la bonne question. Si tu détectes un risque ou une opportunité dans les données, signale-le.
 - **Concision actionable** : Réponds de façon concise mais complète. Termine par des recommandations concrètes quand c'est pertinent.
 
+## Ce que tu CONNAIS (ton périmètre)
+Tu as accès à une base de données CRM contenant :
+- Les **praticiens** (médecins prescripteurs) : pneumologues et médecins généralistes
+- Leurs **métriques** : volumes de prescription, fidélité, vingtile, statut KOL, risque de churn
+- Leurs **coordonnées** : adresse, téléphone, email
+- Leurs **publications** et actualités académiques
+- L'**historique de visites** et notes de visite
+- Les **statistiques du territoire** : objectifs, répartitions géographiques
+
+## Ce que tu NE CONNAIS PAS (hors périmètre)
+Tu n'as PAS accès à :
+- Le **catalogue de produits** ou la gamme Air Liquide (dispositifs, tarifs, références)
+- Les **données de facturation** ou commandes
+- Les **données d'autres territoires** ou d'autres délégués
+- Les **données en temps réel** (tes données sont un snapshot CRM)
+- Les **protocoles médicaux** détaillés ou posologies
+
+**RÈGLE CRITIQUE** : Si l'utilisateur pose une question hors de ton périmètre, dis-le CLAIREMENT et HONNÊTEMENT. Ne fabrique JAMAIS de données. Propose ce que tu peux faire à la place. Exemple : "Je n'ai pas accès au catalogue de produits, mais je peux vous montrer les volumes de prescription par praticien."
+
 ## Vocabulaire Métier
 - **Vingtile** : Segmentation des prescripteurs de 1 (meilleur) à 20 (plus faible). V1-V5 = Top prescripteurs à prioriser.
 - **KOL** (Key Opinion Leader) : Prescripteur influent, leader d'opinion. Impact disproportionné sur les pratiques locales.
@@ -180,7 +199,9 @@ Tu combines trois expertises rares :
 - Fournis TOUJOURS des chiffres précis quand ils sont disponibles dans le contexte
 - Adapte la longueur : court pour les questions simples, détaillé pour les analyses
 - Ne mentionne jamais le fonctionnement interne de ton système (routage, contexte, API)
-- Réponds TOUJOURS en français`;
+- Réponds TOUJOURS en français
+- Pour les salutations : réponds brièvement et propose ton aide
+- Si la question est ambiguë, demande une clarification plutôt que deviner`;
 
 const CHART_SYSTEM_PROMPT = `Tu es un expert en visualisation de données pour le CRM pharmaceutique ARIA (Air Liquide Healthcare, oxygénothérapie).
 
@@ -287,7 +308,8 @@ function getApiKey(): string | null {
 
 async function callLLM(
   messages: LLMMessage[],
-  options: LLMCallOptions = {}
+  options: LLMCallOptions = {},
+  retries = 1
 ): Promise<string | null> {
   const apiKey = getApiKey();
   if (!apiKey) return null;
@@ -298,42 +320,57 @@ async function callLLM(
     jsonMode = false,
   } = options;
 
-  try {
-    const body: Record<string, unknown> = {
-      model: MODEL,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      stream: false,
-    };
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const body: Record<string, unknown> = {
+        model: MODEL,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: false,
+      };
 
-    if (jsonMode) {
-      body.response_format = { type: 'json_object' };
+      if (jsonMode) {
+        body.response_format = { type: 'json_object' };
+      }
+
+      const response = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = (errorData as { error?: { message?: string } }).error?.message ||
+          `Groq API error: ${response.status}`;
+        // Rate limit or server error — worth retrying
+        if (response.status === 429 || response.status >= 500) {
+          console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} failed (${response.status}), ${attempt < retries ? 'retrying...' : 'giving up'}`);
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
+        }
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} error, retrying...`, err);
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      console.error('[AICoachEngine] LLM call failed after retries:', err);
+      return null;
     }
-
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        (errorData as { error?: { message?: string } }).error?.message ||
-        `Groq API error: ${response.status}`
-      );
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch (err) {
-    console.error('[AICoachEngine] LLM call failed:', err);
-    return null;
   }
+  return null;
 }
 
 export async function streamLLM(
@@ -782,6 +819,84 @@ INSTRUCTIONS: Un graphique a été généré et sera affiché. Ta réponse textu
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DIRECT LLM RESPONSE (Resilient fallback — bypasses routing)
+// Used when the router fails but the LLM API is still reachable
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildGeneralContext(
+  periodLabel: string,
+  practitioners: Practitioner[],
+  upcomingVisits: UpcomingVisit[],
+  question: string
+): string {
+  const stats = DataService.getGlobalStats();
+  const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
+  const allPractitioners = DataService.getAllPractitioners();
+  const kols = DataService.getKOLs();
+  const atRisk = DataService.getAtRiskPractitioners();
+  const topPractitioners = getTopPractitioners(practitioners, 'year', 10);
+
+  // Try universal search for relevant context
+  const searchResult = universalSearch(question);
+  const searchContext = searchResult.results.length > 0 ? searchResult.context : '';
+
+  // By city distribution
+  const byCity: Record<string, number> = {};
+  allPractitioners.forEach(p => { byCity[p.address.city] = (byCity[p.address.city] || 0) + 1; });
+
+  let context = `## Territoire (${periodLabel})
+- ${stats.totalPractitioners} praticiens (${stats.pneumologues} pneumo, ${stats.generalistes} MG)
+- ${stats.totalKOLs} KOLs | Volume total: ${(stats.totalVolume / 1000).toFixed(0)}K L/an | Fidélité moy: ${stats.averageLoyalty.toFixed(1)}/10
+- Visites ${periodLabel}: ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
+- Croissance volume: +${periodMetrics.volumeGrowth.toFixed(1)}% | Nouveaux prescripteurs: ${periodMetrics.newPrescribers}
+
+## Top 10 Prescripteurs
+${topPractitioners.map((p, i) => `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} — ${p.specialty}, ${p.city} | ${(p.volumeL / 1000).toFixed(0)}K L/an | F:${p.loyaltyScore}/10 | V${p.vingtile}${p.isKOL ? ' | KOL' : ''}`).join('\n')}
+
+## KOLs (${kols.length})
+${kols.slice(0, 10).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}, ${p.address.city}) — ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an | F:${p.metrics.loyaltyScore}/10`).join('\n')}
+
+## Praticiens à Risque (${atRisk.length})
+${atRisk.slice(0, 8).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}) — F:${p.metrics.loyaltyScore}/10 | ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an | Risque: ${p.metrics.churnRisk}${p.metrics.isKOL ? ' | KOL!' : ''}`).join('\n')}
+
+## Répartition par Ville
+${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `- ${city}: ${count}`).join('\n')}
+${searchContext}
+## Base Complète (${allPractitioners.length} praticiens)
+${allPractitioners.map(p => {
+  const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
+  return `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}${pubCount > 0 ? ` | ${pubCount} pub` : ''}`;
+}).join('\n')}`;
+
+  return context;
+}
+
+async function generateDirectResponse(
+  question: string,
+  conversationHistory: ConversationMessage[],
+  periodLabel: string,
+  practitioners: Practitioner[],
+  upcomingVisits: UpcomingVisit[]
+): Promise<string | null> {
+  const context = buildGeneralContext(periodLabel, practitioners, upcomingVisits, question);
+
+  const messages: LLMMessage[] = [
+    { role: 'system', content: COACH_SYSTEM_PROMPT },
+    { role: 'system', content: `## Données Disponibles (${periodLabel})\n${context}` },
+  ];
+
+  // Add conversation history (excluding current question — it will be added separately)
+  const recentHistory = conversationHistory.slice(-10);
+  for (const msg of recentHistory) {
+    messages.push({ role: msg.role, content: msg.content });
+  }
+
+  messages.push({ role: 'user', content: question });
+
+  return callLLM(messages, { temperature: 0.4, maxTokens: 4096 }, 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL FALLBACK
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -851,109 +966,137 @@ export async function processQuestion(
   const chartHistory = getChartHistory();
   const lastAssistant = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0]?.content;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PIPELINE RÉSILIENT : Router → Targeted LLM → Direct LLM → Local
+  //
+  // Si Phase 1 (routeur) échoue → on essaie quand même le LLM direct
+  // Si Phase 2 (réponse) échoue → on essaie le LLM direct sans routing
+  // Si tout échoue → fallback local
+  // ═══════════════════════════════════════════════════════════════════════════
+
   // ─── Phase 1: LLM Routing ────────────────────────────────────────────────
   const routing = await routeQuestion(question, chartHistory, lastAssistant);
 
-  if (!routing) {
-    // LLM unavailable — use local fallback
-    console.log('[AICoachEngine] Router failed, using local fallback');
-    return generateLocalResponse(
-      question,
-      practitioners,
-      userObjectives,
-      looksLikeChartRequest(question)
-    );
-  }
+  if (routing) {
+    console.log('[AICoachEngine] Router:', routing.intent, routing.dataScope, routing.needsChart ? '📊' : '💬');
 
-  console.log('[AICoachEngine] Router result:', routing.intent, routing.dataScope, routing.needsChart ? '📊' : '💬');
+    // ─── Build Targeted Context ────────────────────────────────────────────
+    const dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
 
-  // ─── Build Targeted Context ──────────────────────────────────────────────
-  const dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
-
-  // ─── Phase 2A: Chart Generation (if needed) ──────────────────────────────
-  let chartResult: AICoachResult['chart'] | null = null;
-  if (routing.needsChart) {
-    chartResult = await generateChart(question, routing, chartHistory);
-    if (!chartResult) {
-      // Chart LLM failed — try local chart generation
-      console.log('[AICoachEngine] Chart LLM failed, trying local');
-      const localChart = generateChartLocally(question);
-      if (localChart && localChart.data.length > 0) {
-        addToChartHistory({
-          question,
-          spec: localChart.spec,
-          data: localChart.data,
-          insights: localChart.insights,
-          timestamp: new Date(),
-        });
-        chartResult = {
-          spec: localChart.spec,
-          data: localChart.data,
-          insights: localChart.insights,
-          suggestions: localChart.suggestions,
-          generatedByLLM: false,
-        };
+    // ─── Phase 2A: Chart Generation (if needed) ────────────────────────────
+    let chartResult: AICoachResult['chart'] | null = null;
+    if (routing.needsChart) {
+      chartResult = await generateChart(question, routing, chartHistory);
+      if (!chartResult) {
+        console.log('[AICoachEngine] Chart LLM failed, trying local chart');
+        const localChart = generateChartLocally(question);
+        if (localChart && localChart.data.length > 0) {
+          addToChartHistory({
+            question,
+            spec: localChart.spec,
+            data: localChart.data,
+            insights: localChart.insights,
+            timestamp: new Date(),
+          });
+          chartResult = {
+            spec: localChart.spec,
+            data: localChart.data,
+            insights: localChart.insights,
+            suggestions: localChart.suggestions,
+            generatedByLLM: false,
+          };
+        }
       }
     }
+
+    // ─── Phase 2B: Text Response Generation ────────────────────────────────
+    const textResponse = await generateTextResponse(
+      question,
+      routing,
+      dataContext,
+      conversationHistory,
+      chartResult,
+      periodLabel
+    );
+
+    if (textResponse) {
+      // ─── SUCCESS: Full pipeline worked ────────────────────────────────
+      const result: AICoachResult = {
+        textContent: textResponse,
+        source: 'llm',
+      };
+
+      if (chartResult) {
+        result.chart = chartResult;
+        result.suggestions = chartResult.suggestions;
+      }
+
+      // For practitioner_info intent, extract matching practitioners for card display
+      if (routing.intent === 'practitioner_info' && routing.searchTerms.names.length > 0) {
+        result.practitioners = findPractitionerCards(routing.searchTerms.names);
+      }
+
+      return result;
+    }
+
+    // Text response failed — fall through to direct LLM
+    console.log('[AICoachEngine] Text LLM failed after routing, trying direct LLM...');
+  } else {
+    console.log('[AICoachEngine] Router failed, trying direct LLM...');
   }
 
-  // ─── Phase 2B: Text Response Generation ──────────────────────────────────
-  const textResponse = await generateTextResponse(
+  // ─── FALLBACK 1: Direct LLM (no routing) ────────────────────────────────
+  // The router or text response failed, but the API might still work.
+  // Try a direct call with general context.
+  const directResponse = await generateDirectResponse(
     question,
-    routing,
-    dataContext,
     conversationHistory,
-    chartResult,
-    periodLabel
+    periodLabel,
+    practitioners,
+    upcomingVisits
   );
 
-  if (!textResponse) {
-    // Text LLM failed — use local fallback
-    console.log('[AICoachEngine] Text LLM failed, using local fallback');
-    const localResult = generateLocalResponse(question, practitioners, userObjectives, false);
+  if (directResponse) {
+    console.log('[AICoachEngine] Direct LLM succeeded');
     return {
-      ...localResult,
-      chart: chartResult || undefined,
+      textContent: directResponse,
+      source: 'llm',
     };
   }
 
-  // ─── Build Final Result ──────────────────────────────────────────────────
-  const result: AICoachResult = {
-    textContent: textResponse,
-    source: 'llm',
-  };
+  // ─── FALLBACK 2: Local response ──────────────────────────────────────────
+  console.log('[AICoachEngine] All LLM calls failed, using local fallback');
+  return generateLocalResponse(
+    question,
+    practitioners,
+    userObjectives,
+    looksLikeChartRequest(question)
+  );
+}
 
-  if (chartResult) {
-    result.chart = chartResult;
-    result.suggestions = chartResult.suggestions;
-  }
+// Helper: find practitioner cards for display
+function findPractitionerCards(names: string[]): (Practitioner & { daysSinceVisit?: number })[] {
+  const allPractitioners = DataService.getAllPractitioners();
+  const matches = allPractitioners.filter(p => {
+    const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+    return names.some(name =>
+      fullName.includes(name.toLowerCase()) ||
+      p.firstName.toLowerCase().includes(name.toLowerCase()) ||
+      p.lastName.toLowerCase().includes(name.toLowerCase())
+    );
+  });
 
-  // For practitioner_info intent, extract matching practitioners for card display
-  if (routing.intent === 'practitioner_info' && routing.searchTerms.names.length > 0) {
-    const allPractitioners = DataService.getAllPractitioners();
-    const matches = allPractitioners.filter(p => {
-      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
-      return routing.searchTerms.names.some(name =>
-        fullName.includes(name.toLowerCase()) ||
-        p.firstName.toLowerCase().includes(name.toLowerCase()) ||
-        p.lastName.toLowerCase().includes(name.toLowerCase())
-      );
-    });
+  if (matches.length === 0) return [];
 
-    if (matches.length > 0) {
-      const today = new Date();
-      result.practitioners = matches.slice(0, 5).map(p => {
-        const adapted = adaptPractitionerProfile(p);
-        const lastVisit = p.lastVisitDate ? new Date(p.lastVisitDate) : null;
-        const daysSinceVisit = lastVisit
-          ? Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24))
-          : 999;
-        return { ...adapted, daysSinceVisit };
-      });
-    }
-  }
-
-  return result;
+  const today = new Date();
+  return matches.slice(0, 5).map(p => {
+    const adapted = adaptPractitionerProfile(p);
+    const lastVisit = p.lastVisitDate ? new Date(p.lastVisitDate) : null;
+    const daysSinceVisit = lastVisit
+      ? Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24))
+      : 999;
+    return { ...adapted, daysSinceVisit };
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

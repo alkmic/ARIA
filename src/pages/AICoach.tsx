@@ -219,14 +219,9 @@ export default function AICoach() {
     setInput('');
     setIsTyping(true);
 
-    // Mettre à jour l'historique de conversation pour le moteur
-    conversationHistoryRef.current.push({ role: 'user', content: question });
-
     try {
-      // Appel unique au moteur LLM-First
-      // Phase 1 : Routage LLM (classification intent + extraction params)
-      // Phase 2A : Génération graphique si nécessaire
-      // Phase 2B : Génération texte avec contexte ciblé
+      // Appel au moteur LLM-First (pipeline résilient)
+      // L'historique est passé SANS la question courante — le moteur l'ajoute lui-même
       const result = await processQuestion(
         question,
         conversationHistoryRef.current,
@@ -258,16 +253,16 @@ export default function AICoach() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Mettre à jour l'historique de conversation
-      const chartSummary = result.chart
-        ? `[Graphique: ${result.chart.spec.title}]`
-        : '';
-      conversationHistoryRef.current.push({
-        role: 'assistant',
-        content: result.textContent,
-        hasChart: !!result.chart,
-        chartSummary,
-      });
+      // Mettre à jour l'historique APRÈS la réponse (pas avant)
+      conversationHistoryRef.current.push(
+        { role: 'user', content: question },
+        {
+          role: 'assistant',
+          content: result.textContent,
+          hasChart: !!result.chart,
+          chartSummary: result.chart ? `[Graphique: ${result.chart.spec.title}]` : '',
+        }
+      );
 
       // Garder les 20 derniers messages dans l'historique
       if (conversationHistoryRef.current.length > 20) {
