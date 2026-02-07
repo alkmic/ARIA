@@ -177,7 +177,7 @@ export function Settings() {
               </p>
               {isLLMConfigured && (
                 <p className="text-xs text-slate-500 mt-1">
-                  Cle : {apiKey.substring(0, 8)}...{apiKey.substring(apiKey.length - 4)}
+                  Clé : {apiKey.substring(0, 8)}...{apiKey.substring(apiKey.length - 4)}
                 </p>
               )}
             </div>

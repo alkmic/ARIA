@@ -25,10 +25,10 @@ export function generateFullDataContext(): string {
   lines.push(`STATISTIQUES GLOBALES:`);
   lines.push(`- Total praticiens: ${stats.totalPractitioners}`);
   lines.push(`- Pneumologues: ${stats.pneumologues}`);
-  lines.push(`- Medecins generalistes: ${stats.generalistes}`);
+  lines.push(`- Médecins généralistes: ${stats.generalistes}`);
   lines.push(`- KOLs (Key Opinion Leaders): ${stats.totalKOLs}`);
   lines.push(`- Volume total annuel: ${(stats.totalVolume / 1000).toFixed(0)}K litres O2`);
-  lines.push(`- Fidelite moyenne: ${stats.averageLoyalty.toFixed(1)}/10`);
+  lines.push(`- Fidélité moyenne: ${stats.averageLoyalty.toFixed(1)}/10`);
   lines.push('');
 
   // Repartition par ville
@@ -53,7 +53,7 @@ export function generateFullDataContext(): string {
 
   // Liste complete des praticiens
   lines.push('LISTE COMPLETE DES PRATICIENS:');
-  lines.push('(Format: ID | Titre Prenom Nom | Specialite | Ville | Volume L/an | Fidelite/10 | Vingtile | KOL | Risque | Dernier visite | Publications)');
+  lines.push('(Format: ID | Titre Prénom Nom | Spécialité | Ville | Volume L/an | Fidélité/10 | Vingtile | KOL | Risque | Dernière visite | Publications)');
   lines.push('');
 
   allPractitioners
@@ -69,7 +69,7 @@ export function generateFullDataContext(): string {
 
       lines.push(
         `${p.id} | ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | ` +
-        `${p.metrics.volumeL} L/an | Fidelite:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile} | ` +
+        `${p.metrics.volumeL} L/an | Fidélité:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile} | ` +
         `${p.metrics.isKOL ? 'KOL' : '-'} | Risque:${p.metrics.churnRisk} | ` +
         `Visite:${lastVisit} (${daysSince}j) | ${pubCount} pub`
       );
@@ -109,7 +109,7 @@ export function generateFullDataContext(): string {
       const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
       lines.push(
         `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | ` +
-        `${(p.metrics.volumeL / 1000).toFixed(0)}K L/an | Fidelite:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile} | ` +
+        `${(p.metrics.volumeL / 1000).toFixed(0)}K L/an | Fidélité:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile} | ` +
         `Derniere visite: ${daysSince}j | ${pubCount} pub | Croissance:+${p.metrics.potentialGrowth}%`
       );
     });

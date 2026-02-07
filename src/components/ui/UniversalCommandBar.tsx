@@ -362,7 +362,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('Reconnaissance vocale non supportée. Utilisez Chrome ou Edge.');
+      setQuery('Reconnaissance vocale non supportée. Utilisez Chrome ou Edge.');
       return;
     }
 

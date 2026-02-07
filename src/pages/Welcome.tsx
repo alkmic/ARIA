@@ -117,7 +117,7 @@ const Welcome: React.FC = () => {
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
             <div className="text-xl font-semibold text-white mb-1.5">Coach Virtuel</div>
-            <p className="text-sm text-white/70">Recommandations strategiques en temps reel</p>
+            <p className="text-sm text-white/70">Recommandations stratégiques en temps réel</p>
           </div>
         </div>
       </div>

@@ -105,7 +105,7 @@ export const Visits: React.FC = () => {
                 }}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   filterType === filter.key
-                    ? 'bg-gradient-to-r from-airLiquide-primary to-airLiquide-teal text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-al-blue-500 to-al-teal text-white shadow-lg'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -136,9 +136,9 @@ export const Visits: React.FC = () => {
                 }}
                 className={`flex flex-col items-center min-w-[80px] p-3 rounded-lg transition-all ${
                   isSelected
-                    ? 'bg-gradient-to-br from-airLiquide-primary to-airLiquide-teal text-white shadow-lg scale-105'
+                    ? 'bg-gradient-to-br from-al-blue-500 to-al-teal text-white shadow-lg scale-105'
                     : isToday
-                    ? 'bg-airLiquide-lightBlue/20 border-2 border-airLiquide-primary'
+                    ? 'bg-al-blue-50/20 border-2 border-al-blue-500'
                     : 'bg-slate-50 hover:bg-slate-100'
                 }`}
               >
@@ -153,7 +153,7 @@ export const Visits: React.FC = () => {
                     className={`text-xs mt-1 px-2 py-0.5 rounded-full ${
                       isSelected
                         ? 'bg-white/20 text-white'
-                        : 'bg-airLiquide-primary/20 text-airLiquide-primary'
+                        : 'bg-al-blue-500/20 text-al-blue-500'
                     }`}
                   >
                     {dayVisits.length}
@@ -270,7 +270,7 @@ export const Visits: React.FC = () => {
                             )}
                           </div>
 
-                          <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-airLiquide-primary group-hover:translate-x-1 transition-all" />
+                          <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-al-blue-500 group-hover:translate-x-1 transition-all" />
                         </div>
 
                         {visit.notes && (

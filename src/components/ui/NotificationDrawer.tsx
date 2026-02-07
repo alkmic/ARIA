@@ -25,13 +25,13 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
   const getIcon = (type: AIInsight['type']) => {
     switch (type) {
       case 'opportunity':
-        return <TrendingUp className="w-5 h-5 text-airLiquide-teal" />;
+        return <TrendingUp className="w-5 h-5 text-al-teal" />;
       case 'alert':
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
       case 'reminder':
-        return <Calendar className="w-5 h-5 text-airLiquide-primary" />;
+        return <Calendar className="w-5 h-5 text-al-blue-500" />;
       case 'achievement':
-        return <Bell className="w-5 h-5 text-airLiquide-lightBlue" />;
+        return <Bell className="w-5 h-5 text-al-sky" />;
     }
   };
 
@@ -42,7 +42,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
       case 'medium':
         return 'border-l-4 border-orange-500 bg-orange-50';
       case 'low':
-        return 'border-l-4 border-blue-500 bg-blue-50';
+        return 'border-l-4 border-al-blue-500 bg-al-blue-50';
     }
   };
 
@@ -75,7 +75,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-airLiquide-primary to-airLiquide-teal flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-teal flex items-center justify-center">
                     <Bell className="w-5 h-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
@@ -125,7 +125,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
                             {notification.message}
                           </p>
                           {notification.actionLabel && (
-                            <div className="flex items-center gap-1 text-xs font-medium text-airLiquide-primary">
+                            <div className="flex items-center gap-1 text-xs font-medium text-al-blue-500">
                               <span>{notification.actionLabel}</span>
                               <ChevronRight className="w-3 h-3" />
                             </div>
@@ -145,7 +145,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
                   navigate('/settings');
                   onClose();
                 }}
-                className="w-full py-2 text-sm text-airLiquide-primary hover:bg-airLiquide-primary/10 rounded-lg transition-colors font-medium"
+                className="w-full py-2 text-sm text-al-blue-500 hover:bg-al-blue-500/10 rounded-lg transition-colors font-medium"
               >
                 Gérer les notifications
               </button>

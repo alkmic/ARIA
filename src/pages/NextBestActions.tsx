@@ -122,7 +122,7 @@ const SCORE_CONFIG = {
   impact: {
     label: 'Impact potentiel',
     description: 'Volume concerné, influence sur le territoire',
-    color: 'bg-blue-500'
+    color: 'bg-al-blue-500'
   },
   probability: {
     label: 'Facilité',

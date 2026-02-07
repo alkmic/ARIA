@@ -74,6 +74,7 @@ export default function VoiceVisitReport() {
   const [editedNotes, setEditedNotes] = useState('');
   const [_isSaved, setIsSaved] = useState(false);
   const [proposedUpdates, setProposedUpdates] = useState<ProposedProfileUpdate[]>([]);
+  const [speechError, setSpeechError] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const interimTranscriptRef = useRef('');
@@ -158,9 +159,10 @@ export default function VoiceVisitReport() {
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
-      alert('La reconnaissance vocale n\'est pas supportée. Utilisez Chrome ou Edge.');
+      setSpeechError('La reconnaissance vocale n\'est pas supportée. Utilisez Chrome ou Edge.');
       return;
     }
+    setSpeechError(null);
 
     if (isRecording) {
       recognitionRef.current.stop();
@@ -562,6 +564,11 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                     <p className={`mt-3 font-medium text-sm ${isRecording ? 'text-red-600' : 'text-slate-600'}`}>
                       {isRecording ? 'Enregistrement...' : 'Dicter'}
                     </p>
+                    {speechError && (
+                      <p className="mt-2 text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-lg">
+                        {speechError}
+                      </p>
+                    )}
                   </div>
                 </div>
 

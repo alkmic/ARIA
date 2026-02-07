@@ -336,7 +336,7 @@ export default function AICoach() {
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('La reconnaissance vocale n\'est pas supportée par votre navigateur. Essayez Chrome ou Edge.');
+      setInput('⚠ Reconnaissance vocale non supportée. Essayez Chrome ou Edge.');
       return;
     }
 

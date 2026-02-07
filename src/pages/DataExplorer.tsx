@@ -74,7 +74,7 @@ export default function DataExplorer() {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<QueryResult[]>([]);
-  const [_isListening, _setIsListening] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   // Get all practitioners for analysis
   const practitioners = useMemo(() => DataService.getAllPractitioners(), []);
@@ -295,6 +295,34 @@ export default function DataExplorer() {
     return charts;
   }, [practitioners, stats]);
 
+  // Voice input handler
+  const handleVoiceInput = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuery(transcript);
+      setIsListening(false);
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    setIsListening(true);
+    recognition.start();
+  }, [isListening]);
+
   // Process query
   const processQuery = async () => {
     if (!query.trim()) return;
@@ -489,8 +517,13 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
               disabled={isLoading}
             />
             <button
-              onClick={() => {/* TODO: Voice input */}}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-al-blue-600"
+              onClick={handleVoiceInput}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors ${
+                isListening
+                  ? 'bg-red-100 text-red-500 animate-pulse'
+                  : 'hover:bg-slate-100 text-slate-400 hover:text-al-blue-600'
+              }`}
+              title={isListening ? 'Arrêter l\'écoute' : 'Dictée vocale'}
             >
               <Mic className="w-5 h-5" />
             </button>

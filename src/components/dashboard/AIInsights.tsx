@@ -211,7 +211,7 @@ export const AIInsights: React.FC = () => {
   const typeConfig = {
     opportunity: { icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
     alert: { icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
-    reminder: { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-50' },
+    reminder: { icon: Clock, color: 'text-al-blue-500', bg: 'bg-al-blue-50' },
     achievement: { icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
   };
 

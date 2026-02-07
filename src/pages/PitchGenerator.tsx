@@ -41,11 +41,11 @@ import type { Practitioner } from '../types';
 // Couleurs et icones par section
 const SECTION_STYLES: Record<string, { gradient: string; bg: string; icon: string; borderColor: string }> = {
   hook: { gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', icon: '1', borderColor: 'border-amber-200' },
-  proposition: { gradient: 'from-blue-500 to-cyan-500', bg: 'bg-blue-50', icon: '2', borderColor: 'border-blue-200' },
-  competition: { gradient: 'from-al-blue-600 to-al-blue-500', bg: 'bg-blue-50', icon: '3', borderColor: 'border-blue-200' },
+  proposition: { gradient: 'from-al-blue-500 to-al-sky', bg: 'bg-al-blue-50', icon: '2', borderColor: 'border-al-blue-200' },
+  competition: { gradient: 'from-al-blue-600 to-al-blue-500', bg: 'bg-al-blue-50', icon: '3', borderColor: 'border-al-blue-200' },
   cta: { gradient: 'from-green-500 to-emerald-500', bg: 'bg-green-50', icon: '4', borderColor: 'border-green-200' },
   objections: { gradient: 'from-red-500 to-rose-500', bg: 'bg-red-50', icon: '5', borderColor: 'border-red-200' },
-  talking_points: { gradient: 'from-al-navy to-al-blue-600', bg: 'bg-blue-50', icon: '6', borderColor: 'border-blue-200' },
+  talking_points: { gradient: 'from-al-navy to-al-blue-600', bg: 'bg-al-blue-50', icon: '6', borderColor: 'border-al-blue-200' },
 };
 
 // Produits Air Liquide disponibles
@@ -167,7 +167,7 @@ export function PitchGenerator() {
     const sectionMap: Record<string, { id: PitchSection['id']; title: string; icon: string }> = {
       ACCROCHE: { id: 'hook', title: 'Accroche', icon: '1' },
       PROPOSITION: { id: 'proposition', title: 'Proposition de valeur', icon: '2' },
-      CONCURRENCE: { id: 'competition', title: 'Differenciation', icon: '3' },
+      CONCURRENCE: { id: 'competition', title: 'Différenciation', icon: '3' },
       CALL_TO_ACTION: { id: 'cta', title: 'Call to Action', icon: '4' },
       OBJECTIONS: { id: 'objections', title: 'Gestion des objections', icon: '5' },
       TALKING_POINTS: { id: 'talking_points', title: 'Points de discussion', icon: '6' },
@@ -397,7 +397,7 @@ export function PitchGenerator() {
                             </span>
                           )}
                           {noteCount > 0 && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-xs bg-al-blue-100 text-al-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <FileText className="w-3 h-3" />
                               {noteCount} notes
                             </span>
@@ -483,7 +483,7 @@ export function PitchGenerator() {
                   <div className="text-lg font-bold text-slate-800">{(selectedPractitioner.volumeL / 1000).toFixed(0)}K L</div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">Fidelite</div>
+                  <div className="text-xs text-slate-500">Fidélité</div>
                   <div className="text-lg font-bold text-slate-800">{selectedPractitioner.loyaltyScore}/10</div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3">
@@ -511,7 +511,7 @@ export function PitchGenerator() {
                 }`}>
                   <AlertTriangle className="w-4 h-4" />
                   <span className="text-sm font-medium">
-                    Risque de churn {profile?.metrics.churnRisk === 'high' ? 'eleve' : 'moyen'}
+                    Risque de churn {profile?.metrics.churnRisk === 'high' ? 'élevé' : 'moyen'}
                   </span>
                 </div>
               )}
@@ -535,22 +535,22 @@ export function PitchGenerator() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 italic">Aucune publication referencee</p>
+                  <p className="text-sm text-slate-500 italic">Aucune publication référencée</p>
                 )}
               </div>
 
               {/* Notes recentes */}
               <div className="glass-card p-4">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
-                  <FileText className="w-5 h-5 text-blue-500" />
-                  Notes recentes ({noteCount})
+                  <FileText className="w-5 h-5 text-al-blue-500" />
+                  Notes récentes ({noteCount})
                 </h3>
                 {noteCount > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {profile?.notes?.slice(0, 3).map((note, idx) => (
-                      <div key={idx} className="bg-blue-50 rounded-lg p-3">
-                        <div className="text-sm text-blue-900">{note.content.substring(0, 100)}...</div>
-                        <div className="text-xs text-blue-600 mt-1">{new Date(note.date).toLocaleDateString('fr-FR')}</div>
+                      <div key={idx} className="bg-al-blue-50 rounded-lg p-3">
+                        <div className="text-sm text-al-blue-900">{note.content.substring(0, 100)}...</div>
+                        <div className="text-xs text-al-blue-600 mt-1">{new Date(note.date).toLocaleDateString('fr-FR')}</div>
                       </div>
                     ))}
                   </div>
@@ -584,7 +584,7 @@ export function PitchGenerator() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 italic">Aucune visite enregistree</p>
+                  <p className="text-sm text-slate-500 italic">Aucune visite enregistrée</p>
                 )}
               </div>
             </div>
@@ -670,7 +670,7 @@ export function PitchGenerator() {
               {/* Longueur et ton */}
               <div className="glass-card p-6">
                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-blue-500" />
+                  <Settings className="w-5 h-5 text-al-blue-500" />
                   Format
                 </h3>
 
@@ -684,7 +684,7 @@ export function PitchGenerator() {
                           onClick={() => setConfig({ ...config, length: len })}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                             config.length === len
-                              ? 'bg-blue-500 text-white'
+                              ? 'bg-al-blue-500 text-white'
                               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
@@ -703,7 +703,7 @@ export function PitchGenerator() {
                           onClick={() => setConfig({ ...config, tone })}
                           className={`w-full px-4 py-2 rounded-lg text-sm font-medium text-left transition-all ${
                             config.tone === tone
-                              ? 'bg-blue-500 text-white'
+                              ? 'bg-al-blue-500 text-white'
                               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
@@ -740,7 +740,7 @@ export function PitchGenerator() {
                     />
                     <div>
                       <div className="font-medium">Points de discussion</div>
-                      <div className="text-xs text-slate-500">Liste des sujets cles a aborder pendant l'entretien</div>
+                      <div className="text-xs text-slate-500">Liste des sujets clés à aborder pendant l'entretien</div>
                     </div>
                   </label>
                 </div>
@@ -751,7 +751,7 @@ export function PitchGenerator() {
             <div className="space-y-6">
               {/* Produits */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Produits a mettre en avant</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Produits à mettre en avant</h3>
                 <div className="space-y-2">
                   {PRODUCTS.map((product) => (
                     <label key={product.id} className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-slate-50">
@@ -778,7 +778,7 @@ export function PitchGenerator() {
 
               {/* Concurrents */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Concurrents a adresser</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Concurrents à adresser</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {COMPETITORS.map((competitor) => (
                     <label key={competitor.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50">
@@ -802,11 +802,11 @@ export function PitchGenerator() {
 
               {/* Instructions additionnelles */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Instructions speciales</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Instructions spéciales</h3>
                 <textarea
                   value={config.additionalInstructions}
                   onChange={(e) => setConfig({ ...config, additionalInstructions: e.target.value })}
-                  placeholder="Ex: Insister sur le service 24/7, mentionner la nouvelle etude clinique, eviter de parler du prix..."
+                  placeholder="Ex: Insister sur le service 24/7, mentionner la nouvelle étude clinique, éviter de parler du prix..."
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-al-blue-500 focus:border-transparent"
                   rows={4}
                 />
@@ -828,7 +828,7 @@ export function PitchGenerator() {
               className="btn-primary flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5" />
-              Generer le pitch
+              Générer le pitch
             </button>
           </div>
         </motion.div>
@@ -887,7 +887,7 @@ export function PitchGenerator() {
                     ) : (
                       <>
                         <Volume2 className="w-4 h-4" />
-                        Ecouter
+                        Écouter
                       </>
                     )}
                   </button>
@@ -908,7 +908,7 @@ export function PitchGenerator() {
                 {copied ? (
                   <>
                     <Check className="w-4 h-4" />
-                    Copie!
+                    Copié !
                   </>
                 ) : (
                   <>
@@ -1008,7 +1008,7 @@ export function PitchGenerator() {
                         <textarea
                           value={editInstruction}
                           onChange={(e) => setEditInstruction(e.target.value)}
-                          placeholder="Ex: Rendre plus percutant, ajouter des chiffres, raccourcir, etre plus technique..."
+                          placeholder="Ex: Rendre plus percutant, ajouter des chiffres, raccourcir, être plus technique..."
                           className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-al-blue-500 focus:border-transparent"
                           rows={3}
                           autoFocus
@@ -1022,7 +1022,7 @@ export function PitchGenerator() {
                             {groqLoading ? (
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Regeneration...
+                                Régénération...
                               </>
                             ) : (
                               <>
@@ -1096,7 +1096,7 @@ export function PitchGenerator() {
                   className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copie!' : 'Copier tout'}
+                  {copied ? 'Copié !' : 'Copier tout'}
                 </button>
               </div>
             </div>

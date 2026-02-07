@@ -692,9 +692,21 @@ export const TourOptimizationPage: React.FC = () => {
     },
   ];
 
-  // Export PDF (simulation)
+  // Export planning as text (clipboard)
+  const [exported, setExported] = useState(false);
   const exportPDF = () => {
-    alert('Export PDF - Fonctionnalité à intégrer avec une vraie génération PDF');
+    if (!result) return;
+    const lines = result.days.map((day, i) => {
+      const header = `Jour ${i + 1} — ${day.dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+      const visits = day.visits.map((v, j) =>
+        `  ${j + 1}. ${v.practitioner.title} ${v.practitioner.lastName} (${v.practitioner.city}) — ${v.arrivalTime}-${v.departureTime}`
+      ).join('\n');
+      return `${header}\n${visits}`;
+    }).join('\n\n');
+    const summary = `Tournée optimisée — ${result.days.length} jours, ${result.totalDistance.toFixed(0)} km\n\n${lines}`;
+    navigator.clipboard.writeText(summary);
+    setExported(true);
+    setTimeout(() => setExported(false), 2000);
   };
 
   // Save to visits — utilise dateObj du résultat (pas de recalcul)
@@ -1508,7 +1520,7 @@ export const TourOptimizationPage: React.FC = () => {
                   </button>
                   <button onClick={exportPDF} className="btn-primary flex items-center gap-2">
                     <Download className="w-4 h-4" />
-                    Export PDF
+                    {exported ? 'Copié !' : 'Exporter'}
                   </button>
                 </div>
               </div>

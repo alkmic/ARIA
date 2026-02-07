@@ -6,18 +6,18 @@ export function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="h-screen bg-gradient-to-br from-airLiquide-primary via-airLiquide-darkBlue to-airLiquide-navy relative overflow-hidden flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-al-blue-500 via-al-blue-800 to-al-navy relative overflow-hidden flex flex-col">
       {/* Animated background elements - subtler */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.2, 0.15] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-20 -right-20 w-64 h-64 bg-airLiquide-teal/30 rounded-full blur-3xl"
+          className="absolute -top-20 -right-20 w-64 h-64 bg-al-teal/30 rounded-full blur-3xl"
         />
         <motion.div
           animate={{ scale: [1.1, 1, 1.1], opacity: [0.2, 0.15, 0.2] }}
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-20 -left-20 w-64 h-64 bg-airLiquide-lightBlue/30 rounded-full blur-3xl"
+          className="absolute -bottom-20 -left-20 w-64 h-64 bg-al-sky/30 rounded-full blur-3xl"
         />
       </div>
 
@@ -33,7 +33,7 @@ export function Landing() {
           <div className="text-white text-sm font-semibold tracking-[0.3em] uppercase">
             Air Liquide Healthcare
           </div>
-          <div className="h-0.5 w-full bg-gradient-to-r from-airLiquide-teal to-airLiquide-lightBlue mt-1" />
+          <div className="h-0.5 w-full bg-gradient-to-r from-al-teal to-al-sky mt-1" />
         </motion.div>
 
         {/* ARIA Title - More compact */}
@@ -46,7 +46,7 @@ export function Landing() {
           <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
             ARIA
           </h1>
-          <div className="flex items-center justify-center gap-2 text-airLiquide-teal text-sm font-medium mt-1.5">
+          <div className="flex items-center justify-center gap-2 text-al-teal text-sm font-medium mt-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Assistant Intelligent pour Représentants</span>
             <Sparkles className="w-3.5 h-3.5" />
@@ -72,12 +72,12 @@ export function Landing() {
           className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 mb-6 max-w-3xl"
         >
           {[
-            { icon: Brain, label: 'Coach IA', color: 'text-airLiquide-teal' },
-            { icon: Zap, label: 'Pitch IA', color: 'text-airLiquide-lightBlue' },
-            { icon: TrendingUp, label: 'Analytics', color: 'text-airLiquide-teal' },
-            { icon: Users, label: 'CRM Pro', color: 'text-airLiquide-lightBlue' },
-            { icon: MapPin, label: 'Territoire', color: 'text-airLiquide-teal' },
-            { icon: Target, label: 'Objectifs', color: 'text-airLiquide-lightBlue' },
+            { icon: Brain, label: 'Coach IA', color: 'text-al-teal' },
+            { icon: Zap, label: 'Pitch IA', color: 'text-al-sky' },
+            { icon: TrendingUp, label: 'Analytics', color: 'text-al-teal' },
+            { icon: Users, label: 'CRM Pro', color: 'text-al-sky' },
+            { icon: MapPin, label: 'Territoire', color: 'text-al-teal' },
+            { icon: Target, label: 'Objectifs', color: 'text-al-sky' },
           ].map((feature, i) => (
             <div key={i} className="flex flex-col items-center text-center group">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-1.5 group-hover:bg-white/20 transition-colors">
@@ -96,7 +96,7 @@ export function Landing() {
           whileHover={{ scale: 1.03, boxShadow: "0 15px 30px rgba(0, 181, 173, 0.3)" }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/dashboard')}
-          className="group relative px-8 py-3 bg-gradient-to-r from-airLiquide-teal to-airLiquide-lightBlue text-white text-base font-semibold rounded-xl shadow-xl overflow-hidden"
+          className="group relative px-8 py-3 bg-gradient-to-r from-al-teal to-al-sky text-white text-base font-semibold rounded-xl shadow-xl overflow-hidden"
         >
           <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
           <div className="relative flex items-center gap-2">

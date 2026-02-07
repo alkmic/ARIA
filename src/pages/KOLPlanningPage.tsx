@@ -461,7 +461,10 @@ export const KOLPlanningPage: React.FC = () => {
                     >
                       Voir le profil complet
                     </button>
-                    <button className="flex-1 btn-primary">
+                    <button
+                      className="flex-1 btn-primary"
+                      onClick={() => navigate(`/tour-optimization`)}
+                    >
                       Planifier la visite
                     </button>
                   </div>
@@ -487,10 +490,21 @@ export const KOLPlanningPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <button className="btn-secondary">
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                const text = kolsAnalysis.map((kol, i) =>
+                  `${i + 1}. ${kol.title} ${kol.lastName} (${kol.specialty}) — ${kol.city} — Urgence: ${kol.analysis.urgencyScore}/100`
+                ).join('\n');
+                navigator.clipboard.writeText(`Planning KOL — ${kolsAnalysis.length} visites\n\n${text}`);
+              }}
+            >
               Exporter le planning
             </button>
-            <button className="btn-primary flex items-center gap-2">
+            <button
+              className="btn-primary flex items-center gap-2"
+              onClick={() => navigate('/tour-optimization')}
+            >
               <Calendar className="w-5 h-5" />
               Planifier les {kolsAnalysis.length} visites
             </button>
