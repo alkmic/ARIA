@@ -11,7 +11,7 @@ import { DataService } from './dataService';
 
 // Types pour les spécifications de graphiques générées par le LLM
 export interface ChartSpec {
-  chartType: 'bar' | 'pie' | 'line' | 'composed';
+  chartType: 'bar' | 'pie' | 'line' | 'composed' | 'radar';
   title: string;
   description: string;
   query: DataQuery;
@@ -561,7 +561,7 @@ export function parseLLMChartResponse(response: string): ChartSpec | null {
     }
 
     // Normaliser le chartType
-    const validTypes = ['bar', 'pie', 'line', 'composed'];
+    const validTypes = ['bar', 'pie', 'line', 'composed', 'radar'];
     if (!validTypes.includes(parsed.chartType)) {
       parsed.chartType = 'bar';
     }

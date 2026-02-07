@@ -23,10 +23,10 @@ export function useGroq(options: UseGroqOptions = {}) {
     maxTokens = 2048,
   } = options;
 
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  const apiKey = import.meta.env.VITE_LLM_API_KEY;
 
   // Vérifier si la clé API est configurée
-  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey.length > 10;
+  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey.length > 10;
 
   // Streaming completion - LE PLUS IMPORTANT POUR L'EFFET WOW
   const streamCompletion = useCallback(
