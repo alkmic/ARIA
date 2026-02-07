@@ -1135,21 +1135,34 @@ export function isGenericFormatChangeRequest(question: string): boolean {
 
 /** Detects if the question asks for a practitioner's time series (volume over time) */
 export function detectPractitionerTimeSeries(question: string): { practitionerName: string } | null {
-  // Patterns that indicate time series intent
-  const timeSeriesPatterns = [
-    /(?:evolution|evolutions|volumes?\s+mensuels?|prescriptions?\s+mensuelles?|historique\s+(?:de|des|du)|tendance)\s+(?:de|du|d['']|pour)\s*(?:le\s+)?(?:dr\.?\s+)?(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)/i,
-    /(?:dr\.?\s+)(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)\s+.*(?:evolution|au\s+cours|temps|mensuel|mois\s+par\s+mois|sur\s+\d+\s+mois)/i,
-    /prescriptions?\s+(?:de|du|d[''])\s*(?:le\s+)?(?:dr\.?\s+)?(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)\s+(?:au\s+cours|dans\s+le\s+temps|sur\s+\d+|mois)/i,
-    /(?:graphique|courbe|montre)\s+.*(?:evolution|volumes?|prescriptions?)\s+.*(?:dr\.?\s+)?(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)/i,
+  // Patterns that indicate time series intent — all require BOTH time-series keywords AND a practitioner name
+  // Important: patterns use /i for keywords but name capture requires initial uppercase (no /i on name part)
+  const timeSeriesPatterns: Array<{ regex: RegExp; nameGroup: number }> = [
+    // "évolution/volumes mensuels/prescriptions mensuelles de/du [Dr] Leroy"
+    { regex: /(?:evolution|evolutions|volumes?\s+mensuels?|prescriptions?\s+mensuelles?|historique\s+(?:de|des|du)|tendance)\s+(?:de|du|d['']|pour)\s*(?:le\s+)?(?:dr\.?\s+)?([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)/i, nameGroup: 1 },
+    // "Dr Leroy ... évolution/au cours du temps/mensuel"
+    { regex: /(?:dr\.?\s+)([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)\s+.*(?:evolution|au\s+cours|temps|mensuel|mois\s+par\s+mois|sur\s+\d+\s+mois)/i, nameGroup: 1 },
+    // "prescriptions de/du [Dr] Leroy au cours du temps"
+    { regex: /prescriptions?\s+(?:de|du|d[''])\s*(?:le\s+)?(?:dr\.?\s+)?([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)\s+(?:au\s+cours|dans\s+le\s+temps|sur\s+\d+|mois)/i, nameGroup: 1 },
+    // "volumes du Dr Leroy" (without explicit time keyword — assumes time series for volume of a specific Dr)
+    { regex: /volumes?\s+(?:de|du|d[''])\s*(?:le\s+)?dr\.?\s+([A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)/, nameGroup: 1 },
   ];
 
-  for (const pattern of timeSeriesPatterns) {
-    const match = question.match(pattern);
-    if (match && match[1]) {
-      const name = match[1].trim();
-      // Filter out common French words that are not names
-      const excluded = ['Quelles', 'Quels', 'Quel', 'Quelle', 'Comment', 'Pourquoi', 'Est', 'Les', 'Des', 'Pour', 'Dans', 'Sur', 'Avec'];
-      if (!excluded.includes(name)) {
+  // Common French words that should NOT be treated as practitioner names
+  const excluded = new Set([
+    'Quelles', 'Quels', 'Quel', 'Quelle', 'Comment', 'Pourquoi', 'Est',
+    'Les', 'Des', 'Pour', 'Dans', 'Sur', 'Avec', 'Tous', 'Toutes',
+    'Mon', 'Mes', 'Leur', 'Leurs', 'Notre', 'Nos', 'Votre', 'Vos',
+    'Ville', 'Villes', 'France', 'Lyon', 'Paris', 'Grenoble',
+    'Volume', 'Volumes', 'Total', 'Mois', 'Analyse', 'Graphique',
+    'Prescripteurs', 'Prescripteur', 'Praticiens', 'Praticien',
+  ]);
+
+  for (const { regex, nameGroup } of timeSeriesPatterns) {
+    const match = question.match(regex);
+    if (match && match[nameGroup]) {
+      const name = match[nameGroup].trim();
+      if (!excluded.has(name)) {
         return { practitionerName: name };
       }
     }
