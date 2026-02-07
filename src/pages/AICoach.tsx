@@ -36,7 +36,12 @@ import {
   LineChart,
   Line,
   Legend,
-  ComposedChart
+  ComposedChart,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
 } from 'recharts';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
@@ -458,12 +463,8 @@ export default function AICoach() {
                         {/* Source indicator */}
                         {message.source && (
                           <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                              message.source === 'llm' || message.source === 'agentic'
-                                ? 'bg-purple-100 text-purple-600'
-                                : 'bg-blue-100 text-blue-600'
-                            }`}>
-                              {message.source === 'agentic' ? 'ARIA Engine + Groq' : message.source === 'llm' ? 'ARIA Engine' : 'Intelligence locale'}
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                              {message.source === 'agentic' ? 'ARIA Engine + Groq' : 'ARIA Engine'}
                             </span>
                             <button
                               onClick={() => speak(message.content)}
@@ -546,6 +547,8 @@ export default function AICoach() {
                             <TrendingUp className="w-5 h-5 text-green-500" />
                           ) : message.agenticChart.spec.chartType === 'composed' ? (
                             <BarChart3 className="w-5 h-5 text-indigo-500" />
+                          ) : message.agenticChart.spec.chartType === 'radar' ? (
+                            <BarChart3 className="w-5 h-5 text-violet-500" />
                           ) : (
                             <BarChart3 className="w-5 h-5 text-blue-500" />
                           )}
@@ -639,6 +642,34 @@ export default function AICoach() {
                                     <Line type="monotone" dataKey={secondaryMetric} stroke="#EF4444" strokeWidth={2} name={secondaryMetric} />
                                   )}
                                 </ComposedChart>
+                              );
+                            }
+
+                            if (chart.spec.chartType === 'radar') {
+                              return (
+                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                                  <PolarGrid stroke="#e2e8f0" />
+                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <PolarRadiusAxis tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                  <Legend />
+                                  <Radar
+                                    name={primaryMetric}
+                                    dataKey={primaryMetric}
+                                    stroke="#8B5CF6"
+                                    fill="#8B5CF6"
+                                    fillOpacity={0.3}
+                                  />
+                                  {secondaryMetric && (
+                                    <Radar
+                                      name={secondaryMetric}
+                                      dataKey={secondaryMetric}
+                                      stroke="#10B981"
+                                      fill="#10B981"
+                                      fillOpacity={0.2}
+                                    />
+                                  )}
+                                </RadarChart>
                               );
                             }
 

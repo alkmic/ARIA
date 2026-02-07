@@ -9,7 +9,7 @@
  * - Le LLM route TOUTES les questions (zéro regex pour le routage)
  * - Le contexte de données est ciblé selon l'intention détectée
  * - Format de sortie unifié (texte + graphique optionnel)
- * - Fallback local robuste si le LLM est indisponible
+ * - 100% LLM — pas de fallback local (erreur explicite si API indisponible)
  */
 
 import { DataService } from './dataService';
@@ -17,7 +17,6 @@ import {
   DATA_SCHEMA,
   parseLLMChartResponse,
   generateChartFromSpec,
-  generateChartLocally,
   addToChartHistory,
   getChartHistory,
   type ChartSpec,
@@ -25,7 +24,6 @@ import {
   type ChartHistory,
 } from './agenticChartEngine';
 import { universalSearch } from './universalSearch';
-import { generateCoachResponse } from './coachAI';
 import { calculatePeriodMetrics, getTopPractitioners } from './metricsCalculator';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
@@ -67,7 +65,7 @@ interface RouterResult {
     isKOL: boolean | null;
   };
   chartParams: {
-    chartType: 'bar' | 'pie' | 'line' | 'composed' | null;
+    chartType: 'bar' | 'pie' | 'line' | 'composed' | 'radar' | null;
     groupBy: string | null;
     metrics: string[];
     limit: number | null;
@@ -121,7 +119,7 @@ Analyse la question de l'utilisateur et classifie-la. Retourne UNIQUEMENT un obj
 
 ## Règles de Routage
 - Si l'utilisateur mentionne "graphique", "montre-moi", "affiche", "diagramme", "camembert", "barres", "courbe" → intent=chart_create
-- Si "en camembert", "change en", "transforme en", "plutôt en", "ajoute", "fais un top X au lieu de" → intent=chart_modify (si graphique précédent)
+- Si "en camembert", "en radar", "change en", "transforme en", "plutôt en", "mets ça en", "ajoute", "fais un top X au lieu de" → intent=chart_modify (si graphique précédent)
 - Si question contient un nom propre identifiable → intent=practitioner_info
 - Si "combien", "qui a le plus", "liste des", "quels sont" → intent=data_query
 - Si "priorité", "stratégie", "comment", "recommandation", "que faire", "optimiser" → intent=strategic_advice
@@ -143,7 +141,7 @@ Analyse la question de l'utilisateur et classifie-la. Retourne UNIQUEMENT un obj
     "isKOL": null ou boolean
   },
   "chartParams": {
-    "chartType": null ou "bar" | "pie" | "line" | "composed",
+    "chartType": null ou "bar" | "pie" | "line" | "composed" | "radar",
     "groupBy": null ou string,
     "metrics": [],
     "limit": null ou number,
@@ -223,6 +221,7 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
    - "pie" : répartitions, proportions, parts de marché (max 8 catégories)
    - "composed" : comparaison de 2 métriques différentes (ex: volume ET fidélité) sur le même graphique
    - "line" : évolutions temporelles, tendances
+   - "radar" : profils multi-dimensionnels, comparaison de plusieurs métriques pour un ou quelques éléments (ex: profil d'un praticien sur plusieurs axes)
 
 3. **Pour les comparaisons KOLs vs Autres** → groupBy: "isKOL"
 4. **Pour les répartitions par spécialité** → groupBy: "specialty"
@@ -235,7 +234,7 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
 ## Format de Sortie OBLIGATOIRE (JSON STRICT)
 \`\`\`json
 {
-  "chartType": "bar" | "pie" | "line" | "composed",
+  "chartType": "bar" | "pie" | "line" | "composed" | "radar",
   "title": "Titre descriptif en français",
   "description": "Description courte de ce que montre le graphique",
   "query": {
@@ -284,6 +283,7 @@ Règles :
 - "En camembert/pie" → change chartType en "pie"
 - "En barres/bar" → change chartType en "bar"
 - "En ligne/courbe" → change chartType en "line"
+- "En radar/toile d'araignée" → change chartType en "radar"
 - "Top X" → change limit à X
 - "Ajoute la fidélité/le volume" → ajoute une métrique
 - "Par ville/spécialité/..." → change le groupBy
@@ -897,61 +897,6 @@ async function generateDirectResponse(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LOCAL FALLBACK
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function generateLocalResponse(
-  question: string,
-  practitioners: Practitioner[],
-  userObjectives: { visitsMonthly: number; visitsCompleted: number },
-  wantsChart: boolean
-): AICoachResult {
-  if (wantsChart) {
-    const chartResult = generateChartLocally(question);
-    if (chartResult && chartResult.data.length > 0) {
-      const firstMetric = chartResult.spec.query.metrics[0]?.name || 'value';
-      const topItems = chartResult.data.slice(0, 3);
-
-      addToChartHistory({
-        question,
-        spec: chartResult.spec,
-        data: chartResult.data,
-        insights: chartResult.insights,
-        timestamp: new Date(),
-      });
-
-      return {
-        textContent: `**${chartResult.spec.title}**\n\n${chartResult.spec.description}\n\n**Résumé :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top ${Math.min(3, topItems.length)} :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item[firstMetric]}`).join('\n')}`,
-        chart: {
-          spec: chartResult.spec,
-          data: chartResult.data,
-          insights: chartResult.insights,
-          suggestions: chartResult.suggestions,
-          generatedByLLM: false,
-        },
-        suggestions: chartResult.suggestions,
-        source: 'local',
-      };
-    }
-  }
-
-  // Text fallback
-  const response = generateCoachResponse(question, practitioners, userObjectives);
-  return {
-    textContent: response.message,
-    practitioners: response.practitioners,
-    suggestions: response.insights?.slice(0, 3),
-    source: 'local',
-  };
-}
-
-// Simple local check for chart-like questions (used only for fallback routing)
-function looksLikeChartRequest(question: string): boolean {
-  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme|montre[- ]?moi|affiche|repartition|distribution|top\s*\d+|classement|compare|par ville|par specialite|par segment|par vingtile|par risque/.test(q);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PIPELINE
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -961,17 +906,17 @@ export async function processQuestion(
   periodLabel: string,
   practitioners: Practitioner[],
   upcomingVisits: UpcomingVisit[],
-  userObjectives: { visitsMonthly: number; visitsCompleted: number }
+  _userObjectives: { visitsMonthly: number; visitsCompleted: number }
 ): Promise<AICoachResult> {
   const chartHistory = getChartHistory();
   const lastAssistant = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0]?.content;
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PIPELINE RÉSILIENT : Router → Targeted LLM → Direct LLM → Local
+  // PIPELINE 100% LLM : Router → Targeted LLM → Direct LLM → Error
   //
   // Si Phase 1 (routeur) échoue → on essaie quand même le LLM direct
   // Si Phase 2 (réponse) échoue → on essaie le LLM direct sans routing
-  // Si tout échoue → fallback local
+  // Si tout échoue → message d'erreur explicite (PAS de fallback local)
   // ═══════════════════════════════════════════════════════════════════════════
 
   // ─── Phase 1: LLM Routing ────────────────────────────────────────────────
@@ -988,24 +933,7 @@ export async function processQuestion(
     if (routing.needsChart) {
       chartResult = await generateChart(question, routing, chartHistory);
       if (!chartResult) {
-        console.log('[AICoachEngine] Chart LLM failed, trying local chart');
-        const localChart = generateChartLocally(question);
-        if (localChart && localChart.data.length > 0) {
-          addToChartHistory({
-            question,
-            spec: localChart.spec,
-            data: localChart.data,
-            insights: localChart.insights,
-            timestamp: new Date(),
-          });
-          chartResult = {
-            spec: localChart.spec,
-            data: localChart.data,
-            insights: localChart.insights,
-            suggestions: localChart.suggestions,
-            generatedByLLM: false,
-          };
-        }
+        console.warn('[AICoachEngine] Chart LLM failed — no local fallback, chart will be skipped');
       }
     }
 
@@ -1045,7 +973,7 @@ export async function processQuestion(
     console.log('[AICoachEngine] Router failed, trying direct LLM...');
   }
 
-  // ─── FALLBACK 1: Direct LLM (no routing) ────────────────────────────────
+  // ─── FALLBACK: Direct LLM (no routing) ──────────────────────────────────
   // The router or text response failed, but the API might still work.
   // Try a direct call with general context.
   const directResponse = await generateDirectResponse(
@@ -1064,14 +992,12 @@ export async function processQuestion(
     };
   }
 
-  // ─── FALLBACK 2: Local response ──────────────────────────────────────────
-  console.log('[AICoachEngine] All LLM calls failed, using local fallback');
-  return generateLocalResponse(
-    question,
-    practitioners,
-    userObjectives,
-    looksLikeChartRequest(question)
-  );
+  // ─── ALL LLM CALLS FAILED: Explicit error ─────────────────────────────
+  console.error('[AICoachEngine] All LLM calls failed — returning error to user');
+  return {
+    textContent: `**Désolé, le service d'intelligence artificielle est temporairement indisponible.**\n\nJe ne peux pas traiter votre demande pour le moment. Cela peut être dû à :\n- Une surcharge temporaire du service\n- Un problème de connexion réseau\n\n**Veuillez réessayer dans quelques instants.** Si le problème persiste, vérifiez la configuration de la clé API Groq.`,
+    source: 'llm',
+  };
 }
 
 // Helper: find practitioner cards for display
