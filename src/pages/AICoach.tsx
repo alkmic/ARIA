@@ -696,12 +696,18 @@ PRATICIEN SPÉCIFIQUE IDENTIFIÉ — La FICHE COMPLÈTE est ci-dessus. Utilise-l
   const isVisualizationRequest = (q: string): boolean => {
     const normalized = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const patterns = [
+      // Explicit chart/graph keywords
       /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme|radar|spider|toile|araignee|aire/,
+      // "montre-moi", "affiche", "dessine" — explicit show verbs
       /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
+      // Emojis
       /📊|📈|🥧|📉/,
+      // Data organization keywords that imply charts
       /repartition|distribution|top\s*\d+|classement|compar|versus|\bvs\b/,
-      /combien|nombre de|total de|analyse/,
-      /par ville|par specialite|par segment|par vingtile|par risque/
+      // "par [dimension]" — grouping implies chart
+      /par ville|par specialite|par segment|par vingtile|par risque/,
+      // "combien/nombre de" ONLY when paired with a grouping dimension (not standalone)
+      /(?:combien|nombre\s+de|total\s+de).*(?:par\s+\w+|par ville|par specialite|chaque|par segment)/,
     ];
     return patterns.some(p => p.test(normalized));
   };
@@ -1146,6 +1152,29 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
             if (autoSpeak) speak(`${modifiedSpec.title}. ${chartResult.insights.join('. ')}`);
             chartHandled = true;
           }
+        }
+      }
+
+      // Safety net: Knowledge questions should NEVER generate charts,
+      // even if isVisualizationRequest matched due to broad patterns.
+      // Check RAG first for knowledge questions before any chart generation.
+      if (!chartHandled && isKnowledgeQuestion(question)) {
+        const builtinChunks = getBuiltinChunks();
+        const ragResults = searchChunks(question, documentChunks, builtinChunks, 5);
+        if (ragResults.length > 0 && ragResults[0].score > 0.4) {
+          const ragContent = buildLocalRAGResponse(ragResults);
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: ragContent,
+            insights: [`${ragResults.length} source(s) trouvée(s) dans la base de connaissances`],
+            timestamp: new Date(),
+            isMarkdown: true,
+            source: 'local'
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+          if (autoSpeak) speak(ragContent);
+          chartHandled = true; // Skip chart generation
         }
       }
 
