@@ -311,7 +311,13 @@ ${text}`;
   return `
 === BASE DE CONNAISSANCES ENTREPRISE (RAG) ===
 Les informations ci-dessous proviennent de documents d'entreprise et de sources médicales fiables.
-Utilise-les pour enrichir ta réponse quand c'est pertinent. Cite les sources quand tu les utilises.
+
+INSTRUCTIONS CRITIQUES pour utiliser ces sources :
+1. SYNTHÉTISE l'information — ne copie JAMAIS le contenu brut tel quel
+2. Réponds D'ABORD à la question de l'utilisateur (chiffre, fait, réponse directe)
+3. Puis structure l'information en catégories claires avec du contexte métier
+4. Ajoute un caveat si la base n'est peut-être pas exhaustive
+5. Propose une relance orientée action (détailler, croiser avec le CRM, etc.)
 
 ${sections.join('\n\n')}
 === FIN BASE DE CONNAISSANCES ===`;

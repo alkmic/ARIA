@@ -130,41 +130,88 @@ function isKnowledgeQuestion(question: string): boolean {
   return /\b(bpco|has|recommandation|guideline|protocole|parcours de soins|epidemio|prevalence|incidence|mortalite|traitement|molecule|medicament|therapie|therapeutique|oxygene|o2|ald|ventilation|vni|ppc|apnee|insuffisance\s+respiratoire|produit|gamme|offre|solution|service|catalogue|air\s*liquide|formation|certification|norme|reglementation|remboursement|prise\s+en\s+charge|ssiad|had|prestataire|dispositif\s+medical|matiere\s+medicale|pharmacovigilance|iec|etude|essai\s+clinique|publication scientifique)\b/.test(q);
 }
 
-/** Construit une réponse locale à partir des résultats de recherche RAG */
-function buildLocalRAGResponse(results: SearchResult[]): string {
+/**
+ * Construit une réponse locale intelligente à partir des résultats RAG.
+ * Analyse la question pour structurer la réponse : réponse directe → contexte → caveat → relance.
+ */
+function buildLocalRAGResponse(question: string, results: SearchResult[]): string {
   if (results.length === 0) return '';
 
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const parts: string[] = [];
   const topScore = results[0].score;
 
-  // === PRIMARY RESULT: full content, no aggressive truncation ===
+  // === PRIMARY RESULT ===
   const primary = results[0];
   const section = primary.chunk.metadata.section || '';
   const source = primary.chunk.metadata.source || 'Document interne';
   const category = primary.chunk.metadata.category || '';
 
-  parts.push(`Voici ce que j'ai trouvé dans la **base de connaissances entreprise** :\n`);
-
-  if (section) {
-    parts.push(`### ${section}`);
-  }
-
-  const categoryLabel = getCategoryLabel(category);
-  parts.push(`> ${categoryLabel} — ${source}\n`);
-
-  // Full content for primary source (builtin chunks are already curated/short)
   let content = primary.chunk.content;
   if (section && content.startsWith(section)) {
     content = content.substring(section.length).replace(/^\n+/, '');
   }
-  // Only truncate very long user-uploaded chunks
   const isBuiltin = primary.chunk.documentId === 'builtin';
   if (!isBuiltin && content.length > 1500) {
     content = content.substring(0, 1500) + '...';
   }
+
+  // === DETECT QUESTION TYPE for intelligent framing ===
+  const isCountQuestion = /combien|nombre|quantit|quel.*nombre|compte|total/.test(q);
+  const isListQuestion = /quels?\s+sont|liste|enumere|cite|existe/.test(q);
+  const isDefineQuestion = /qu.est.ce|definition|c.est\s+quoi|signifie|veut\s+dire|expliqu/.test(q);
+  const isHowQuestion = /comment|de\s+quelle\s+maniere|procedure|methode|etape/.test(q);
+
+  // Extract structured elements from content for smart framing
+  const bulletItems = content.match(/^[-•]\s+.+$/gm) || [];
+  const numberedItems = content.match(/^\d+\.\s+.+$/gm) || [];
+  const allItems = [...bulletItems, ...numberedItems];
+  // Count real category headers: lines ending with ":" that are followed by a bullet item
+  // (filters out "Service 24/7 : description" single-line entries)
+  const contentLines = content.split('\n');
+  let categoryCount = 0;
+  for (let i = 0; i < contentLines.length - 1; i++) {
+    const line = contentLines[i].trim();
+    const nextLine = contentLines[i + 1]?.trim() || '';
+    if (/^[A-ZÀ-Ý][\wà-ÿ\s/'']+\s*:$/.test(line) && /^[-•]/.test(nextLine)) {
+      categoryCount++;
+    }
+  }
+
+  // === QUESTION-AWARE HEADER (answer first!) ===
+  const categoryLabel = getCategoryLabel(category);
+
+  if (isCountQuestion && allItems.length > 0) {
+    // Count question: give the number first
+    if (categoryCount > 1) {
+      parts.push(`D'après la base de connaissances, **environ ${allItems.length} éléments** sont identifiés, répartis en **${categoryCount} catégories** :\n`);
+    } else {
+      parts.push(`D'après la base de connaissances, **${allItems.length} éléments** sont répertoriés :\n`);
+    }
+  } else if (isDefineQuestion) {
+    const topic = section || 'ce sujet';
+    parts.push(`Voici ce que contient la base de connaissances sur **${topic}** :\n`);
+  } else if (isHowQuestion) {
+    parts.push(`Voici la procédure décrite dans la base de connaissances :\n`);
+  } else if (isListQuestion) {
+    if (allItems.length > 0) {
+      parts.push(`La base de connaissances référence **${allItems.length} éléments** :\n`);
+    } else {
+      parts.push(`Voici les informations disponibles dans la base de connaissances :\n`);
+    }
+  } else {
+    // Generic: still give a contextual intro
+    parts.push(`D'après la **base de connaissances** *(${categoryLabel} — ${source})* :\n`);
+  }
+
+  // === STRUCTURED CONTENT ===
+  if (section && !isCountQuestion && !isListQuestion) {
+    parts.push(`### ${section}\n`);
+  }
+
   parts.push(content);
 
-  // === SECONDARY RESULTS: only if score >= 60% of top, shown as compact "Voir aussi" ===
+  // === SECONDARY RESULTS ===
   const relevantSecondary = results.slice(1).filter(r => r.score >= topScore * 0.6);
 
   if (relevantSecondary.length > 0) {
@@ -176,7 +223,6 @@ function buildLocalRAGResponse(results: SearchResult[]): string {
       const secSource = result.chunk.metadata.source || '';
       const secCategory = getCategoryLabel(result.chunk.metadata.category || '');
 
-      // Brief excerpt for secondary sources
       let secContent = result.chunk.content;
       if (secSection && secContent.startsWith(secSection)) {
         secContent = secContent.substring(secSection.length).replace(/^\n+/, '');
@@ -191,12 +237,15 @@ function buildLocalRAGResponse(results: SearchResult[]): string {
     }
   }
 
-  // Footer: remaining sources not shown
+  // === CAVEAT + FOLLOW-UP (always present) ===
   const shownCount = 1 + Math.min(relevantSecondary.length, 2);
   const remaining = results.length - shownCount;
+
+  parts.push('\n---');
   if (remaining > 0) {
-    parts.push(`\n> ${remaining} autre(s) source(s) disponible(s) — posez une question plus précise pour affiner.`);
+    parts.push(`> ${remaining} autre(s) source(s) disponible(s) — posez une question plus précise pour affiner.`);
   }
+  parts.push(`> *Ces informations proviennent de la base de connaissances intégrée. Configurez une clé API LLM (Paramètres) pour des réponses synthétisées par IA.*`);
 
   return parts.join('\n');
 }
@@ -1067,7 +1116,13 @@ ${conversationHistory}
 QUESTION ACTUELLE :
 ${question}
 
-RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, donne l'adresse. Si on demande une tendance, décris la tendance. Ne rajoute PAS d'informations non demandées.`;
+INSTRUCTIONS DE RÉPONSE :
+- Réponds D'ABORD à la question posée (chiffre, fait, réponse directe en gras)
+- Si des informations RAG sont disponibles ci-dessus, SYNTHÉTISE-les — ne les copie jamais brutes
+- Structure : réponse directe → contexte structuré → suggestion d'approfondissement
+- Si on demande une adresse, donne l'adresse. Si on demande une tendance, décris la tendance
+- Ne rajoute PAS d'informations non demandées
+- Utilise le format Markdown (gras, listes, tableaux) pour structurer`;
 
         const aiResponse = await complete([{ role: 'user', content: prompt }]);
 
@@ -1162,7 +1217,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
         const builtinChunks = getBuiltinChunks();
         const ragResults = searchChunks(question, documentChunks, builtinChunks, 5);
         if (ragResults.length > 0 && ragResults[0].score > 0.4) {
-          const ragContent = buildLocalRAGResponse(ragResults);
+          const ragContent = buildLocalRAGResponse(question, ragResults);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
@@ -1247,7 +1302,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
         }
         // Layer 2: Knowledge questions (BPCO, produits, HAS, etc.) → RAG first
         else if (isKnowledgeQuestion(question) && hasGoodRAG) {
-          const ragContent = buildLocalRAGResponse(ragResults);
+          const ragContent = buildLocalRAGResponse(question, ragResults);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
@@ -1273,7 +1328,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
             && hasGoodRAG;
 
           if (useRAG) {
-            const ragContent = buildLocalRAGResponse(ragResults);
+            const ragContent = buildLocalRAGResponse(question, ragResults);
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
