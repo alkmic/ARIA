@@ -329,16 +329,32 @@ export function isFollowUpQuestion(question: string): boolean {
 // Détecter si l'utilisateur veut MODIFIER le graphique précédent
 export function isChartModificationRequest(question: string): boolean {
   const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // All recognized chart type keywords (used in multiple patterns)
+  const chartTypes = 'camembert|barres?|courbe|ligne|line|pie|bar|histogramme|compose|mixte|radar|spider|toile|araignee|aires?|area|circulaire';
   const modificationPatterns = [
-    /modifie.*graphi|change.*graphi|transforme.*graphi/,
-    /en (camembert|barres?|courbe|ligne|histogramme|radar|spider|toile|araignee|aire|area)/,
-    /au format (camembert|barres?|courbe|ligne|histogramme|pie|bar|radar|spider|toile|aire|area)/,
-    /le meme en|pareil (mais )?en|refais.*(en|au format)/,
-    /format (camembert|barres?|courbe|pie|bar|histogramme|radar|spider|toile|aire|area)/,
-    /passe.*en (camembert|barres?|courbe|ligne|radar|spider|toile|aire|area)/,
-    /je.*attendais.*camembert|je.*attendais.*barres/,
+    // Explicit modification verbs: "modifie le graphique", "change le graphe", "transforme en..."
+    /modifie|change.*graphi|transforme|convertis|reconvertis/,
+    // "en [chartType]" with optional "graphe/graphique" between
+    new RegExp(`(?:en|sous\\s+forme\\s+de?)\\s+(?:(?:un\\s+)?(?:graphe?|graphique|diagramme|chart)\\s+(?:de\\s+(?:type\\s+)?)?)?(?:${chartTypes})`, 'i'),
+    // "au format [chartType]"
+    new RegExp(`au\\s+format\\s+(?:${chartTypes})`, 'i'),
+    // "le même en...", "pareil en...", "refais/réalise en..."
+    /(?:le\s+)?meme\s+(?:graphe?|graphique|chart|diagramme)?\s*(?:mais\s+)?en\b/,
+    /pareil\s+(?:mais\s+)?en\b/,
+    new RegExp(`(?:refais|realise|reproduis|remets|repasse).*(?:en|au\\s+format|comme|sous\\s+forme)`, 'i'),
+    // "format [chartType]"
+    new RegExp(`format\\s+(?:${chartTypes})`, 'i'),
+    // "passe en [chartType]"
+    new RegExp(`passe.*en\\s+(?:${chartTypes})`, 'i'),
+    // "je voulais/attendais un camembert"
+    new RegExp(`je.*(?:attendais|voulais|voudrais|prefere|prefererais|aimerais).*(?:${chartTypes})`, 'i'),
+    // "un autre format/type/graphique"
     /un\s+autre(\s+(format|type|graphique))?(\s|$)/,
     /autre\s+(format|type|graphique)/,
+    // "comme un radar", "sous forme radar"
+    new RegExp(`(?:comme|sous\\s+forme)\\s+(?:un\\s+)?(?:graphe?\\s+)?(?:de\\s+)?(?:${chartTypes})`, 'i'),
+    // "plutôt en barres", "de préférence en camembert"
+    new RegExp(`(?:plutot|de\\s+preference)\\s+en\\s+(?:${chartTypes})`, 'i'),
   ];
   return modificationPatterns.some(p => p.test(q));
 }
@@ -755,6 +771,20 @@ function generateAutoSuggestions(spec: ChartSpec): string[] {
     suggestions.push('Répartition par segment');
   }
 
+  // Always offer format conversion as last suggestion
+  const formatSuggestions: Record<string, string> = {
+    bar: 'Afficher en camembert',
+    pie: 'Afficher en barres',
+    line: 'Afficher en aires',
+    area: 'Afficher en courbe',
+    radar: 'Afficher en barres',
+    composed: 'Afficher en radar',
+  };
+  const altFormat = formatSuggestions[spec.chartType];
+  if (altFormat) {
+    suggestions.push(altFormat);
+  }
+
   return suggestions;
 }
 
@@ -1098,10 +1128,31 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
 }
 
 /**
- * Génère un graphique complet à partir d'une interprétation locale
+ * Détecte le type de graphique explicitement demandé dans la question.
+ * Retourne null si aucun type n'est spécifié explicitement.
+ */
+export function detectRequestedChartType(question: string): ChartSpec['chartType'] | null {
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/camembert|pie|circulaire/.test(q)) return 'pie';
+  if (/radar|spider|toile|araignee/.test(q)) return 'radar';
+  if (/aires?\b|area\b|cumule/.test(q)) return 'area';
+  if (/courbe|ligne|line\b|lineaire/.test(q)) return 'line';
+  if (/compose|mixte|combined/.test(q)) return 'composed';
+  if (/barres?\b|bar\b|histogramme|batons/.test(q)) return 'bar';
+  return null;
+}
+
+/**
+ * Génère un graphique complet à partir d'une interprétation locale.
+ * Respecte le type de graphique explicitement demandé par l'utilisateur.
  */
 export function generateChartLocally(question: string): ChartResult {
   const { spec } = interpretQuestionLocally(question);
+  // Override with explicitly requested chart type (e.g. "volumes par ville en radar")
+  const requestedType = detectRequestedChartType(question);
+  if (requestedType) {
+    spec.chartType = requestedType;
+  }
   return generateChartFromSpec(spec);
 }
 

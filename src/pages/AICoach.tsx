@@ -71,6 +71,7 @@ import {
   isGenericFormatChangeRequest,
   detectPractitionerTimeSeries,
   isContextualChartRequest,
+  detectRequestedChartType,
   type ChartSpec
 } from '../services/agenticChartEngine';
 import { useUserDataStore } from '../stores/useUserDataStore';
@@ -791,19 +792,9 @@ Réponds de manière précise et contextuelle.`;
         // on modifie programmatiquement sans appeler le LLM
         if (wantsChartModification && hasRecentChart) {
           const lastChart = chartHistory[0];
-          const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          let newChartType: ChartSpec['chartType'] = lastChart.spec.chartType;
-
-          if (/camembert|pie|circulaire/.test(q)) newChartType = 'pie';
-          else if (/barres?|bar|histogramme/.test(q)) newChartType = 'bar';
-          else if (/courbe|ligne|line/.test(q)) newChartType = 'line';
-          else if (/compose|mixte/.test(q)) newChartType = 'composed';
-          else if (/radar|spider|toile|araignee/.test(q)) newChartType = 'radar';
-          else if (/aire|area/.test(q)) newChartType = 'area';
-          else if (isGenericFormatChangeRequest(question)) {
-            // "Un autre format" / "un autre" → cycle to the next chart type
-            newChartType = getNextChartType(lastChart.spec.chartType);
-          }
+          const requestedType = detectRequestedChartType(question);
+          const newChartType = requestedType
+            || (isGenericFormatChangeRequest(question) ? getNextChartType(lastChart.spec.chartType) : lastChart.spec.chartType);
 
           if (newChartType !== lastChart.spec.chartType) {
             const chartTypeLabels: Record<string, string> = {
@@ -868,8 +859,10 @@ Réponds de manière précise et contextuelle.`;
             const p = practitionerMatches[0];
             const volumeHistory = DataService.generateVolumeHistory(p.metrics.volumeL, p.id);
 
+            // Allow user to request specific chart type for time series (e.g. "évolution en aires")
+            const timeSeriesChartType = detectRequestedChartType(question) || 'line';
             const timeSeriesSpec: ChartSpec = {
-              chartType: 'line',
+              chartType: timeSeriesChartType,
               title: `Évolution des volumes — ${p.title} ${p.firstName} ${p.lastName}`,
               description: `Prescriptions mensuelles d'oxygène sur 12 mois (${p.specialty}, ${p.address.city})`,
               query: {
@@ -1099,9 +1092,65 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
       // ============================================
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Try chart generation first if visualization was requested
+      // FAST PATH: Chart modification (convert existing chart to new type)
+      // This is client-side only, no LLM needed
       let chartHandled = false;
-      if (wantsVisualization) {
+      if ((wantsChartModification || wantsVisualization) && hasRecentChart) {
+        const requestedType = detectRequestedChartType(question);
+        const isGenericChange = isGenericFormatChangeRequest(question);
+
+        if (requestedType || isGenericChange) {
+          const lastChart = chartHistory[0];
+          const newChartType = requestedType || getNextChartType(lastChart.spec.chartType);
+
+          if (newChartType !== lastChart.spec.chartType || isGenericChange) {
+            const chartTypeLabels: Record<string, string> = {
+              pie: 'en camembert', bar: 'en barres', line: 'en courbe',
+              radar: 'en radar', area: 'en aires', composed: 'en composé',
+            };
+            const modifiedSpec: ChartSpec = {
+              ...lastChart.spec,
+              chartType: newChartType,
+              title: lastChart.spec.title.replace(
+                /\s+en (camembert|barres?|courbe|ligne|histogramme|radar|spider|spider\s*chart|toile|araign[ée]e|aires?|area|compos[ée])/i, ''
+              ).trim() + (chartTypeLabels[newChartType] ? ` ${chartTypeLabels[newChartType]}` : ''),
+            };
+
+            const chartResult = generateChartFromSpec(modifiedSpec);
+            addToChartHistory({
+              question,
+              spec: chartResult.spec,
+              data: chartResult.data,
+              insights: chartResult.insights,
+              timestamp: new Date()
+            });
+
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: `**${modifiedSpec.title}**\n\n${modifiedSpec.description || ''}`,
+              agenticChart: {
+                spec: chartResult.spec,
+                data: chartResult.data,
+                insights: chartResult.insights,
+                suggestions: chartResult.suggestions,
+                generatedByLLM: false
+              },
+              suggestions: chartResult.suggestions,
+              timestamp: new Date(),
+              isMarkdown: true,
+              source: 'local'
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
+            if (autoSpeak) speak(`${modifiedSpec.title}. ${chartResult.insights.join('. ')}`);
+            chartHandled = true;
+          }
+        }
+      }
+
+      // Generate a new chart if visualization was requested and not a modification
+      if (!chartHandled && wantsVisualization) {
         const chartResult = generateChartLocally(question);
 
         if (chartResult && chartResult.data.length > 0) {
