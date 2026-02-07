@@ -299,8 +299,8 @@ Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même fo
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function getApiKey(): string | null {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey.length < 10) {
+  const apiKey = import.meta.env.VITE_LLM_API_KEY;
+  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === 'your_llm_api_key_here' || apiKey.length < 10) {
     return null;
   }
   return apiKey;
@@ -922,7 +922,7 @@ export async function processQuestion(
   // Early exit: no API key configured
   if (!getApiKey()) {
     return {
-      textContent: `**La clé API Groq n'est pas configurée.**\n\nPour utiliser le Coach IA, vous devez configurer votre clé API Groq :\n\n1. Créez un compte sur [console.groq.com](https://console.groq.com)\n2. Générez une clé API\n3. Créez un fichier \`.env\` à la racine du projet avec :\n\`\`\`\nVITE_GROQ_API_KEY=votre_clé_ici\n\`\`\`\n4. Redémarrez l'application\n\nLe Coach IA utilise le modèle **Llama 3.3 70B** via Groq pour toutes ses fonctionnalités.`,
+      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, vous devez configurer votre clé API :\n\n1. Créez un compte sur [console.groq.com](https://console.groq.com)\n2. Générez une clé API\n3. Définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec votre clé\n4. Redémarrez l'application\n\nLe Coach IA utilise le modèle **Llama 3.3 70B** via Groq pour toutes ses fonctionnalités.`,
       source: 'llm',
     };
   }

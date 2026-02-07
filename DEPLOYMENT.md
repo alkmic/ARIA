@@ -43,7 +43,7 @@ npm install -g vercel
 2. Importer votre repository GitHub `alkmic/ARIA`
 3. Configurer les variables d'environnement :
    - Cliquer sur "Environment Variables"
-   - Ajouter : `VITE_GROQ_API_KEY` = `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`
+   - Ajouter : `VITE_LLM_API_KEY` = `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`
 4. Cliquer sur "Deploy"
 5. ✅ Votre site sera disponible à `https://aria-[random].vercel.app`
 
@@ -61,7 +61,7 @@ vercel
 # ? In which directory is your code located? ./
 
 # Configurer la variable d'environnement
-vercel env add VITE_GROQ_API_KEY
+vercel env add VITE_LLM_API_KEY
 
 # Déployer en production
 vercel --prod
@@ -72,7 +72,7 @@ vercel --prod
 **IMPORTANT** : N'oubliez pas d'ajouter la clé Groq API dans Vercel !
 
 - Via l'interface : Settings → Environment Variables
-- Nom : `VITE_GROQ_API_KEY`
+- Nom : `VITE_LLM_API_KEY`
 - Valeur : `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`
 - Environnement : Production, Preview, Development (cocher les 3)
 
@@ -119,7 +119,7 @@ npm install -g netlify-cli
 netlify deploy --prod
 
 # Configurer les variables d'environnement
-netlify env:set VITE_GROQ_API_KEY "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"
+netlify env:set VITE_LLM_API_KEY "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"
 ```
 
 ### GitHub Pages (limité - pas de variables d'env côté serveur)
@@ -169,7 +169,7 @@ Une fois déployé, vérifiez que :
 ## Troubleshooting 🔧
 
 ### Erreur : "Groq API key not found"
-→ Vérifiez que `VITE_GROQ_API_KEY` est bien configurée dans Vercel
+→ Vérifiez que `VITE_LLM_API_KEY` est bien configurée dans Vercel
 
 ### Erreur : "404 on page refresh"
 → Vérifiez que `vercel.json` est bien présent avec la configuration des rewrites
@@ -194,7 +194,7 @@ Une fois déployé, vérifiez que :
 
 1. Créer compte sur vercel.com (1 min)
 2. Importer le repo GitHub (1 min)
-3. Ajouter la variable d'env VITE_GROQ_API_KEY (1 min)
+3. Ajouter la variable d'env VITE_LLM_API_KEY (1 min)
 4. Deploy automatique (2 min)
 
 ✅ Vous obtiendrez un URL public HTTPS que vous pourrez partager immédiatement !

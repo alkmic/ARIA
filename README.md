@@ -293,7 +293,7 @@ Créer un fichier `.env` à la racine :
 
 ```env
 # Groq API Configuration
-VITE_GROQ_API_KEY=votre_clé_groq_api_ici
+VITE_LLM_API_KEY=votre_clé_groq_api_ici
 ```
 
 Pour obtenir une clé API Groq :
@@ -309,7 +309,7 @@ Le moyen le plus simple de déployer ARIA est d'utiliser Vercel :
 
 1. Créer un compte sur [vercel.com](https://vercel.com)
 2. Importer le repository GitHub
-3. Configurer la variable d'environnement `VITE_GROQ_API_KEY`
+3. Configurer la variable d'environnement `VITE_LLM_API_KEY`
 4. Déployer
 
 Voir `DEPLOYMENT.md` pour les instructions détaillées.

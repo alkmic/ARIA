@@ -21,7 +21,7 @@ Dans le répertoire racine du projet (`/home/user/ARIA`), créez un fichier `.en
 cp .env.example .env
 
 # Ou créer directement
-echo "VITE_GROQ_API_KEY=votre_cle_api_ici" > .env
+echo "VITE_LLM_API_KEY=votre_cle_api_ici" > .env
 ```
 
 ### 3. Ajouter votre clé
@@ -30,7 +30,7 @@ Ouvrez le fichier `.env` et remplacez `your_groq_api_key_here` par votre vraie c
 
 ```env
 # Groq API Configuration
-VITE_GROQ_API_KEY=gsk_votre_vraie_cle_ici
+VITE_LLM_API_KEY=gsk_votre_vraie_cle_ici
 ```
 
 ### 4. Redémarrer le serveur
