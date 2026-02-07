@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -38,26 +38,15 @@ import {
   Legend,
   ComposedChart
 } from 'recharts';
-import { useGroq } from '../hooks/useGroq';
-import { generateCoachResponse } from '../services/coachAI';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
-import { calculatePeriodMetrics, getTopPractitioners } from '../services/metricsCalculator';
-import { DataService } from '../services/dataService';
-import { generateQueryContext, generateFullSiteContext, executeQuery } from '../services/dataQueryEngine';
-import { universalSearch, getFullDatabaseContext } from '../services/universalSearch';
 import {
-  CHART_GENERATION_PROMPT,
-  getDataContextForLLM,
-  parseLLMChartResponse,
-  generateChartFromSpec,
-  generateChartLocally,
+  processQuestion,
+  isLLMConfigured,
+  type ConversationMessage
+} from '../services/aiCoachEngine';
+import {
   DEFAULT_CHART_COLORS,
-  addToChartHistory,
-  getChartHistory,
-  buildChartContextForLLM,
-  isFollowUpQuestion,
-  extractQueryParameters,
   clearChartHistory,
   type ChartSpec
 } from '../services/agenticChartEngine';
@@ -100,19 +89,21 @@ export default function AICoach() {
   const { practitioners, currentUser, upcomingVisits } = useAppStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
-  const { complete, error: groqError } = useGroq();
+  const llmConfigured = isLLMConfigured();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  // Conversation history for the engine (role + content, no UI metadata)
+  const conversationHistoryRef = useRef<ConversationMessage[]>([]);
 
-  // Suggestions contextuelles - Talk to My Data (approche agentique)
+  // Suggestions contextuelles - Talk to My Data (approche agentique LLM-First)
   const SUGGESTION_CHIPS = [
     "Montre-moi un graphique des volumes par ville",
-    "Quelle est la répartition des praticiens par niveau de risque ?",
     "Compare les KOLs aux autres praticiens en volume",
-    "Top 10 prescripteurs avec leur fidélité",
-    "Distribution des praticiens par ancienneté de visite",
+    "Top 15 prescripteurs avec leur fidélité",
+    "Camembert de la répartition par niveau de risque",
     "Analyse les pneumologues vs généralistes",
-    "Camembert des segments par vingtile",
+    "Quels KOLs n'ai-je pas vus depuis 60 jours ?",
+    "Qui a le plus de publications ?",
     `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
   ];
 
@@ -208,136 +199,13 @@ export default function AICoach() {
     setAutoSpeak(!autoSpeak);
   };
 
-  // NOTE: La génération de graphiques est maintenant gérée par agenticChartEngine.ts
-  // avec les fonctions generateChartLocally() et interpretQuestionLocally()
+  // ════════════════════════════════════════════════════════════════════════════
+  // NOUVEAU : Pipeline unifié via aiCoachEngine
+  // Le routage, la construction de contexte, et la génération de réponse
+  // sont entièrement gérés par le moteur LLM-First (2 phases).
+  // ════════════════════════════════════════════════════════════════════════════
 
-  // Créer un contexte ultra-enrichi pour l'IA avec accès complet aux données
-  // et moteur de requêtes intelligent
-  const buildContext = (userQuestion?: string) => {
-    // Calculer les métriques de la période sélectionnée
-    const periodMetrics = calculatePeriodMetrics(practitioners, upcomingVisits, 'month');
-
-    // Utiliser le nouveau service de données pour les statistiques
-    const stats = DataService.getGlobalStats();
-    const kols = DataService.getKOLs();
-    const atRiskPractitioners = DataService.getAtRiskPractitioners().slice(0, 10);
-
-    // Top praticiens par volume
-    const topPractitioners = getTopPractitioners(practitioners, 'year', 10);
-
-    // KOLs non vus depuis longtemps
-    const today = new Date();
-    const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-    const undervisitedKOLs = kols.filter(p => {
-      if (!p.lastVisitDate) return true;
-      const lastVisit = new Date(p.lastVisitDate);
-      return lastVisit < ninetyDaysAgo;
-    });
-
-    // NOUVEAU: Utiliser le moteur de recherche universelle pour analyser la question
-    let queryContext = '';
-    let specificPractitionerContext = '';
-    let universalSearchContext = '';
-
-    if (userQuestion) {
-      // Utiliser la recherche universelle pour des résultats complets
-      const universalResult = universalSearch(userQuestion);
-      if (universalResult.results.length > 0) {
-        universalSearchContext = universalResult.context;
-      }
-
-      // Exécuter aussi la requête classique pour compatibilité
-      const queryResult = executeQuery(userQuestion);
-
-      // Si des résultats spécifiques sont trouvés, générer le contexte de requête
-      if (queryResult.practitioners.length > 0 && queryResult.practitioners.length < practitioners.length) {
-        queryContext = generateQueryContext(userQuestion);
-      }
-
-      // Recherche floue additionnelle pour le contexte de praticien spécifique
-      const matches = DataService.fuzzySearchPractitioner(userQuestion);
-      if (matches.length > 0 && matches.length <= 3) {
-        specificPractitionerContext = matches.map(p =>
-          DataService.getCompletePractitionerContext(p.id)
-        ).join('\n');
-      }
-    }
-
-    // Générer le contexte complet du site pour les questions générales
-    const fullSiteContext = userQuestion ? getFullDatabaseContext() : generateFullSiteContext();
-
-    return `Tu es un assistant stratégique expert pour un délégué pharmaceutique spécialisé en oxygénothérapie à domicile chez Air Liquide Healthcare.
-
-Tu as accès à la BASE DE DONNÉES COMPLÈTE des praticiens et peux répondre à N'IMPORTE QUELLE question sur les données, incluant :
-- Questions sur des praticiens spécifiques (par nom, prénom, ville, spécialité)
-- Questions sur les publications, actualités, certifications
-- Questions statistiques (combien de..., qui a le plus de..., moyenne de...)
-- Questions géographiques (praticiens par ville)
-- Questions sur les KOLs, vingtiles, volumes
-
-CONTEXTE TERRITOIRE (${periodLabel}) :
-- Nombre total de praticiens : ${stats.totalPractitioners} (${stats.pneumologues} pneumologues, ${stats.generalistes} médecins généralistes)
-- KOLs identifiés : ${stats.totalKOLs}
-- Volume total annuel : ${(stats.totalVolume / 1000).toFixed(0)}K L
-- Fidélité moyenne : ${stats.averageLoyalty.toFixed(1)}/10
-- Visites ${periodLabel} : ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective}
-- Praticiens à risque : ${atRiskPractitioners.length}
-- KOLs sous-visités : ${undervisitedKOLs.length}
-
-MÉTRIQUES DE PERFORMANCE ${periodLabel.toUpperCase()} :
-- Objectif visites : ${periodMetrics.visitsObjective}
-- Visites réalisées : ${periodMetrics.visitsCount} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
-- Nouveaux prescripteurs : ${periodMetrics.newPrescribers}
-- Volume période : ${(periodMetrics.totalVolume / 1000).toFixed(0)}K L
-- Croissance volume : +${periodMetrics.volumeGrowth.toFixed(1)}%
-
-TOP 10 PRATICIENS (VOLUME ANNUEL) :
-${topPractitioners.map((p, i) =>
-  `${i + 1}. ${p.title} ${p.firstName} ${p.lastName} - ${p.specialty}, ${p.city}
-   Volume: ${(p.volumeL / 1000).toFixed(0)}K L/an | Fidélité: ${p.loyaltyScore}/10 | Vingtile: ${p.vingtile}${p.isKOL ? ' | KOL' : ''}`
-).join('\n')}
-
-PRATICIENS À RISQUE :
-${atRiskPractitioners.length > 0 ? atRiskPractitioners.slice(0, 5).map(p =>
-  `- ${p.title} ${p.lastName} (${p.address.city}): Fidélité ${p.metrics.loyaltyScore}/10, Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an${p.metrics.isKOL ? ', KOL' : ''}`
-).join('\n') : '- Aucun praticien à risque critique'}
-
-KOLS SOUS-VISITÉS (>90 jours) :
-${undervisitedKOLs.length > 0 ? undervisitedKOLs.slice(0, 5).map(p =>
-  `- ${p.title} ${p.firstName} ${p.lastName} (${p.address.city}): ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`
-).join('\n') : '- Tous les KOLs sont à jour'}
-
-${universalSearchContext}
-${queryContext}
-${specificPractitionerContext}
-${fullSiteContext}
-
-INSTRUCTIONS IMPORTANTES :
-- Réponds de manière concise et professionnelle avec des recommandations concrètes
-- Utilise le format Markdown pour mettre en valeur les informations importantes (**gras**, *italique*)
-- Pour les questions sur des praticiens spécifiques, utilise les données ci-dessus pour donner des réponses PRÉCISES
-- Si on demande "quel médecin dont le prénom est X a le plus de Y", cherche dans la base complète ci-dessus
-- Priorise par impact stratégique : KOL > Volume > Urgence > Fidélité
-- Fournis des chiffres précis basés sur les données réelles
-- Sois encourageant et positif
-- Adapte tes recommandations à la période (${periodLabel})`;
-  };
-
-  // Détecter si la question demande une visualisation
-  const isVisualizationRequest = (q: string): boolean => {
-    const normalized = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const patterns = [
-      /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme/,
-      /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
-      /📊|📈|🥧|📉/,
-      /repartition|distribution|top\s*\d+|classement|compare/,
-      /combien|nombre de|total de|analyse/,
-      /par ville|par specialite|par segment|par vingtile|par risque/
-    ];
-    return patterns.some(p => p.test(normalized));
-  };
-
-  const handleSend = async (question: string) => {
+  const handleSend = useCallback(async (question: string) => {
     if (!question.trim()) return;
 
     // Ajouter message utilisateur
@@ -351,292 +219,85 @@ INSTRUCTIONS IMPORTANTES :
     setInput('');
     setIsTyping(true);
 
-    // Détecter le type de question
-    const wantsVisualization = isVisualizationRequest(question);
-    const isFollowUp = isFollowUpQuestion(question);
-    const chartHistory = getChartHistory();
-    const hasRecentChart = chartHistory.length > 0;
+    // Mettre à jour l'historique de conversation pour le moteur
+    conversationHistoryRef.current.push({ role: 'user', content: question });
 
     try {
-      // ============================================
-      // MODE 1: Question de suivi sur un graphique précédent
-      // ============================================
-      if (isFollowUp && hasRecentChart) {
-        console.log('🔄 Mode suivi - question sur graphique précédent');
+      // Appel unique au moteur LLM-First
+      // Phase 1 : Routage LLM (classification intent + extraction params)
+      // Phase 2A : Génération graphique si nécessaire
+      // Phase 2B : Génération texte avec contexte ciblé
+      const result = await processQuestion(
+        question,
+        conversationHistoryRef.current,
+        periodLabel,
+        practitioners,
+        upcomingVisits,
+        currentUser.objectives
+      );
 
-        const chartContext = buildChartContextForLLM();
-        const context = buildContext(question);
+      // Construire le message assistant
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: result.textContent,
+        practitioners: result.practitioners,
+        agenticChart: result.chart ? {
+          spec: result.chart.spec,
+          data: result.chart.data,
+          insights: result.chart.insights,
+          suggestions: result.chart.suggestions,
+          generatedByLLM: result.chart.generatedByLLM
+        } : undefined,
+        insights: result.chart?.insights,
+        suggestions: result.suggestions || result.chart?.suggestions,
+        timestamp: new Date(),
+        isMarkdown: true,
+        source: result.source === 'llm' ? (result.chart ? 'agentic' : 'llm') : 'local'
+      };
 
-        // Construire le prompt avec contexte du graphique
-        const followUpPrompt = `${context}
+      setMessages(prev => [...prev, assistantMessage]);
 
-${chartContext}
+      // Mettre à jour l'historique de conversation
+      const chartSummary = result.chart
+        ? `[Graphique: ${result.chart.spec.title}]`
+        : '';
+      conversationHistoryRef.current.push({
+        role: 'assistant',
+        content: result.textContent,
+        hasChart: !!result.chart,
+        chartSummary,
+      });
 
-L'utilisateur pose une question de SUIVI concernant le graphique précédent.
-
-QUESTION DE L'UTILISATEUR :
-"${question}"
-
-INSTRUCTIONS :
-1. Analyse la question par rapport aux données du graphique précédent
-2. Si la question semble contredire les données, explique la réalité des données
-3. Sois précis et utilise les chiffres du graphique pour appuyer ta réponse
-4. Utilise le format Markdown
-
-Réponds de manière précise et contextuelle.`;
-
-        const aiResponse = await complete([{ role: 'user', content: followUpPrompt }]);
-
-        if (aiResponse) {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: aiResponse,
-            timestamp: new Date(),
-            isMarkdown: true,
-            source: 'llm'
-          };
-
-          setMessages(prev => [...prev, assistantMessage]);
-
-          if (autoSpeak) {
-            speak(aiResponse);
-          }
-        } else {
-          throw new Error('Pas de réponse du LLM');
-        }
+      // Garder les 20 derniers messages dans l'historique
+      if (conversationHistoryRef.current.length > 20) {
+        conversationHistoryRef.current = conversationHistoryRef.current.slice(-20);
       }
-      // ============================================
-      // MODE 2: Demande de visualisation/graphique
-      // ============================================
-      else if (wantsVisualization) {
-        console.log('🤖 Mode agentique activé - génération de graphique');
 
-        const dataContext = getDataContextForLLM();
-        const extractedParams = extractQueryParameters(question);
-
-        // Ajouter les paramètres extraits au prompt pour guider le LLM
-        let paramHints = '';
-        if (extractedParams.limit) {
-          paramHints += `\n⚠️ L'utilisateur demande EXACTEMENT ${extractedParams.limit} éléments (limit: ${extractedParams.limit})`;
-        }
-        if (extractedParams.wantsKOL) {
-          paramHints += `\n⚠️ L'utilisateur s'intéresse aux KOLs`;
-        }
-        if (extractedParams.wantsSpecialty) {
-          paramHints += `\n⚠️ Spécialité ciblée : ${extractedParams.wantsSpecialty}`;
-        }
-
-        const chartPrompt = `${CHART_GENERATION_PROMPT}
-
-${dataContext}
-
-DEMANDE DE L'UTILISATEUR :
-"${question}"
-${paramHints}
-
-Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les paramètres demandés (nombre d'éléments, filtres, etc.).`;
-
-        const chartResponse = await complete([{ role: 'user', content: chartPrompt }]);
-
-        if (chartResponse) {
-          // Parser la réponse du LLM pour extraire la spec
-          let spec = parseLLMChartResponse(chartResponse);
-
-          if (spec) {
-            // Forcer le limit si extrait de la question mais pas dans la spec
-            if (extractedParams.limit && (!spec.query.limit || spec.query.limit !== extractedParams.limit)) {
-              console.log(`📊 Forcing limit to ${extractedParams.limit} as requested`);
-              spec.query.limit = extractedParams.limit;
-            }
-
-            // Exécuter la spec contre les vraies données
-            const chartResult = generateChartFromSpec(spec);
-
-            // Sauvegarder dans l'historique pour les questions de suivi
-            addToChartHistory({
-              question,
-              spec: chartResult.spec,
-              data: chartResult.data,
-              insights: chartResult.insights,
-              timestamp: new Date()
-            });
-
-            // Générer une description enrichie basée sur les vraies données
-            const dataInsight = chartResult.data.length > 0
-              ? `\n\n**Résumé des données :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}`
-              : '';
-
-            // Créer le message avec le graphique généré dynamiquement
-            const assistantMessage: Message = {
-              id: (Date.now() + 1).toString(),
-              role: 'assistant',
-              content: `**${spec.title}**\n\n${spec.description || ''}${dataInsight}`,
-              agenticChart: {
-                spec: chartResult.spec,
-                data: chartResult.data,
-                insights: chartResult.insights,
-                suggestions: chartResult.suggestions,
-                generatedByLLM: true
-              },
-              insights: chartResult.insights,
-              suggestions: chartResult.suggestions,
-              timestamp: new Date(),
-              isMarkdown: true,
-              source: 'agentic'
-            };
-
-            setMessages(prev => [...prev, assistantMessage]);
-
-            if (autoSpeak) {
-              speak(`${spec.title}. ${chartResult.insights.join('. ')}`);
-            }
-          } else {
-            // Fallback si le parsing échoue
-            console.error('Parsing LLM response failed, trying fallback');
-            throw new Error('Impossible de parser la réponse du LLM');
-          }
-        } else {
-          throw new Error('Pas de réponse du LLM');
-        }
-      }
-      // ============================================
-      // MODE 3: Conversation textuelle classique
-      // ============================================
-      else {
-        const context = buildContext(question);
-        const chartContext = hasRecentChart ? buildChartContextForLLM() : '';
-
-        const conversationHistory = messages
-          .slice(-6)
-          .map(m => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
-          .join('\n\n');
-
-        const prompt = `${context}
-${chartContext}
-
-HISTORIQUE DE CONVERSATION :
-${conversationHistory}
-
-QUESTION ACTUELLE :
-${question}
-
-Réponds de manière précise et professionnelle en utilisant le format Markdown. Si la question concerne des données précises, utilise les informations disponibles.`;
-
-        const aiResponse = await complete([{ role: 'user', content: prompt }]);
-
-        if (aiResponse) {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: aiResponse,
-            timestamp: new Date(),
-            isMarkdown: true,
-            source: 'llm'
-          };
-
-          setMessages(prev => [...prev, assistantMessage]);
-
-          if (autoSpeak) {
-            speak(aiResponse);
-          }
-        } else {
-          throw new Error('Pas de réponse de l\'IA');
-        }
+      if (autoSpeak) {
+        speak(result.textContent);
       }
     } catch (error) {
-      console.log('Mode local activé (LLM non disponible)', error);
-
-      // ============================================
-      // FALLBACK LOCAL : Utiliser le moteur de génération intelligent
-      // ============================================
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      if (wantsVisualization) {
-        // Utiliser le nouveau système d'interprétation locale intelligent
-        const chartResult = generateChartLocally(question);
-
-        if (chartResult && chartResult.data.length > 0) {
-          const firstMetric = chartResult.spec.query.metrics[0]?.name || 'value';
-          const topItems = chartResult.data.slice(0, 3);
-
-          // Convertir au format agentique pour l'affichage
-          const agenticData: AgenticChartData = {
-            spec: chartResult.spec,
-            data: chartResult.data,
-            insights: chartResult.insights,
-            suggestions: chartResult.suggestions,
-            generatedByLLM: false
-          };
-
-          // Sauvegarder dans l'historique pour les questions de suivi
-          addToChartHistory({
-            question,
-            spec: chartResult.spec,
-            data: chartResult.data,
-            insights: chartResult.insights,
-            timestamp: new Date()
-          });
-
-          // Générer un message descriptif
-          const response = {
-            message: `**${chartResult.spec.title}**\n\n${chartResult.spec.description}\n\n**Résumé :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top ${Math.min(3, topItems.length)} :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item[firstMetric]}`).join('\n')}`,
-            insights: chartResult.insights,
-            suggestions: chartResult.suggestions
-          };
-
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: response.message,
-            agenticChart: agenticData,
-            insights: response.insights,
-            suggestions: response.suggestions,
-            timestamp: new Date(),
-            isMarkdown: true,
-            source: 'local'
-          };
-
-          setMessages(prev => [...prev, assistantMessage]);
-
-          if (autoSpeak) {
-            speak(response.message);
-          }
-        }
-      } else {
-        // Fallback conversation
-        const response = generateCoachResponse(
-          question,
-          practitioners,
-          currentUser.objectives
-        );
-
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: response.message,
-          practitioners: response.practitioners,
-          insights: response.insights,
-          timestamp: new Date(),
-          isMarkdown: response.isMarkdown,
-          source: 'local'
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-
-        if (autoSpeak && response.message) {
-          speak(response.message);
-        }
-      }
+      console.error('[AICoach] Unexpected error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Désolé, une erreur inattendue est survenue. Veuillez réessayer.',
+        timestamp: new Date(),
+        isMarkdown: false,
+        source: 'local'
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
 
     setIsTyping(false);
-  };
+  }, [periodLabel, practitioners, upcomingVisits, currentUser.objectives, autoSpeak]);
 
   const clearConversation = () => {
     if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
       setMessages([]);
-      clearChartHistory(); // Effacer aussi l'historique des graphiques
+      clearChartHistory();
+      conversationHistoryRef.current = [];
       stopSpeaking();
     }
   };
@@ -723,7 +384,7 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
             </button>
           )}
 
-          {groqError && (
+          {!llmConfigured && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs border border-amber-200">
               <AlertCircle className="w-4 h-4" />
               <span>Mode local (LLM non configuré)</span>
@@ -803,11 +464,11 @@ Réponds de manière précise et professionnelle en utilisant le format Markdown
                         {message.source && (
                           <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
                             <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                              message.source === 'llm'
+                              message.source === 'llm' || message.source === 'agentic'
                                 ? 'bg-purple-100 text-purple-600'
                                 : 'bg-blue-100 text-blue-600'
                             }`}>
-                              {message.source === 'llm' ? 'Groq AI' : 'Intelligence locale'}
+                              {message.source === 'agentic' ? 'ARIA Engine + Groq' : message.source === 'llm' ? 'ARIA Engine' : 'Intelligence locale'}
                             </span>
                             <button
                               onClick={() => speak(message.content)}
