@@ -21,6 +21,32 @@ function daysSince(dateStr: string | null): number {
   return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+// ============================================
+// SEMANTIC SYNONYM NORMALIZATION
+// ============================================
+function normalizeQuestion(q: string): string {
+  const synonyms: [RegExp, string][] = [
+    // Risk synonyms
+    [/\b(surveiller|attention|danger|précaires?|fragiles?|alertes?|déclin|en\s+danger)\b/gi, 'risque'],
+    // Priority synonyms
+    [/\b(urgent|focus|cruciale?|critiques?|important)\b/gi, 'priorité'],
+    // Trend synonyms
+    [/\b(progression|historique)\b/gi, 'tendance'],
+    // Top synonyms
+    [/\b(champions?|vedettes?|stars?)\b/gi, 'meilleur'],
+    // Loyalty synonyms
+    [/\b(engagements?|loyaux|loyal)\b/gi, 'fidélité'],
+    // Opportunity synonyms
+    [/\b(prospects?|prospection|conquête|acquisition)\b/gi, 'opportunité'],
+  ];
+
+  let normalized = q;
+  for (const [pattern, replacement] of synonyms) {
+    normalized = normalized.replace(pattern, replacement);
+  }
+  return normalized;
+}
+
 /**
  * Système de réponse intelligent utilisant le moteur de requêtes
  * Fonctionne SANS le LLM en analysant la question et les données
@@ -30,15 +56,20 @@ export function generateSmartResponse(
   practitioners: Practitioner[],
   userObjectives: { visitsMonthly: number; visitsCompleted: number }
 ): CoachResponse {
-  const q = question.toLowerCase();
-  const analysis = analyzeQuestion(question);
-  const queryResult = executeQuery(question);
+  // Apply semantic normalization before pattern matching
+  const normalized = normalizeQuestion(question);
+  const q = normalized.toLowerCase();
+  const analysis = analyzeQuestion(normalized);
+  const queryResult = executeQuery(normalized);
 
   // 1. Questions sur des praticiens spécifiques (nom, prénom)
   if (analysis.filters.firstName || analysis.filters.lastName) {
-    // Détecter si c'est une question sur les actualités/news d'un praticien
     if (q.includes('actualit') || q.includes('news') || q.includes('nouveaut') || q.includes('récent') || q.includes('recent') || q.includes('dernièr') || q.includes('dernier')) {
       return handlePractitionerNewsQuery(queryResult, analysis, question);
+    }
+    // Trend question about a specific practitioner
+    if (q.includes('tendance') || q.includes('évolution') || q.includes('evolution') || q.includes('au cours du temps')) {
+      return handlePractitionerTrendQuery(queryResult, analysis);
     }
     return handlePractitionerSearch(queryResult, analysis, question);
   }
@@ -48,57 +79,89 @@ export function generateSmartResponse(
     return handlePublicationsQuery(queryResult, analysis, question);
   }
 
-  // 3. Questions statistiques (combien, moyenne, total)
+  // 3. "Depuis X jours" filtering — before other handlers
+  const daysMatch = q.match(/(?:depuis|plus\s+de|pas\s+vu.*depuis)\s+(\d+)\s+jours?/);
+  if (daysMatch) {
+    return handleDaysSinceQuery(parseInt(daysMatch[1]), practitioners, q);
+  }
+
+  // 4. Comparison / versus queries
+  if (q.includes('compar') || q.includes(' vs ') || q.includes('versus') || q.includes('contre') || q.includes('différence entre')) {
+    return handleComparisonQuery(question, practitioners);
+  }
+
+  // 5. Trend / evolution queries (general, not specific practitioner)
+  if (q.includes('tendance') || q.includes('évolution') || q.includes('evolution') || q.includes('au cours du temps') || q.includes('progression')) {
+    return handleGeneralTrendQuery(practitioners);
+  }
+
+  // 6. Definition / explanation queries
+  if (q.includes('qu\'est-ce') || q.includes('c\'est quoi') || q.includes('signifie') || q.includes('définition') || q.includes('definition') || q.includes('expliqu')) {
+    return handleDefinitionQuery(q);
+  }
+
+  // 7. Questions statistiques (combien, moyenne, total)
   if (analysis.aggregationType === 'count' || q.includes('combien')) {
     return handleCountQuery(queryResult, analysis, question);
   }
 
-  // 4. Questions géographiques (par ville)
+  // 8. Questions géographiques (par ville)
   if (analysis.filters.city || q.includes('à lyon') || q.includes('à grenoble') || q.includes('par ville')) {
     return handleGeographicQuery(queryResult, analysis, question);
   }
 
-  // 5. Questions sur les KOLs
+  // 9. Questions sur les KOLs
   if (analysis.filters.isKOL || q.includes('kol') || q.includes('leader') || q.includes('opinion')) {
     return handleKOLQuery(practitioners, userObjectives);
   }
 
-  // 6. Questions sur les priorités de visite
+  // 10. Questions sur les priorités de visite
   if (q.includes('priorité') || q.includes('voir') || q.includes('semaine') || q.includes('aujourd')) {
     return handlePriorityQuery(practitioners, userObjectives);
   }
 
-  // 7. Questions sur les objectifs
-  if (q.includes('objectif') || q.includes('atteindre') || q.includes('mois') || q.includes('sauver')) {
+  // 11. Questions sur les objectifs
+  if (q.includes('objectif') || q.includes('atteindre') || q.includes('sauver')) {
     return handleObjectiveQuery(practitioners, userObjectives);
   }
 
-  // 8. Questions sur les risques
+  // 12. Questions sur les risques
   if (q.includes('risque') || q.includes('perdre') || q.includes('churn') || q.includes('baisse')) {
     return handleRiskQuery(practitioners, userObjectives);
   }
 
-  // 9. Questions sur les opportunités
+  // 13. Questions sur les opportunités
   if (q.includes('nouveau') || q.includes('potentiel') || q.includes('opportunité')) {
     return handleOpportunitiesQuery(practitioners, userObjectives);
   }
 
-  // 10. Questions sur le top/classement
-  if (q.includes('top') || q.includes('meilleur') || q.includes('premier') || q.includes('plus gros')) {
+  // 14. Questions sur le top/classement
+  if (q.includes('top') || q.includes('meilleur') || q.includes('premier') || q.includes('plus gros') || q.includes('classement')) {
     return handleTopQuery(queryResult, analysis, question);
   }
 
-  // 11. Questions sur les vingtiles
+  // 15. Questions sur les vingtiles
   if (q.includes('vingtile')) {
     return handleVingtileQuery(queryResult, analysis, question);
   }
 
-  // 12. Si des résultats ont été trouvés par le moteur de requêtes
+  // 16. Questions sur la fidélité
+  if (q.includes('fidélité') || q.includes('fidelite') || q.includes('fidèle')) {
+    return handleLoyaltyQuery(practitioners);
+  }
+
+  // 17. Questions sur les spécialités
+  if (q.includes('spécialité') || q.includes('specialite') || q.includes('pneumologue') || q.includes('généraliste')) {
+    return handleSpecialtyQuery(q, practitioners);
+  }
+
+  // 18. Si des résultats ont été trouvés par le moteur de requêtes
   if (queryResult.practitioners.length > 0 && queryResult.practitioners.length < DataService.getAllPractitioners().length) {
     return handleGenericQueryResult(queryResult, question);
   }
 
-  return getHelpResponse();
+  // 19. Smart fallback — try to answer with territory overview
+  return getSmartFallback(q, practitioners, userObjectives);
 }
 
 function handlePractitionerNewsQuery(queryResult: ReturnType<typeof executeQuery>, analysis: ReturnType<typeof analyzeQuestion>, _question: string): CoachResponse {
@@ -628,16 +691,390 @@ function handleGenericQueryResult(queryResult: ReturnType<typeof executeQuery>, 
   };
 }
 
+// ============================================
+// NEW HANDLERS
+// ============================================
+
+function handlePractitionerTrendQuery(queryResult: ReturnType<typeof executeQuery>, analysis: ReturnType<typeof analyzeQuestion>): CoachResponse {
+  if (queryResult.practitioners.length === 0) {
+    const nameHint = [analysis.filters.firstName, analysis.filters.lastName].filter(Boolean).join(' ');
+    return { message: `Je n'ai trouvé aucun praticien correspondant à **${nameHint}**.`, isMarkdown: true, isNoMatch: true };
+  }
+
+  const p = queryResult.practitioners[0];
+  const volumeHistory = DataService.generateVolumeHistory(p.metrics.volumeL, p.id);
+  const avgVol = Math.round(volumeHistory.reduce((s, v) => s + v.volume, 0) / volumeHistory.length);
+  const maxMonth = volumeHistory.reduce((max, v) => v.volume > max.volume ? v : max, volumeHistory[0]);
+  const minMonth = volumeHistory.reduce((min, v) => v.volume < min.volume ? v : min, volumeHistory[0]);
+  // Compute trend from volume history (last 3 months vs first 3 months)
+  const lastThree = volumeHistory.slice(-3).reduce((s, v) => s + v.volume, 0) / 3;
+  const firstThree = volumeHistory.slice(0, 3).reduce((s, v) => s + v.volume, 0) / 3;
+  const trendDirection = lastThree > firstThree * 1.05 ? 'up' : lastThree < firstThree * 0.95 ? 'down' : 'stable';
+  const trend = trendDirection === 'up' ? '📈 en hausse' : trendDirection === 'down' ? '📉 en baisse' : '➡️ stable';
+
+  return {
+    message: `## Tendance — ${p.title} ${p.firstName} ${p.lastName}\n\n` +
+      `**${p.specialty}** à ${p.address.city} | Vingtile ${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}\n\n` +
+      `**Tendance globale : ${trend}**\n\n` +
+      `| Indicateur | Valeur |\n|---|---|\n` +
+      `| Volume annuel | **${Math.round(p.metrics.volumeL / 1000)}K L/an** |\n` +
+      `| Volume mensuel moyen | ${avgVol} L/mois |\n` +
+      `| Mois le plus fort | ${maxMonth.month} (${maxMonth.volume} L) |\n` +
+      `| Mois le plus faible | ${minMonth.month} (${minMonth.volume} L) |\n` +
+      `| Fidélité | ${p.metrics.loyaltyScore}/10 |\n` +
+      `| Dernière visite | ${p.lastVisitDate ? `il y a ${daysSince(p.lastVisitDate)} jours` : 'Jamais visité'} |`,
+    practitioners: [{
+      ...adaptPractitionerProfile(p),
+      daysSinceVisit: daysSince(p.lastVisitDate || null)
+    }],
+    insights: [
+      `Amplitude saisonnière : ${maxMonth.volume - minMonth.volume} L entre le pic (${maxMonth.month}) et le creux (${minMonth.month})`,
+      trendDirection === 'down' ? `⚠️ Tendance baissière — une visite de relance est recommandée` :
+      trendDirection === 'up' ? `Tendance positive — maintenir le rythme de visites` :
+      `Volume stable — continuer le suivi régulier`
+    ],
+    isMarkdown: true
+  };
+}
+
+function handleDaysSinceQuery(days: number, practitioners: Practitioner[], q: string): CoachResponse {
+  const isKOLOnly = q.includes('kol');
+  const filtered = practitioners
+    .filter(p => daysSince(p.lastVisitDate) > days)
+    .filter(p => !isKOLOnly || p.isKOL)
+    .sort((a, b) => daysSince(b.lastVisitDate) - daysSince(a.lastVisitDate))
+    .map(p => ({ ...p, daysSinceVisit: daysSince(p.lastVisitDate) }));
+
+  const label = isKOLOnly ? 'KOLs' : 'praticiens';
+  const totalVolume = filtered.reduce((s, p) => s + p.volumeL, 0);
+
+  return {
+    message: `**${filtered.length} ${label}** n'ont pas été vus depuis plus de **${days} jours** :`,
+    practitioners: filtered.slice(0, 8),
+    insights: [
+      `Volume total concerné : **${Math.round(totalVolume / 1000)}K L/an**`,
+      filtered.length > 0 ? `Le plus ancien : **${filtered[0].title} ${filtered[0].firstName} ${filtered[0].lastName}** (${filtered[0].daysSinceVisit} jours)` : '',
+      `${filtered.filter(p => p.isKOL).length} KOL(s) dans cette liste`
+    ].filter(Boolean),
+    isMarkdown: true
+  };
+}
+
+function handleComparisonQuery(question: string, practitioners: Practitioner[]): CoachResponse {
+  const q = question.toLowerCase();
+
+  // KOLs vs Autres
+  if (q.includes('kol') && (q.includes('autre') || q.includes('non-kol') || q.includes('non kol') || q.includes('vs'))) {
+    const kols = practitioners.filter(p => p.isKOL);
+    const others = practitioners.filter(p => !p.isKOL);
+    const kolVol = kols.reduce((s, p) => s + p.volumeL, 0);
+    const othersVol = others.reduce((s, p) => s + p.volumeL, 0);
+    const kolLoyalty = kols.length > 0 ? kols.reduce((s, p) => s + p.loyaltyScore, 0) / kols.length : 0;
+    const othersLoyalty = others.length > 0 ? others.reduce((s, p) => s + p.loyaltyScore, 0) / others.length : 0;
+
+    return {
+      message: `## Comparaison KOLs vs Autres praticiens\n\n` +
+        `| Indicateur | KOLs (${kols.length}) | Autres (${others.length}) |\n|---|---|---|\n` +
+        `| Volume total | **${Math.round(kolVol / 1000)}K L/an** | ${Math.round(othersVol / 1000)}K L/an |\n` +
+        `| Volume moyen | ${kols.length > 0 ? Math.round(kolVol / kols.length / 1000) : 0}K L/an | ${others.length > 0 ? Math.round(othersVol / others.length / 1000) : 0}K L/an |\n` +
+        `| Fidélité moyenne | **${kolLoyalty.toFixed(1)}/10** | ${othersLoyalty.toFixed(1)}/10 |\n` +
+        `| Part du volume total | **${Math.round(kolVol / (kolVol + othersVol) * 100)}%** | ${Math.round(othersVol / (kolVol + othersVol) * 100)}% |`,
+      insights: [
+        `Les KOLs (${Math.round(kols.length / practitioners.length * 100)}% des praticiens) génèrent **${Math.round(kolVol / (kolVol + othersVol) * 100)}%** du volume total`,
+        kolLoyalty > othersLoyalty ? `Les KOLs sont en moyenne plus fidèles (+${(kolLoyalty - othersLoyalty).toFixed(1)} pts)` : `Les non-KOLs sont plus fidèles en moyenne`,
+      ],
+      isMarkdown: true
+    };
+  }
+
+  // Comparison between cities
+  const cityMatch = q.match(/(?:compar|entre|vs|versus)\s+.*?([A-ZÀ-Ý][a-zà-ÿ]+(?:-[A-ZÀ-Ý]?[a-zà-ÿ]+)?)\s+(?:et|vs|versus|contre)\s+([A-ZÀ-Ý][a-zà-ÿ]+(?:-[A-ZÀ-Ý]?[a-zà-ÿ]+)?)/i);
+  if (cityMatch) {
+    const city1 = cityMatch[1].toUpperCase();
+    const city2 = cityMatch[2].toUpperCase();
+    const p1 = practitioners.filter(p => p.city?.toUpperCase().includes(city1));
+    const p2 = practitioners.filter(p => p.city?.toUpperCase().includes(city2));
+
+    if (p1.length > 0 || p2.length > 0) {
+      const vol1 = p1.reduce((s, p) => s + p.volumeL, 0);
+      const vol2 = p2.reduce((s, p) => s + p.volumeL, 0);
+      const loy1 = p1.length > 0 ? p1.reduce((s, p) => s + p.loyaltyScore, 0) / p1.length : 0;
+      const loy2 = p2.length > 0 ? p2.reduce((s, p) => s + p.loyaltyScore, 0) / p2.length : 0;
+
+      return {
+        message: `## Comparaison ${cityMatch[1]} vs ${cityMatch[2]}\n\n` +
+          `| Indicateur | ${cityMatch[1]} | ${cityMatch[2]} |\n|---|---|---|\n` +
+          `| Praticiens | ${p1.length} | ${p2.length} |\n` +
+          `| Volume total | ${Math.round(vol1 / 1000)}K L/an | ${Math.round(vol2 / 1000)}K L/an |\n` +
+          `| Fidélité moyenne | ${loy1.toFixed(1)}/10 | ${loy2.toFixed(1)}/10 |\n` +
+          `| KOLs | ${p1.filter(p => p.isKOL).length} | ${p2.filter(p => p.isKOL).length} |`,
+        insights: [
+          vol1 > vol2 ? `**${cityMatch[1]}** génère ${Math.round((vol1 - vol2) / 1000)}K L/an de plus` :
+          `**${cityMatch[2]}** génère ${Math.round((vol2 - vol1) / 1000)}K L/an de plus`,
+        ],
+        isMarkdown: true
+      };
+    }
+  }
+
+  // Comparison between specialties
+  const specMatch = q.match(/(?:compar|entre|vs|versus)\s+.*?(pneumo\w*|généraliste\w*|MG)\s+(?:et|vs|versus|contre)\s+(pneumo\w*|généraliste\w*|MG)/i);
+  if (specMatch) {
+    const allP = DataService.getAllPractitioners();
+    const spec1Name = specMatch[1].toLowerCase().startsWith('pneumo') ? 'Pneumologue' : 'Médecin généraliste';
+    const spec2Name = specMatch[2].toLowerCase().startsWith('pneumo') ? 'Pneumologue' : 'Médecin généraliste';
+    const s1 = allP.filter(p => p.specialty === spec1Name);
+    const s2 = allP.filter(p => p.specialty === spec2Name);
+    const vol1 = s1.reduce((s, p) => s + p.metrics.volumeL, 0);
+    const vol2 = s2.reduce((s, p) => s + p.metrics.volumeL, 0);
+
+    return {
+      message: `## Comparaison ${spec1Name}s vs ${spec2Name}s\n\n` +
+        `| Indicateur | ${spec1Name}s | ${spec2Name}s |\n|---|---|---|\n` +
+        `| Nombre | ${s1.length} | ${s2.length} |\n` +
+        `| Volume total | ${Math.round(vol1 / 1000)}K L/an | ${Math.round(vol2 / 1000)}K L/an |\n` +
+        `| Volume moyen | ${s1.length > 0 ? Math.round(vol1 / s1.length / 1000) : 0}K L/an | ${s2.length > 0 ? Math.round(vol2 / s2.length / 1000) : 0}K L/an |\n` +
+        `| KOLs | ${s1.filter(p => p.metrics.isKOL).length} | ${s2.filter(p => p.metrics.isKOL).length} |`,
+      insights: [
+        `Les ${spec1Name}s représentent ${Math.round(vol1 / (vol1 + vol2) * 100)}% du volume total`,
+      ],
+      isMarkdown: true
+    };
+  }
+
+  // Generic comparison — compare top vs bottom
+  const topHalf = [...practitioners].sort((a, b) => b.volumeL - a.volumeL);
+  const top50 = topHalf.slice(0, Math.ceil(topHalf.length / 2));
+  const bottom50 = topHalf.slice(Math.ceil(topHalf.length / 2));
+  const topVol = top50.reduce((s, p) => s + p.volumeL, 0);
+  const bottomVol = bottom50.reduce((s, p) => s + p.volumeL, 0);
+
+  return {
+    message: `## Analyse comparative du territoire\n\n` +
+      `| Indicateur | Top 50% (${top50.length}) | Bottom 50% (${bottom50.length}) |\n|---|---|---|\n` +
+      `| Volume total | **${Math.round(topVol / 1000)}K L/an** | ${Math.round(bottomVol / 1000)}K L/an |\n` +
+      `| Fidélité moyenne | ${(top50.reduce((s, p) => s + p.loyaltyScore, 0) / top50.length).toFixed(1)}/10 | ${(bottom50.reduce((s, p) => s + p.loyaltyScore, 0) / bottom50.length).toFixed(1)}/10 |\n` +
+      `| KOLs | ${top50.filter(p => p.isKOL).length} | ${bottom50.filter(p => p.isKOL).length} |`,
+    insights: [
+      `Les top 50% prescripteurs génèrent **${Math.round(topVol / (topVol + bottomVol) * 100)}%** du volume`,
+      `Ratio de concentration : x${(topVol / Math.max(bottomVol, 1)).toFixed(1)}`
+    ],
+    isMarkdown: true
+  };
+}
+
+function handleGeneralTrendQuery(practitioners: Practitioner[]): CoachResponse {
+  const up = practitioners.filter(p => p.trend === 'up');
+  const down = practitioners.filter(p => p.trend === 'down');
+  const stable = practitioners.filter(p => p.trend === 'stable');
+
+  const downVolume = down.reduce((s, p) => s + p.volumeL, 0);
+  const upVolume = up.reduce((s, p) => s + p.volumeL, 0);
+
+  return {
+    message: `## Tendances du territoire\n\n` +
+      `| Tendance | Praticiens | Volume | Part |\n|---|---|---|---|\n` +
+      `| 📈 En hausse | **${up.length}** | ${Math.round(upVolume / 1000)}K L/an | ${Math.round(upVolume / practitioners.reduce((s, p) => s + p.volumeL, 0) * 100)}% |\n` +
+      `| ➡️ Stables | **${stable.length}** | ${Math.round(stable.reduce((s, p) => s + p.volumeL, 0) / 1000)}K L/an | ${Math.round(stable.reduce((s, p) => s + p.volumeL, 0) / practitioners.reduce((s, p) => s + p.volumeL, 0) * 100)}% |\n` +
+      `| 📉 En baisse | **${down.length}** | ${Math.round(downVolume / 1000)}K L/an | ${Math.round(downVolume / practitioners.reduce((s, p) => s + p.volumeL, 0) * 100)}% |`,
+    practitioners: down.length > 0
+      ? down.sort((a, b) => b.volumeL - a.volumeL).slice(0, 5).map(p => ({
+          ...p, daysSinceVisit: daysSince(p.lastVisitDate)
+        }))
+      : undefined,
+    insights: [
+      down.length > 0 ? `⚠️ **${down.length} praticien(s) en baisse** représentant ${Math.round(downVolume / 1000)}K L/an — action recommandée` : `Aucun praticien en baisse — excellent !`,
+      `${up.length} praticien(s) en hausse (+${Math.round(upVolume / 1000)}K L/an) — maintenir le suivi`,
+      down.filter(p => p.isKOL).length > 0 ? `🚨 **${down.filter(p => p.isKOL).length} KOL(s) en baisse** — priorité absolue` : ''
+    ].filter(Boolean),
+    isMarkdown: true
+  };
+}
+
+function handleDefinitionQuery(q: string): CoachResponse {
+  if (q.includes('vingtile')) {
+    return {
+      message: `## Qu'est-ce que le vingtile ?\n\n` +
+        `Le **vingtile** est un système de classement des prescripteurs, de **1** (meilleur) à **20** (plus faible).\n\n` +
+        `| Vingtile | Signification | Action |\n|---|---|---|\n` +
+        `| **1-5** | Top 25% — prescripteurs majeurs | Visites fréquentes, relation premium |\n` +
+        `| **6-10** | Haut potentiel | Développement, upsell |\n` +
+        `| **11-15** | Prescripteur moyen | Maintien, suivi standard |\n` +
+        `| **16-20** | Prescripteur faible | Visite ponctuelle, canal indirect |\n\n` +
+        `Plus le vingtile est **bas**, plus le praticien est un **gros prescripteur**.`,
+      insights: [
+        'Critères : basé sur le volume de prescriptions d\'oxygène et gaz médicaux',
+        'Mis à jour trimestriellement par la direction commerciale'
+      ],
+      isMarkdown: true
+    };
+  }
+
+  if (q.includes('kol') || q.includes('key opinion leader')) {
+    return {
+      message: `## Qu'est-ce qu'un KOL ?\n\n` +
+        `Un **KOL** (Key Opinion Leader) est un praticien **influent** dans son domaine qui :\n\n` +
+        `- A une **expertise reconnue** (publications, conférences)\n` +
+        `- **Influence** les pratiques de prescription de ses confrères\n` +
+        `- Est souvent **chercheur** ou **chef de service**\n` +
+        `- Représente un **volume de prescriptions important**\n\n` +
+        `Les KOLs nécessitent un suivi **premium** avec des visites plus fréquentes et un contenu scientifique adapté.`,
+      insights: [
+        `Vous avez **${DataService.getKOLs().length} KOLs** sur votre territoire`,
+        'Ils représentent vos contacts stratégiques les plus importants'
+      ],
+      isMarkdown: true
+    };
+  }
+
+  if (q.includes('fidélité') || q.includes('fidelite') || q.includes('loyalty')) {
+    return {
+      message: `## Score de fidélité\n\n` +
+        `Le score de **fidélité** (de 1 à 10) mesure l'engagement d'un praticien envers Air Liquide Santé :\n\n` +
+        `| Score | Niveau | Risque |\n|---|---|---|\n` +
+        `| **8-10** | Très fidèle | Faible |\n` +
+        `| **5-7** | Fidélité moyenne | Modéré |\n` +
+        `| **1-4** | Fidélité faible | **Élevé** — risque de churn |\n\n` +
+        `Un score bas + tendance en baisse = **signal d'alerte** nécessitant une visite de réactivation.`,
+      isMarkdown: true
+    };
+  }
+
+  // Generic definition response
+  return {
+    message: `Je n'ai pas de définition spécifique pour ce terme dans ma base. Voici les concepts que je peux expliquer :\n\n` +
+      `- **Vingtile** : système de classement 1-20 des prescripteurs\n` +
+      `- **KOL** : Key Opinion Leader, praticien influent\n` +
+      `- **Fidélité** : score d'engagement 1-10\n` +
+      `- **Trend** : tendance d'évolution (hausse/baisse/stable)`,
+    isMarkdown: true
+  };
+}
+
+function handleLoyaltyQuery(practitioners: Practitioner[]): CoachResponse {
+  const sorted = [...practitioners].sort((a, b) => a.loyaltyScore - b.loyaltyScore);
+  const lowLoyalty = sorted.filter(p => p.loyaltyScore < 5);
+  const highLoyalty = sorted.filter(p => p.loyaltyScore >= 8);
+  const avg = practitioners.reduce((s, p) => s + p.loyaltyScore, 0) / practitioners.length;
+
+  return {
+    message: `## Analyse de la fidélité\n\n` +
+      `**Fidélité moyenne du territoire : ${avg.toFixed(1)}/10**\n\n` +
+      `| Segment | Nombre | Volume | Action |\n|---|---|---|---|\n` +
+      `| 🟢 Fidèles (8+) | ${highLoyalty.length} | ${Math.round(highLoyalty.reduce((s, p) => s + p.volumeL, 0) / 1000)}K L/an | Maintenir |\n` +
+      `| 🟡 Moyens (5-7) | ${sorted.filter(p => p.loyaltyScore >= 5 && p.loyaltyScore < 8).length} | ${Math.round(sorted.filter(p => p.loyaltyScore >= 5 && p.loyaltyScore < 8).reduce((s, p) => s + p.volumeL, 0) / 1000)}K L/an | Développer |\n` +
+      `| 🔴 À risque (<5) | ${lowLoyalty.length} | ${Math.round(lowLoyalty.reduce((s, p) => s + p.volumeL, 0) / 1000)}K L/an | **Réactiver** |`,
+    practitioners: lowLoyalty.slice(0, 5).map(p => ({
+      ...p, daysSinceVisit: daysSince(p.lastVisitDate)
+    })),
+    insights: [
+      lowLoyalty.length > 0 ? `⚠️ **${lowLoyalty.length} praticien(s) à fidélité faible** — ${Math.round(lowLoyalty.reduce((s, p) => s + p.volumeL, 0) / 1000)}K L/an à risque` : 'Tous les praticiens ont une bonne fidélité',
+      `${lowLoyalty.filter(p => p.isKOL).length} KOL(s) à fidélité faible`
+    ],
+    isMarkdown: true
+  };
+}
+
+function handleSpecialtyQuery(q: string, _practitioners: Practitioner[]): CoachResponse {
+  const allP = DataService.getAllPractitioners();
+  const bySpec: Record<string, { count: number; volume: number; kols: number; avgLoyalty: number }> = {};
+
+  allP.forEach(p => {
+    const spec = p.specialty;
+    if (!bySpec[spec]) bySpec[spec] = { count: 0, volume: 0, kols: 0, avgLoyalty: 0 };
+    bySpec[spec].count++;
+    bySpec[spec].volume += p.metrics.volumeL;
+    bySpec[spec].kols += p.metrics.isKOL ? 1 : 0;
+    bySpec[spec].avgLoyalty += p.metrics.loyaltyScore;
+  });
+
+  Object.keys(bySpec).forEach(k => {
+    bySpec[k].avgLoyalty = bySpec[k].avgLoyalty / bySpec[k].count;
+  });
+
+  const sorted = Object.entries(bySpec).sort((a, b) => b[1].volume - a[1].volume);
+
+  // If asking about a specific specialty
+  const targetSpec = q.includes('pneumologue') ? 'Pneumologue' : q.includes('généraliste') ? 'Médecin généraliste' : null;
+  if (targetSpec && bySpec[targetSpec]) {
+    const data = bySpec[targetSpec];
+    const specPractitioners = allP.filter(p => p.specialty === targetSpec)
+      .sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
+
+    return {
+      message: `## ${targetSpec}s sur votre territoire\n\n` +
+        `- **${data.count}** praticiens\n` +
+        `- Volume total : **${Math.round(data.volume / 1000)}K L/an**\n` +
+        `- Volume moyen : ${Math.round(data.volume / data.count / 1000)}K L/an\n` +
+        `- Fidélité moyenne : ${data.avgLoyalty.toFixed(1)}/10\n` +
+        `- **${data.kols} KOL(s)**`,
+      practitioners: specPractitioners.slice(0, 5).map(p => ({
+        ...adaptPractitionerProfile(p),
+        daysSinceVisit: daysSince(p.lastVisitDate || null)
+      })),
+      isMarkdown: true
+    };
+  }
+
+  return {
+    message: `## Répartition par spécialité\n\n` +
+      `| Spécialité | Praticiens | Volume | KOLs | Fidélité |\n|---|---|---|---|---|\n` +
+      sorted.map(([spec, d]) =>
+        `| **${spec}** | ${d.count} | ${Math.round(d.volume / 1000)}K L/an | ${d.kols} | ${d.avgLoyalty.toFixed(1)}/10 |`
+      ).join('\n'),
+    insights: [
+      `${sorted.length} spécialités couvertes sur votre territoire`,
+      `Spécialité principale : **${sorted[0][0]}** (${Math.round(sorted[0][1].volume / (allP.reduce((s, p) => s + p.metrics.volumeL, 0)) * 100)}% du volume)`
+    ],
+    isMarkdown: true
+  };
+}
+
+function getSmartFallback(q: string, practitioners: Practitioner[], userObjectives: { visitsMonthly: number; visitsCompleted: number }): CoachResponse {
+  // Try to provide a useful territory overview instead of generic help
+  const stats = DataService.getGlobalStats();
+  const atRisk = practitioners.filter(p => p.trend === 'down' || p.loyaltyScore < 5);
+  const notVisited60 = practitioners.filter(p => daysSince(p.lastVisitDate) > 60);
+  const progress = Math.round(userObjectives.visitsCompleted / userObjectives.visitsMonthly * 100);
+
+  // If question seems to be a greeting or general inquiry, give a dashboard summary
+  if (q.length < 30 || /\b(bonjour|salut|hello|aide|help|résumé|resume|synthèse|bilan|situation|tableau)\b/.test(q)) {
+    return {
+      message: `## Synthèse de votre territoire\n\n` +
+        `**${stats.totalPractitioners} praticiens** | ${stats.totalKOLs} KOLs | ${stats.pneumologues} pneumo + ${stats.generalistes} MG\n\n` +
+        `| Indicateur | Valeur |\n|---|---|\n` +
+        `| Objectif visites | **${userObjectives.visitsCompleted}/${userObjectives.visitsMonthly}** (${progress}%) |\n` +
+        `| Volume total | ${Math.round(stats.totalVolume / 1000)}K L/an |\n` +
+        `| Fidélité moyenne | ${stats.averageLoyalty.toFixed(1)}/10 |\n` +
+        `| Praticiens à risque | ${atRisk.length} |\n` +
+        `| Non vus depuis 60j+ | ${notVisited60.length} |`,
+      insights: [
+        atRisk.length > 0 ? `⚠️ **${atRisk.length} praticien(s) à risque** nécessitent votre attention` : '✅ Aucun praticien en situation critique',
+        notVisited60.length > 0 ? `${notVisited60.length} praticien(s) non vus depuis 60+ jours` : '',
+        `Progression mensuelle : ${progress}%`
+      ].filter(Boolean),
+      isMarkdown: true
+    };
+  }
+
+  return getHelpResponse();
+}
+
 function getHelpResponse(): CoachResponse {
   return {
-    message: `Je suis votre **assistant stratégique ARIA**. Je peux répondre à de nombreuses questions sur vos praticiens. Voici quelques exemples :`,
-    insights: [
-      `**Recherche de praticiens :**\n- "Quel médecin prénommé Bernard a le plus de publications ?"\n- "Donne-moi les coordonnées du Dr Martin"`,
-      `**Statistiques :**\n- "Combien de pneumologues à Lyon ?"\n- "Quel est le vingtile moyen par ville ?"`,
-      `**Stratégie commerciale :**\n- "Qui dois-je voir en priorité cette semaine ?"\n- "Quels KOLs n'ai-je pas vus depuis 60 jours ?"`,
-      `**Classements :**\n- "Top 5 prescripteurs par volume"\n- "Praticiens à risque de churn"`,
-      `**Opportunités :**\n- "Quelles sont mes opportunités de nouveaux prescripteurs ?"\n- "Comment atteindre mon objectif mensuel ?"`
-    ],
+    message: `Je suis votre **assistant stratégique ARIA**. Voici ce que je peux faire :\n\n` +
+      `**📊 Graphiques & Données**\n` +
+      `- "Montre-moi les volumes par ville"\n` +
+      `- "Top 10 prescripteurs"\n` +
+      `- "Comparaison KOLs vs autres"\n\n` +
+      `**🔍 Recherche & Analyse**\n` +
+      `- "Qui est Dr Martin ?"\n` +
+      `- "Combien de pneumologues à Lyon ?"\n` +
+      `- "Tendances du territoire"\n\n` +
+      `**⚡ Stratégie**\n` +
+      `- "Qui dois-je voir en priorité ?"\n` +
+      `- "Praticiens à risque"\n` +
+      `- "Praticiens non vus depuis 90 jours"`,
     isMarkdown: true,
     isGenericHelp: true
   };

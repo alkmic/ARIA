@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Zap,
   Brain,
-  AlertCircle,
   BarChart3,
   PieChart as PieChartIcon,
   TrendingUp,
@@ -1090,12 +1089,12 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
       // ============================================
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      // Try chart generation first if visualization was requested
+      let chartHandled = false;
       if (wantsVisualization) {
-        // Utiliser le nouveau système d'interprétation locale intelligent
         const chartResult = generateChartLocally(question);
 
         if (chartResult && chartResult.data.length > 0) {
-          // Convertir au format agentique pour l'affichage
           const agenticData: AgenticChartData = {
             spec: chartResult.spec,
             data: chartResult.data,
@@ -1104,7 +1103,6 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
             generatedByLLM: false
           };
 
-          // Sauvegarder dans l'historique pour les questions de suivi
           addToChartHistory({
             question,
             spec: chartResult.spec,
@@ -1129,8 +1127,12 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
           if (autoSpeak) {
             speak(`${chartResult.spec.title}. ${chartResult.insights.join('. ')}`);
           }
+          chartHandled = true;
         }
-      } else {
+        // If chart generation failed, fall through to text response below
+      }
+
+      if (!chartHandled) {
         // Enrich follow-up questions with conversation context
         const { query: searchQuery, pointExtract } = enrichQueryWithContext(question, messages);
 
@@ -1286,9 +1288,9 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
           )}
 
           {groqError && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs border border-amber-200">
-              <AlertCircle className="w-4 h-4" />
-              <span>Mode local (LLM non configuré)</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs border border-blue-200">
+              <Sparkles className="w-4 h-4" />
+              <span>Intelligence locale</span>
             </div>
           )}
 
