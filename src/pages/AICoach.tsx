@@ -327,7 +327,7 @@ export default function AICoach() {
                 <Brain className="w-7 h-7 text-white" />
               </div>
               <span className="bg-gradient-to-r from-al-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Coach IA Avancé
+                Coach IA
               </span>
             </h1>
             <p className="text-slate-600 text-sm sm:text-base flex items-center gap-2">
