@@ -13,7 +13,7 @@ export const UpcomingVisits: React.FC = () => {
   const priorityPractitioners = getHighPriorityPractitioners();
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
       {/* Today's Visits */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -1376,7 +1376,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                       </div>
 
                       {/* Graphique dynamique */}
-                      <div className="h-72 w-full">
+                      <div className="h-52 sm:h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           {(() => {
                             const chart = message.agenticChart!;

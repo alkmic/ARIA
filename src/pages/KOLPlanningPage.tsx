@@ -320,7 +320,7 @@ export const KOLPlanningPage: React.FC = () => {
                   </div>
 
                   {/* Quick stats */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-4">
                     <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
                       <Clock className="w-4 h-4 text-slate-500" />
                       <div>

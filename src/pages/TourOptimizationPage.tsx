@@ -935,7 +935,7 @@ export const TourOptimizationPage: React.FC = () => {
             </div>
 
             {/* Practitioners grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] sm:max-h-[500px] overflow-y-auto pr-2">
               {practitionersWithCoords
                 .filter(p => showPlanned || !alreadyPlannedIds.has(p.id))
                 .map((p) => {
@@ -1323,7 +1323,7 @@ export const TourOptimizationPage: React.FC = () => {
                   <MapPin className="w-5 h-5 text-blue-500" />
                   Itinéraire Jour {editableResult[activeDay]?.day}
                 </h3>
-                <div className="h-[400px] rounded-xl overflow-hidden border border-slate-200">
+                <div className="h-[300px] sm:h-[400px] rounded-xl overflow-hidden border border-slate-200">
                   <MapContainer
                     center={startCoords[startPoint]}
                     zoom={10}

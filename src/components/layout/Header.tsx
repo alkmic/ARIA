@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   return (
     <>
       <header className="h-16 lg:h-20 bg-white/95 backdrop-blur-sm border-b border-slate-200 flex items-center px-4 lg:px-8 fixed top-0 right-0 left-0 lg:left-64 z-10">
-        <div className="flex items-center justify-between w-full gap-4">
+        <div className="flex items-center justify-between w-full gap-2 sm:gap-4">
           {/* Mobile menu button */}
           <button
             onClick={onMenuClick}
@@ -36,12 +36,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </div>
 
           {/* Universal Command Bar - Voice-First Search */}
-          <div className="flex-1 max-w-2xl">
+          <div className="flex-1 min-w-0 max-w-2xl">
             <UniversalCommandBar />
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center space-x-3 lg:space-x-6">
+          <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-6">
             {/* Notifications */}
             <button
               onClick={() => setIsDrawerOpen(true)}

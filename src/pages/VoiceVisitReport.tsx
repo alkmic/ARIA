@@ -536,7 +536,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 Comment souhaitez-vous saisir votre compte-rendu ?
               </h3>
 
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div className="grid md:grid-cols-2 gap-3 sm:gap-4 mb-6">
                 {/* Voice Option */}
                 <div className="p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-300 transition-colors">
                   <div className="text-center">
@@ -686,7 +686,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             </div>
 
             {/* Extracted Info Grid */}
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
               {/* Topics */}
               {extractedInfo.topics.length > 0 && (
                 <div className="glass-card p-4">

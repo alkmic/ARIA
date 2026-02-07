@@ -88,14 +88,14 @@ export const Visits: React.FC = () => {
 
       {/* Filter Tabs */}
       <div className="glass-card p-4">
-        <div className="flex items-center gap-4 mb-4">
-          <Filter className="w-5 h-5 text-slate-600" />
-          <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4">
+          <Filter className="w-5 h-5 text-slate-600 hidden sm:block" />
+          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto">
             {[
               { key: 'all', label: 'Toutes' },
               { key: 'today', label: "Aujourd'hui" },
-              { key: 'week', label: 'Cette semaine' },
-              { key: 'month', label: 'Ce mois' },
+              { key: 'week', label: 'Semaine' },
+              { key: 'month', label: 'Mois' },
             ].map((filter) => (
               <button
                 key={filter.key}
@@ -103,7 +103,7 @@ export const Visits: React.FC = () => {
                   setFilterType(filter.key as FilterType);
                   setSelectedDate(null);
                 }}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
                   filterType === filter.key
                     ? 'bg-gradient-to-r from-al-blue-500 to-al-teal text-white shadow-lg'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -134,7 +134,7 @@ export const Visits: React.FC = () => {
                   setSelectedDate(isSelected ? null : day);
                   setFilterType('all');
                 }}
-                className={`flex flex-col items-center min-w-[80px] p-3 rounded-lg transition-all ${
+                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] p-2 sm:p-3 rounded-lg transition-all ${
                   isSelected
                     ? 'bg-gradient-to-br from-al-blue-500 to-al-teal text-white shadow-lg scale-105'
                     : isToday
@@ -244,7 +244,7 @@ export const Visits: React.FC = () => {
                               )}
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-600">
                               <span className="flex items-center gap-1.5">
                                 <Clock className="w-4 h-4" />
                                 {visit.time}
@@ -292,10 +292,10 @@ export const Visits: React.FC = () => {
 
       {/* Stats Footer */}
       {filteredVisits.length > 0 && (
-        <div className="glass-card p-6">
-          <div className="grid grid-cols-3 gap-6">
+        <div className="glass-card p-4 sm:p-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold gradient-text mb-1">
+              <div className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
                 {filteredVisits.length}
               </div>
               <div className="text-sm text-slate-600">
@@ -303,13 +303,13 @@ export const Visits: React.FC = () => {
               </div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold gradient-text mb-1">
+              <div className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
                 {new Set(filteredVisits.map((v) => v.practitioner.id)).size}
               </div>
               <div className="text-sm text-slate-600">Praticiens différents</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold gradient-text mb-1">
+              <div className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
                 {filteredVisits.filter((v) => v.practitioner.isKOL).length}
               </div>
               <div className="text-sm text-slate-600">Visites KOL</div>

@@ -478,35 +478,35 @@ const ActionCard = ({
                 <div className="flex flex-wrap gap-2 pt-2">
                   <button
                     onClick={() => navigate(`/practitioner/${practitioner.id}`)}
-                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-700 hover:text-al-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-700 hover:text-al-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     Voir profil
                   </button>
                   <button
                     onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}
-                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
                     Préparer pitch
                   </button>
                   <button
                     onClick={() => navigate(`/visit-report?practitioner=${practitioner.id}`)}
-                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-700 hover:text-al-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-700 hover:text-al-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
                     Compte-rendu
                   </button>
                   <button
                     onClick={() => navigate(`/tour-optimization?include=${practitioner.id}`)}
-                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Route className="w-4 h-4" />
                     Ajouter tournée
                   </button>
                   <a
                     href={`tel:${practitioner.contact.phone}`}
-                    className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-green-300 hover:bg-green-50 text-slate-700 hover:text-green-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-green-300 hover:bg-green-50 text-slate-700 hover:text-green-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Phone className="w-4 h-4" />
                     Appeler
@@ -613,9 +613,9 @@ export default function NextBestActions() {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-        <div className="glass-card p-4 text-center">
-          <div className="text-3xl font-bold text-slate-800">{stats.total}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-6">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <div className="text-2xl sm:text-3xl font-bold text-slate-800">{stats.total}</div>
           <div className="text-sm text-slate-500">Actions</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-red-50 to-orange-50 border-red-200">
@@ -638,8 +638,8 @@ export default function NextBestActions() {
 
       {/* Activity Stats */}
       <div className="glass-card p-4 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-6">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-al-blue-500" />
               <span className="text-sm text-slate-600">

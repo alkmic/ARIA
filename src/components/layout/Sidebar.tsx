@@ -88,7 +88,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       `}
     >
       {/* Logo */}
-      <div className="p-6 border-b border-white/10 flex items-center justify-between">
+      <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" onClick={onClose}>
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
             <Brain className="w-6 h-6 text-al-navy" />

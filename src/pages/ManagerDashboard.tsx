@@ -511,12 +511,12 @@ export default function ManagerDashboard() {
               <tr className="border-b-2 border-slate-200">
                 <th className="text-left py-3 px-2 sm:px-4 font-semibold text-slate-700">Rang</th>
                 <th className="text-left py-3 px-2 sm:px-4 font-semibold text-slate-700">Commercial</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Territoire</th>
+                <th className="hidden sm:table-cell text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Territoire</th>
                 <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Visites</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Volume</th>
+                <th className="hidden sm:table-cell text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Volume</th>
                 <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Progression</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">KOLs</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Satisfaction</th>
+                <th className="hidden md:table-cell text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">KOLs</th>
+                <th className="hidden md:table-cell text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Satisfaction</th>
               </tr>
             </thead>
             <tbody>
@@ -554,14 +554,14 @@ export default function ManagerDashboard() {
                           </span>
                         </div>
                       </td>
-                      <td className="text-center py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm text-slate-600">
+                      <td className="hidden sm:table-cell text-center py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm text-slate-600">
                         {member.territory}
                       </td>
                       <td className="text-center py-3 sm:py-4 px-2 sm:px-4 font-semibold text-slate-800">
                         {member.visits}
                         <span className="text-xs text-slate-400">/{member.objective}</span>
                       </td>
-                      <td className="text-center py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm">
+                      <td className="hidden sm:table-cell text-center py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm">
                         <span className="font-semibold text-cyan-600">
                           {(member.volume / 1000000).toFixed(1)}M
                         </span>
@@ -587,12 +587,12 @@ export default function ManagerDashboard() {
                           </div>
                         </div>
                       </td>
-                      <td className="text-center py-3 sm:py-4 px-2 sm:px-4">
+                      <td className="hidden md:table-cell text-center py-3 sm:py-4 px-2 sm:px-4">
                         <span className="inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">
                           {member.kolCoverage}
                         </span>
                       </td>
-                      <td className="text-center py-3 sm:py-4 px-2 sm:px-4">
+                      <td className="hidden md:table-cell text-center py-3 sm:py-4 px-2 sm:px-4">
                         <span className="font-semibold text-slate-800">{member.satisfaction}</span>
                         <span className="text-xs text-slate-400">/10</span>
                       </td>

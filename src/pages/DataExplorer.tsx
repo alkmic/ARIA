@@ -471,9 +471,9 @@ Réponds de manière CONCISE (2-3 phrases max) avec les insights clés. Utilise 
 
       case 'stats':
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             {chart.data.map((stat: any, i: number) => (
-              <div key={i} className="text-center p-4 bg-slate-50 rounded-xl">
+              <div key={i} className="text-center p-3 sm:p-4 bg-slate-50 rounded-xl">
                 <div className="text-2xl font-bold text-slate-800">{stat.value}</div>
                 <div className="text-sm text-slate-500">{stat.label}</div>
               </div>

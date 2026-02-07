@@ -174,11 +174,11 @@ export default function TerritoryMap() {
       </div>
 
       {/* Contenu principal */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Panneau de filtres et options */}
-        <div className="w-96 bg-white border-r border-slate-200 overflow-y-auto">
+        <div className="w-full md:w-96 bg-white border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-[40vh] md:max-h-none">
           {/* Filtres */}
-          <div className="p-6 border-b border-slate-200">
+          <div className="p-4 md:p-6 border-b border-slate-200">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Filter className="w-5 h-5 text-al-blue-500" />
               Filtres
@@ -272,7 +272,7 @@ export default function TerritoryMap() {
             </div>
 
             {showSelectionList && (
-              <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-lg">
+              <div className="max-h-40 sm:max-h-64 overflow-y-auto border border-slate-200 rounded-lg">
                 {mappedPractitioners.map((p) => p && (
                   <label
                     key={p.id}

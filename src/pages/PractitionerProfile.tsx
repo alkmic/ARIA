@@ -97,23 +97,23 @@ export default function PractitionerProfile() {
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
+            <span className="hidden sm:inline">Retour</span>
           </button>
           <PeriodSelector size="sm" />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Badge variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'success'}>
             Risque {practitioner.riskLevel}
           </Badge>
           {practitioner.isKOL && (
-            <Badge variant="warning">Key Opinion Leader</Badge>
+            <Badge variant="warning">KOL</Badge>
           )}
         </div>
       </div>
@@ -228,22 +228,22 @@ export default function PractitionerProfile() {
         {/* Right Column - Tabs */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tab Navigation */}
-          <div className="glass-card p-2">
-            <div className="flex gap-2">
+          <div className="glass-card p-1.5 sm:p-2">
+            <div className="flex gap-1 sm:gap-2 overflow-x-auto">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as TabType)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
                       activeTab === tab.id
                         ? 'bg-gradient-to-r from-al-blue-500 to-al-sky text-white shadow-lg'
                         : 'text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span>{tab.label}</span>
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 );
               })}

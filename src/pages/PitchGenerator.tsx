@@ -316,7 +316,7 @@ export function PitchGenerator() {
           {/* Filtres et recherche */}
           <div className="glass-card p-4">
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-[250px]">
+              <div className="flex-1 min-w-0 w-full sm:w-auto">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
