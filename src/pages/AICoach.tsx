@@ -797,12 +797,20 @@ Réponds de manière précise et contextuelle.`;
           }
 
           if (newChartType !== lastChart.spec.chartType) {
+            const chartTypeLabels: Record<string, string> = {
+              pie: 'en camembert',
+              bar: 'en barres',
+              line: 'en courbe',
+              radar: 'en radar',
+              area: 'en aires',
+              composed: 'en composé',
+            };
             const modifiedSpec: ChartSpec = {
               ...lastChart.spec,
               chartType: newChartType,
               title: lastChart.spec.title.replace(
-                /en (camembert|barres?|courbe|ligne|histogramme)/i, ''
-              ).trim() + (newChartType === 'pie' ? ' en camembert' : ''),
+                /\s+en (camembert|barres?|courbe|ligne|histogramme|radar|spider|spider\s*chart|toile|araign[ée]e|aires?|area|compos[ée])/i, ''
+              ).trim() + (chartTypeLabels[newChartType] ? ` ${chartTypeLabels[newChartType]}` : ''),
             };
 
             const chartResult = generateChartFromSpec(modifiedSpec);
@@ -814,14 +822,10 @@ Réponds de manière précise et contextuelle.`;
               timestamp: new Date()
             });
 
-            const dataInsight = chartResult.data.length > 0
-              ? `\n\n**Résumé des données :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}`
-              : '';
-
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
-              content: `**${modifiedSpec.title}**\n\n${modifiedSpec.description || ''}${dataInsight}`,
+              content: `**${modifiedSpec.title}**\n\n${modifiedSpec.description || ''}`,
               agenticChart: {
                 spec: chartResult.spec,
                 data: chartResult.data,
@@ -829,7 +833,6 @@ Réponds de manière précise et contextuelle.`;
                 suggestions: chartResult.suggestions,
                 generatedByLLM: false
               },
-              insights: chartResult.insights,
               suggestions: chartResult.suggestions,
               timestamp: new Date(),
               isMarkdown: true,
@@ -901,7 +904,7 @@ Réponds de manière précise et contextuelle.`;
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
-              content: `**${timeSeriesSpec.title}**\n\n${timeSeriesSpec.description}\n\n**Résumé :**\n${tsInsights.map(i => `• ${i}`).join('\n')}`,
+              content: `**${timeSeriesSpec.title}**\n\n${timeSeriesSpec.description}`,
               agenticChart: {
                 spec: timeSeriesSpec,
                 data: timeSeriesData,
@@ -913,7 +916,6 @@ Réponds de manière précise et contextuelle.`;
                 ],
                 generatedByLLM: false
               },
-              insights: tsInsights,
               suggestions: [
                 `Volumes par ville`,
                 `Top 10 prescripteurs`,
@@ -1004,16 +1006,11 @@ Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les p
               timestamp: new Date()
             });
 
-            // Générer une description enrichie basée sur les vraies données
-            const dataInsight = chartResult.data.length > 0
-              ? `\n\n**Résumé des données :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}`
-              : '';
-
             // Créer le message avec le graphique généré dynamiquement
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
-              content: `**${spec.title}**\n\n${spec.description || ''}${dataInsight}`,
+              content: `**${spec.title}**\n\n${spec.description || ''}`,
               agenticChart: {
                 spec: chartResult.spec,
                 data: chartResult.data,
@@ -1021,7 +1018,6 @@ Génère la spécification JSON du graphique demandé. RESPECTE EXACTEMENT les p
                 suggestions: chartResult.suggestions,
                 generatedByLLM: true
               },
-              insights: chartResult.insights,
               suggestions: chartResult.suggestions,
               timestamp: new Date(),
               isMarkdown: true,
@@ -1099,9 +1095,6 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
         const chartResult = generateChartLocally(question);
 
         if (chartResult && chartResult.data.length > 0) {
-          const firstMetric = chartResult.spec.query.metrics[0]?.name || 'value';
-          const topItems = chartResult.data.slice(0, 3);
-
           // Convertir au format agentique pour l'affichage
           const agenticData: AgenticChartData = {
             spec: chartResult.spec,
@@ -1120,20 +1113,12 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
             timestamp: new Date()
           });
 
-          // Générer un message descriptif
-          const response = {
-            message: `**${chartResult.spec.title}**\n\n${chartResult.spec.description}\n\n**Résumé :**\n${chartResult.insights.map(i => `• ${i}`).join('\n')}\n\n**Top ${Math.min(3, topItems.length)} :**\n${topItems.map((item, i) => `${i + 1}. **${item.name}** : ${item[firstMetric]}`).join('\n')}`,
-            insights: chartResult.insights,
-            suggestions: chartResult.suggestions
-          };
-
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: response.message,
+            content: `**${chartResult.spec.title}**\n\n${chartResult.spec.description}`,
             agenticChart: agenticData,
-            insights: response.insights,
-            suggestions: response.suggestions,
+            suggestions: chartResult.suggestions,
             timestamp: new Date(),
             isMarkdown: true,
             source: 'local'
@@ -1142,7 +1127,7 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
           setMessages(prev => [...prev, assistantMessage]);
 
           if (autoSpeak) {
-            speak(response.message);
+            speak(`${chartResult.spec.title}. ${chartResult.insights.join('. ')}`);
           }
         }
       } else {
@@ -1357,10 +1342,10 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                   </div>
                 )}
 
-                <div className={`max-w-[85%] sm:max-w-[80%] ${
+                <div className={`${
                   message.role === 'user'
-                    ? 'bg-gradient-to-r from-al-blue-500 to-al-blue-600 text-white rounded-2xl rounded-tr-md px-3 sm:px-4 py-2 sm:py-3 shadow-md'
-                    : 'space-y-3'
+                    ? 'max-w-[85%] sm:max-w-[80%] bg-gradient-to-r from-al-blue-500 to-al-blue-600 text-white rounded-2xl rounded-tr-md px-3 sm:px-4 py-2 sm:py-3 shadow-md'
+                    : `${message.agenticChart ? 'max-w-[95%] sm:max-w-[85%]' : 'max-w-[85%] sm:max-w-[80%]'} space-y-3`
                 }`}>
                   {/* Message content */}
                   <div className="flex items-start justify-between gap-2">
@@ -1382,9 +1367,11 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                             <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                               message.source === 'llm'
                                 ? 'bg-al-blue-100 text-al-blue-600'
+                                : message.source === 'agentic'
+                                ? 'bg-purple-100 text-purple-600'
                                 : 'bg-blue-100 text-blue-600'
                             }`}>
-                              {message.source === 'llm' ? 'Groq AI' : 'Intelligence locale'}
+                              {message.source === 'llm' ? 'Groq AI' : message.source === 'agentic' ? 'IA Agentique' : 'Intelligence locale'}
                             </span>
                             <button
                               onClick={() => speak(message.content)}
@@ -1495,19 +1482,30 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                             const secondaryMetric = metrics[1]?.name;
 
                             if (chart.spec.chartType === 'pie') {
+                              // Limit to 7 segments for readability, group rest as "Autres"
+                              let pieData = data;
+                              if (data.length > 7) {
+                                const sorted = [...data].sort((a, b) => (Number(b[primaryMetric]) || 0) - (Number(a[primaryMetric]) || 0));
+                                const top6 = sorted.slice(0, 6);
+                                const othersTotal = sorted.slice(6).reduce((sum, item) => sum + (Number(item[primaryMetric]) || 0), 0);
+                                pieData = [...top6, { name: `Autres (${data.length - 6})`, [primaryMetric]: othersTotal }];
+                              }
                               return (
                                 <PieChart>
                                   <Pie
-                                    data={data}
+                                    data={pieData}
                                     cx="50%"
                                     cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
+                                    labelLine={true}
+                                    label={({ name, percent }) => {
+                                      const pct = (percent || 0) * 100;
+                                      return pct >= 5 ? `${name} (${pct.toFixed(0)}%)` : '';
+                                    }}
                                     outerRadius={90}
                                     fill="#8884d8"
                                     dataKey={primaryMetric}
                                   >
-                                    {data.map((_, index) => (
+                                    {pieData.map((_, index) => (
                                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                                     ))}
                                   </Pie>
