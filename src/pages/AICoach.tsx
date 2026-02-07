@@ -119,6 +119,16 @@ function getCategoryLabel(category: string): string {
   return labels[category] || category || 'Document';
 }
 
+/**
+ * Détecte si une question porte sur des connaissances métier/médicales/entreprise
+ * plutôt que sur les données CRM des praticiens.
+ * Utilisé pour prioriser la recherche RAG sur le handler local praticiens.
+ */
+function isKnowledgeQuestion(question: string): boolean {
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return /\b(bpco|has|recommandation|guideline|protocole|parcours de soins|epidemio|prevalence|incidence|mortalite|traitement|molecule|medicament|therapie|therapeutique|oxygene|o2|ald|ventilation|vni|ppc|apnee|insuffisance\s+respiratoire|produit|gamme|offre|solution|service|catalogue|air\s*liquide|formation|certification|norme|reglementation|remboursement|prise\s+en\s+charge|ssiad|had|prestataire|dispositif\s+medical|matiere\s+medicale|pharmacovigilance|iec|etude|essai\s+clinique|publication scientifique)\b/.test(q);
+}
+
 /** Construit une réponse locale à partir des résultats de recherche RAG */
 function buildLocalRAGResponse(results: SearchResult[]): string {
   if (results.length === 0) return '';
@@ -1139,25 +1149,12 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
         // Search RAG knowledge base with enriched query
         const builtinChunks = getBuiltinChunks();
         const ragResults = searchChunks(searchQuery, documentChunks, builtinChunks, 5);
+        const hasGoodRAG = ragResults.length > 0 && ragResults[0].score > 0.5;
 
-        // Try local practitioner handler
-        const localResponse = generateCoachResponse(
-          question,
-          practitioners,
-          currentUser.objectives
-        );
-
-        // If local handler couldn't answer (generic help or no match), prefer RAG results
-        const useRAG = (localResponse.isGenericHelp || localResponse.isNoMatch)
-          && ragResults.length > 0
-          && ragResults[0].score > 0.5;
-
-        if (useRAG) {
-          // Use focused response for numbered point drill-downs
-          const ragContent = pointExtract
-            ? buildPointFollowUpResponse(pointExtract, ragResults)
-            : buildLocalRAGResponse(ragResults);
-
+        // Layer 1: Point drill-down follow-ups (e.g. "développe le point 7")
+        // Always prefer RAG since enrichQueryWithContext already extracted the specific content
+        if (pointExtract && ragResults.length > 0 && ragResults[0].score > 0.3) {
+          const ragContent = buildPointFollowUpResponse(pointExtract, ragResults);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
@@ -1167,28 +1164,62 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
             isMarkdown: true,
             source: 'local'
           };
-
           setMessages(prev => [...prev, assistantMessage]);
-
-          if (autoSpeak) {
-            speak(ragContent);
-          }
-        } else {
+          if (autoSpeak) speak(ragContent);
+        }
+        // Layer 2: Knowledge questions (BPCO, produits, HAS, etc.) → RAG first
+        else if (isKnowledgeQuestion(question) && hasGoodRAG) {
+          const ragContent = buildLocalRAGResponse(ragResults);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: localResponse.message,
-            practitioners: localResponse.practitioners,
-            insights: localResponse.insights,
+            content: ragContent,
+            insights: [`${ragResults.length} source(s) trouvée(s) dans la base de connaissances`],
             timestamp: new Date(),
-            isMarkdown: localResponse.isMarkdown,
+            isMarkdown: true,
             source: 'local'
           };
-
           setMessages(prev => [...prev, assistantMessage]);
+          if (autoSpeak) speak(ragContent);
+        }
+        // Layer 3: Practitioner/data questions → local handler, with RAG as fallback
+        else {
+          const localResponse = generateCoachResponse(
+            question,
+            practitioners,
+            currentUser.objectives
+          );
 
-          if (autoSpeak && localResponse.message) {
-            speak(localResponse.message);
+          // If local handler couldn't give a specific answer, prefer RAG results
+          const useRAG = (localResponse.isGenericHelp || localResponse.isNoMatch)
+            && hasGoodRAG;
+
+          if (useRAG) {
+            const ragContent = buildLocalRAGResponse(ragResults);
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: ragContent,
+              insights: [`${ragResults.length} source(s) trouvée(s) dans la base de connaissances`],
+              timestamp: new Date(),
+              isMarkdown: true,
+              source: 'local'
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            if (autoSpeak) speak(ragContent);
+          } else {
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: localResponse.message,
+              practitioners: localResponse.practitioners,
+              insights: localResponse.insights,
+              timestamp: new Date(),
+              isMarkdown: localResponse.isMarkdown,
+              source: 'local'
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            if (autoSpeak && localResponse.message) speak(localResponse.message);
           }
         }
       }

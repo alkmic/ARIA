@@ -1037,8 +1037,8 @@ function getSmartFallback(q: string, practitioners: Practitioner[], userObjectiv
   const notVisited60 = practitioners.filter(p => daysSince(p.lastVisitDate) > 60);
   const progress = Math.round(userObjectives.visitsCompleted / userObjectives.visitsMonthly * 100);
 
-  // If question seems to be a greeting or general inquiry, give a dashboard summary
-  if (q.length < 30 || /\b(bonjour|salut|hello|aide|help|résumé|resume|synthèse|bilan|situation|tableau)\b/.test(q)) {
+  // If question is explicitly a greeting or dashboard request, give territory summary
+  if (/\b(bonjour|salut|hello|aide|help|résumé|resume|synthèse|bilan|situation|tableau|dashboard)\b/.test(q)) {
     return {
       message: `## Synthèse de votre territoire\n\n` +
         `**${stats.totalPractitioners} praticiens** | ${stats.totalKOLs} KOLs | ${stats.pneumologues} pneumo + ${stats.generalistes} MG\n\n` +
