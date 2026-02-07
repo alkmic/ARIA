@@ -11,7 +11,7 @@ import { DataService } from './dataService';
 
 // Types pour les spécifications de graphiques générées par le LLM
 export interface ChartSpec {
-  chartType: 'bar' | 'pie' | 'line' | 'composed';
+  chartType: 'bar' | 'pie' | 'line' | 'composed' | 'radar' | 'area';
   title: string;
   description: string;
   query: DataQuery;
@@ -171,6 +171,8 @@ Analyse la demande de l'utilisateur et génère une spécification JSON PRÉCISE
    - "pie" : pour répartitions/proportions (max 8 catégories). Utilise "pie" si l'utilisateur dit "camembert", "répartition", "proportion"
    - "composed" : pour comparer 2 métriques (ex: volume ET fidélité)
    - "line" : pour évolutions temporelles uniquement
+   - "radar" : pour profils multi-dimensionnels, comparaisons sur plusieurs axes. Utilise "radar" si l'utilisateur dit "spider", "radar", "toile d'araignée", "araignée"
+   - "area" : comme line mais avec l'aire sous la courbe remplie (pour évolutions avec emphasis sur le volume)
 
 3. **Si l'utilisateur demande de MODIFIER un graphique précédent** (ex: "en camembert", "au format barres", "modifie ce graphique") :
    - REPRENDS EXACTEMENT la même query (mêmes filtres, métriques, groupBy, limit)
@@ -329,12 +331,14 @@ export function isChartModificationRequest(question: string): boolean {
   const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const modificationPatterns = [
     /modifie.*graphi|change.*graphi|transforme.*graphi/,
-    /en (camembert|barres?|courbe|ligne|histogramme)/,
-    /au format (camembert|barres?|courbe|ligne|histogramme|pie|bar)/,
+    /en (camembert|barres?|courbe|ligne|histogramme|radar|spider|toile|araignee|aire|area)/,
+    /au format (camembert|barres?|courbe|ligne|histogramme|pie|bar|radar|spider|toile|aire|area)/,
     /le meme en|pareil (mais )?en|refais.*(en|au format)/,
-    /format (camembert|barres?|courbe|pie|bar|histogramme)/,
-    /passe.*en (camembert|barres?|courbe|ligne)/,
+    /format (camembert|barres?|courbe|pie|bar|histogramme|radar|spider|toile|aire|area)/,
+    /passe.*en (camembert|barres?|courbe|ligne|radar|spider|toile|aire|area)/,
     /je.*attendais.*camembert|je.*attendais.*barres/,
+    /un\s+autre(\s+(format|type|graphique))?(\s|$)/,
+    /autre\s+(format|type|graphique)/,
   ];
   return modificationPatterns.some(p => p.test(q));
 }
@@ -599,7 +603,7 @@ export function parseLLMChartResponse(response: string): ChartSpec | null {
     }
 
     // Normaliser le chartType
-    const validTypes = ['bar', 'pie', 'line', 'composed'];
+    const validTypes = ['bar', 'pie', 'line', 'composed', 'radar', 'area'];
     if (!validTypes.includes(parsed.chartType)) {
       parsed.chartType = 'bar';
     }
@@ -1106,3 +1110,58 @@ export const DEFAULT_CHART_COLORS = [
   '#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444',
   '#06B6D4', '#EC4899', '#6366F1', '#14B8A6', '#F97316'
 ];
+
+// ============================================
+// CHART TYPE CYCLING
+// ============================================
+const ALL_CHART_TYPES: ChartSpec['chartType'][] = ['bar', 'pie', 'radar', 'line', 'area', 'composed'];
+
+/** Returns the next chart type in the cycling order */
+export function getNextChartType(current: ChartSpec['chartType']): ChartSpec['chartType'] {
+  const idx = ALL_CHART_TYPES.indexOf(current);
+  return ALL_CHART_TYPES[(idx + 1) % ALL_CHART_TYPES.length];
+}
+
+/** Detects "un autre format" / "un autre" without specifying which format */
+export function isGenericFormatChangeRequest(question: string): boolean {
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  return /^un\s+autre(\s+(format|type|graphique))?$/.test(q) ||
+    /autre\s+(format|type|graphique)/.test(q);
+}
+
+// ============================================
+// PRACTITIONER TIME SERIES DETECTION
+// ============================================
+
+/** Detects if the question asks for a practitioner's time series (volume over time) */
+export function detectPractitionerTimeSeries(question: string): { practitionerName: string } | null {
+  // Patterns that indicate time series intent
+  const timeSeriesPatterns = [
+    /(?:evolution|evolutions|volumes?\s+mensuels?|prescriptions?\s+mensuelles?|historique\s+(?:de|des|du)|tendance)\s+(?:de|du|d['']|pour)\s*(?:le\s+)?(?:dr\.?\s+)?(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)/i,
+    /(?:dr\.?\s+)(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)\s+.*(?:evolution|au\s+cours|temps|mensuel|mois\s+par\s+mois|sur\s+\d+\s+mois)/i,
+    /prescriptions?\s+(?:de|du|d[''])\s*(?:le\s+)?(?:dr\.?\s+)?(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+(?:\s+[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)?)\s+(?:au\s+cours|dans\s+le\s+temps|sur\s+\d+|mois)/i,
+    /(?:graphique|courbe|montre)\s+.*(?:evolution|volumes?|prescriptions?)\s+.*(?:dr\.?\s+)?(\b[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)/i,
+  ];
+
+  for (const pattern of timeSeriesPatterns) {
+    const match = question.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      // Filter out common French words that are not names
+      const excluded = ['Quelles', 'Quels', 'Quel', 'Quelle', 'Comment', 'Pourquoi', 'Est', 'Les', 'Des', 'Pour', 'Dans', 'Sur', 'Avec'];
+      if (!excluded.includes(name)) {
+        return { practitionerName: name };
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Detects if the user wants to visualize previously discussed data ("montre les avec un graphique") */
+export function isContextualChartRequest(question: string): boolean {
+  const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return /(?:montre|affiche|visualise|fais).*(?:les|le|la|ces|cette|ce).*(?:graphique|chart|graph|courbe|diagramme)/i.test(q) ||
+    /(?:montre|affiche|visualise|fais).*(?:avec|en|sous\s+forme)\s+(?:un\s+)?(?:graphique|chart|graph|courbe|diagramme)/i.test(q) ||
+    /(?:en|sous\s+forme\s+de?)\s+graphique/i.test(q);
+}

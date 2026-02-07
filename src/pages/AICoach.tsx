@@ -36,7 +36,14 @@ import {
   LineChart,
   Line,
   Legend,
-  ComposedChart
+  ComposedChart,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  AreaChart,
+  Area
 } from 'recharts';
 import { useGroq } from '../hooks/useGroq';
 import { generateCoachResponse } from '../services/coachAI';
@@ -61,6 +68,10 @@ import {
   isChartModificationRequest,
   extractQueryParameters,
   clearChartHistory,
+  getNextChartType,
+  isGenericFormatChangeRequest,
+  detectPractitionerTimeSeries,
+  isContextualChartRequest,
   type ChartSpec
 } from '../services/agenticChartEngine';
 import { useUserDataStore } from '../stores/useUserDataStore';
@@ -675,7 +686,7 @@ PRATICIEN SPÉCIFIQUE IDENTIFIÉ — La FICHE COMPLÈTE est ci-dessus. Utilise-l
   const isVisualizationRequest = (q: string): boolean => {
     const normalized = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const patterns = [
-      /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme/,
+      /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme|radar|spider|toile|araignee|aire/,
       /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
       /📊|📈|🥧|📉/,
       /repartition|distribution|top\s*\d+|classement|compare/,
@@ -772,12 +783,18 @@ Réponds de manière précise et contextuelle.`;
         if (wantsChartModification && hasRecentChart) {
           const lastChart = chartHistory[0];
           const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          let newChartType: 'bar' | 'pie' | 'line' | 'composed' = lastChart.spec.chartType;
+          let newChartType: ChartSpec['chartType'] = lastChart.spec.chartType;
 
           if (/camembert|pie|circulaire/.test(q)) newChartType = 'pie';
           else if (/barres?|bar|histogramme/.test(q)) newChartType = 'bar';
           else if (/courbe|ligne|line/.test(q)) newChartType = 'line';
           else if (/compose|mixte/.test(q)) newChartType = 'composed';
+          else if (/radar|spider|toile|araignee/.test(q)) newChartType = 'radar';
+          else if (/aire|area/.test(q)) newChartType = 'area';
+          else if (isGenericFormatChangeRequest(question)) {
+            // "Un autre format" / "un autre" → cycle to the next chart type
+            newChartType = getNextChartType(lastChart.spec.chartType);
+          }
 
           if (newChartType !== lastChart.spec.chartType) {
             const modifiedSpec: ChartSpec = {
@@ -821,6 +838,94 @@ Réponds de manière précise et contextuelle.`;
 
             setMessages(prev => [...prev, assistantMessage]);
             if (autoSpeak) speak(`${modifiedSpec.title}. ${chartResult.insights.join('. ')}`);
+            setIsTyping(false);
+            return;
+          }
+        }
+
+        // TIME SERIES: Detect practitioner-specific time series requests
+        const timeSeriesMatch = detectPractitionerTimeSeries(question);
+        // Also handle contextual requests like "montre les avec un graphique" after discussing a practitioner
+        const isContextualViz = !timeSeriesMatch && isContextualChartRequest(question);
+        const contextPractitionerName = isContextualViz ? extractLastDiscussedPractitioner(messages) : null;
+        const timeSeriesName = timeSeriesMatch?.practitionerName || contextPractitionerName;
+
+        if (timeSeriesName) {
+          const practitionerMatches = DataService.fuzzySearchPractitioner(timeSeriesName);
+          if (practitionerMatches.length > 0) {
+            const p = practitionerMatches[0];
+            const volumeHistory = DataService.generateVolumeHistory(p.metrics.volumeL, p.id);
+
+            const timeSeriesSpec: ChartSpec = {
+              chartType: 'line',
+              title: `Évolution des volumes — ${p.title} ${p.firstName} ${p.lastName}`,
+              description: `Prescriptions mensuelles d'oxygène sur 12 mois (${p.specialty}, ${p.address.city})`,
+              query: {
+                source: 'practitioners',
+                metrics: [
+                  { name: 'Volume (L)', field: 'volumeL', aggregation: 'sum' },
+                  { name: 'Moyenne vingtile', field: 'vingtileAvg', aggregation: 'avg' }
+                ]
+              },
+              formatting: {
+                xAxisLabel: 'Mois',
+                yAxisLabel: 'Volume (L/mois)',
+                showLegend: true
+              }
+            };
+
+            const timeSeriesData = volumeHistory.map(vh => ({
+              name: vh.month,
+              'Volume (L)': vh.volume,
+              'Moyenne vingtile': vh.vingtileAvg
+            }));
+
+            // Compute insights from actual data
+            const maxMonth = volumeHistory.reduce((max, vh) => vh.volume > max.volume ? vh : max, volumeHistory[0]);
+            const minMonth = volumeHistory.reduce((min, vh) => vh.volume < min.volume ? vh : min, volumeHistory[0]);
+            const avgVolume = Math.round(volumeHistory.reduce((s, vh) => s + vh.volume, 0) / volumeHistory.length);
+            const tsInsights = [
+              `Volume annuel total : **${Math.round(p.metrics.volumeL / 1000)}K L/an** (${avgVolume} L/mois en moyenne)`,
+              `Pic : **${maxMonth.month}** (${maxMonth.volume} L) — Creux : **${minMonth.month}** (${minMonth.volume} L)`,
+              `Vingtile : ${p.metrics.vingtile} | Fidélité : ${p.metrics.loyaltyScore}/10`
+            ];
+
+            addToChartHistory({
+              question,
+              spec: timeSeriesSpec,
+              data: timeSeriesData,
+              insights: tsInsights,
+              timestamp: new Date()
+            });
+
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: `**${timeSeriesSpec.title}**\n\n${timeSeriesSpec.description}\n\n**Résumé :**\n${tsInsights.map(i => `• ${i}`).join('\n')}`,
+              agenticChart: {
+                spec: timeSeriesSpec,
+                data: timeSeriesData,
+                insights: tsInsights,
+                suggestions: [
+                  `Volumes par ville`,
+                  `Top 10 prescripteurs`,
+                  `Comparer KOLs vs autres`
+                ],
+                generatedByLLM: false
+              },
+              insights: tsInsights,
+              suggestions: [
+                `Volumes par ville`,
+                `Top 10 prescripteurs`,
+                `Comparer KOLs vs autres`
+              ],
+              timestamp: new Date(),
+              isMarkdown: true,
+              source: 'agentic'
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
+            if (autoSpeak) speak(`${timeSeriesSpec.title}. ${tsInsights.join('. ')}`);
             setIsTyping(false);
             return;
           }
@@ -1362,6 +1467,10 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                             <TrendingUp className="w-5 h-5 text-green-500" />
                           ) : message.agenticChart.spec.chartType === 'composed' ? (
                             <BarChart3 className="w-5 h-5 text-al-navy" />
+                          ) : message.agenticChart.spec.chartType === 'radar' ? (
+                            <TrendingUp className="w-5 h-5 text-purple-500" />
+                          ) : message.agenticChart.spec.chartType === 'area' ? (
+                            <TrendingUp className="w-5 h-5 text-cyan-500" />
                           ) : (
                             <BarChart3 className="w-5 h-5 text-blue-500" />
                           )}
@@ -1455,6 +1564,66 @@ RAPPEL : Réponds UNIQUEMENT à la question posée. Si on demande une adresse, d
                                     <Line type="monotone" dataKey={secondaryMetric} stroke="#EF4444" strokeWidth={2} name={secondaryMetric} />
                                   )}
                                 </ComposedChart>
+                              );
+                            }
+
+                            if (chart.spec.chartType === 'radar') {
+                              return (
+                                <RadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
+                                  <PolarGrid stroke="#e2e8f0" />
+                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                  <PolarRadiusAxis tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                  <Legend />
+                                  <Radar
+                                    dataKey={primaryMetric}
+                                    stroke="#8B5CF6"
+                                    fill="#8B5CF6"
+                                    fillOpacity={0.3}
+                                    name={primaryMetric}
+                                  />
+                                  {secondaryMetric && (
+                                    <Radar
+                                      dataKey={secondaryMetric}
+                                      stroke="#10B981"
+                                      fill="#10B981"
+                                      fillOpacity={0.2}
+                                      name={secondaryMetric}
+                                    />
+                                  )}
+                                </RadarChart>
+                              );
+                            }
+
+                            if (chart.spec.chartType === 'area') {
+                              return (
+                                <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                  <Legend />
+                                  <Area
+                                    type="monotone"
+                                    dataKey={primaryMetric}
+                                    stroke="#3B82F6"
+                                    fill="#3B82F6"
+                                    fillOpacity={0.3}
+                                    strokeWidth={2}
+                                    name={primaryMetric}
+                                  />
+                                  {secondaryMetric && (
+                                    <Area
+                                      type="monotone"
+                                      dataKey={secondaryMetric}
+                                      stroke="#10B981"
+                                      fill="#10B981"
+                                      fillOpacity={0.2}
+                                      strokeWidth={2}
+                                      name={secondaryMetric}
+                                    />
+                                  )}
+                                </AreaChart>
                               );
                             }
 
