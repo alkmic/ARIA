@@ -689,7 +689,7 @@ PRATICIEN SPÉCIFIQUE IDENTIFIÉ — La FICHE COMPLÈTE est ci-dessus. Utilise-l
       /graphique|graph|chart|diagramme|visualis|courbe|barres?|camembert|histogramme|radar|spider|toile|araignee|aire/,
       /montre[- ]?moi|affiche|fais[- ]?moi voir|presente|dessine/,
       /📊|📈|🥧|📉/,
-      /repartition|distribution|top\s*\d+|classement|compare/,
+      /repartition|distribution|top\s*\d+|classement|compar|versus|\bvs\b/,
       /combien|nombre de|total de|analyse/,
       /par ville|par specialite|par segment|par vingtile|par risque/
     ];
