@@ -114,7 +114,7 @@ export function Landing() {
         className="relative z-10 pb-4 text-center"
       >
         <span className="text-white/30 text-xs">
-          v1.0 · Propulsé par Groq Llama 3.3 70B
+          v1.0 · Propulsé par IA multi-fournisseurs
         </span>
       </motion.div>
     </div>

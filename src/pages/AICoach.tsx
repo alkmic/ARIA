@@ -464,7 +464,7 @@ export default function AICoach() {
                         {message.source && (
                           <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
-                              {message.source === 'agentic' ? 'ARIA Engine + Groq' : 'ARIA Engine'}
+                              {message.source === 'agentic' ? 'ARIA Engine + LLM' : 'ARIA Engine'}
                             </span>
                             <button
                               onClick={() => speak(message.content)}
