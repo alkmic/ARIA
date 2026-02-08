@@ -2,15 +2,25 @@
 
 ## ⚠️ Problème Identifié
 
-Les fonctions IA (Pitch Generator, Coach IA) ne fonctionnent pas car **la clé API Groq n'est pas configurée**.
+Les fonctions IA (Pitch Generator, Coach IA) ne fonctionnent pas car **la clé API LLM n'est pas configurée**.
 
-## 🔧 Solution - Configuration de la clé API Groq
+## 🔧 Solution - Configuration de la clé API LLM
 
-### 1. Obtenir une clé API Groq
+Le fournisseur est **détecté automatiquement** à partir du format de la clé API.
 
-1. Allez sur [https://console.groq.com](https://console.groq.com)
-2. Créez un compte (gratuit)
-3. Générez une clé API
+### Fournisseurs supportés
+
+| Fournisseur | Préfixe clé | Lien |
+|-------------|-------------|------|
+| **Groq** (Llama) | `gsk_...` | [console.groq.com](https://console.groq.com) |
+| **Google Gemini** | `AIzaSy...` | [aistudio.google.com](https://aistudio.google.com) |
+| **OpenAI** (GPT) | `sk-...` | [platform.openai.com](https://platform.openai.com) |
+| **Anthropic** (Claude) | `sk-ant-...` | [console.anthropic.com](https://console.anthropic.com) |
+| **OpenRouter** (tous modèles) | `sk-or-...` | [openrouter.ai](https://openrouter.ai) |
+
+### 1. Obtenir une clé API
+
+Choisissez un fournisseur ci-dessus et générez une clé API.
 
 ### 2. Créer le fichier .env
 
@@ -26,11 +36,20 @@ echo "VITE_LLM_API_KEY=votre_cle_api_ici" > .env
 
 ### 3. Ajouter votre clé
 
-Ouvrez le fichier `.env` et remplacez `your_groq_api_key_here` par votre vraie clé API :
+Ouvrez le fichier `.env` et remplacez `your_api_key_here` par votre vraie clé API :
 
 ```env
-# Groq API Configuration
+# Exemple avec Groq
 VITE_LLM_API_KEY=gsk_votre_vraie_cle_ici
+
+# Ou avec Gemini
+# VITE_LLM_API_KEY=AIzaSy_votre_cle_ici
+
+# Ou avec Anthropic (Claude)
+# VITE_LLM_API_KEY=sk-ant-votre_cle_ici
+
+# Endpoint personnalisé (Mistral, Azure, local)
+# VITE_LLM_BASE_URL=https://api.mistral.ai/v1
 ```
 
 ### 4. Redémarrer le serveur
@@ -73,8 +92,8 @@ Tous les dashboards demandés sont bien présents et fonctionnels:
 - ✅ Navigation
 
 ### Avec clé API (nécessite configuration)
-- ⚠️ Pitch Generator (attend clé Groq)
-- ⚠️ Coach IA (attend clé Groq)
+- ⚠️ Pitch Generator (attend clé LLM)
+- ⚠️ Coach IA (attend clé LLM)
 
 ## 💡 Note Importante
 
@@ -88,7 +107,7 @@ Si les fonctions IA ne fonctionnent toujours pas après configuration:
 2. Vérifiez que la variable commence bien par `VITE_` (requis pour Vite)
 3. Redémarrez complètement le serveur de dev
 4. Ouvrez la console du navigateur pour voir les erreurs éventuelles
-5. Vérifiez que votre clé API est valide sur console.groq.com
+5. Vérifiez que votre clé API est valide auprès de votre fournisseur
 
 ## ✨ Tout le Reste Fonctionne
 

@@ -92,7 +92,7 @@ interface LLMCallOptions {
 // MULTI-PROVIDER LLM — Auto-détection depuis le format de clé API
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type LLMProvider = 'groq' | 'gemini' | 'openai';
+type LLMProvider = 'groq' | 'gemini' | 'openai' | 'anthropic' | 'openrouter';
 
 interface ProviderConfig {
   name: string;
@@ -106,12 +106,33 @@ interface ProviderConfig {
   parseError: (data: Record<string, unknown>, status: number) => string;
 }
 
+function getCustomBaseUrl(): string | null {
+  const url = import.meta.env.VITE_LLM_BASE_URL;
+  if (!url || url.includes('your_') || url.length < 10) return null;
+  return url.replace(/\/+$/, '');
+}
+
 function detectProvider(apiKey: string): ProviderConfig {
+  // Custom base URL: OpenAI-compatible endpoint (Mistral, Azure, local, etc.)
+  const customUrl = getCustomBaseUrl();
+  if (customUrl) {
+    let hostname = 'custom';
+    try { hostname = new URL(customUrl).hostname; } catch { /* ignore */ }
+    return {
+      ...PROVIDERS.openai,
+      name: `Custom (${hostname})`,
+      apiUrl: () => `${customUrl}/chat/completions`,
+    };
+  }
+
+  // Auto-detect from key format (order matters: sk-ant- and sk-or- before sk-)
   if (apiKey.startsWith('gsk_')) return PROVIDERS.groq;
   if (apiKey.startsWith('AIzaSy')) return PROVIDERS.gemini;
+  if (apiKey.startsWith('sk-ant-')) return PROVIDERS.anthropic;
+  if (apiKey.startsWith('sk-or-')) return PROVIDERS.openrouter;
   if (apiKey.startsWith('sk-')) return PROVIDERS.openai;
-  // Default: try OpenAI-compatible format (works with Groq, Together, etc.)
-  return PROVIDERS.groq;
+  // Default: OpenAI-compatible format
+  return PROVIDERS.openai;
 }
 
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
@@ -143,8 +164,8 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     provider: 'gemini',
     apiUrl: (model, apiKey) =>
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    mainModel: 'gemini-2.0-flash',
-    routerModel: 'gemini-2.0-flash',
+    mainModel: 'gemini-1.5-flash',
+    routerModel: 'gemini-1.5-flash',
     headers: () => ({
       'Content-Type': 'application/json',
     }),
@@ -210,6 +231,79 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
     parseError: (data, status) =>
       (data as { error?: { message?: string } }).error?.message || `OpenAI API error: ${status}`,
+  },
+
+  anthropic: {
+    name: 'Anthropic (Claude)',
+    provider: 'anthropic',
+    apiUrl: () => 'https://api.anthropic.com/v1/messages',
+    mainModel: 'claude-sonnet-4-5-20250929',
+    routerModel: 'claude-haiku-4-5-20251001',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    }),
+    buildBody: (messages, model, temperature, maxTokens, _jsonMode) => {
+      // Anthropic: system prompt is top-level, not in messages array
+      const systemContent = messages
+        .filter(m => m.role === 'system')
+        .map(m => m.content)
+        .join('\n\n');
+      const chatMessages = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({ role: m.role as string, content: m.content }));
+      // Anthropic requires alternating user/assistant, must start with user
+      const merged: { role: string; content: string }[] = [];
+      for (const msg of chatMessages) {
+        if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+          merged[merged.length - 1].content += '\n\n' + msg.content;
+        } else {
+          merged.push({ ...msg });
+        }
+      }
+      if (merged.length === 0 || merged[0].role !== 'user') {
+        merged.unshift({ role: 'user', content: '...' });
+      }
+      const body: Record<string, unknown> = {
+        model,
+        max_tokens: maxTokens,
+        messages: merged,
+      };
+      if (systemContent) body.system = systemContent;
+      if (temperature !== undefined) body.temperature = temperature;
+      return body;
+    },
+    parseResponse: (data) => {
+      const content = (data as { content?: { type: string; text?: string }[] }).content;
+      const textBlock = content?.find(c => c.type === 'text');
+      return textBlock?.text || null;
+    },
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Anthropic API error: ${status}`,
+  },
+
+  openrouter: {
+    name: 'OpenRouter',
+    provider: 'openrouter',
+    apiUrl: () => 'https://openrouter.ai/api/v1/chat/completions',
+    mainModel: 'meta-llama/llama-3.3-70b-instruct',
+    routerModel: 'meta-llama/llama-3.1-8b-instruct',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model, messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `OpenRouter API error: ${status}`,
   },
 };
 
@@ -489,8 +583,8 @@ export async function streamLLM(
   const provider = getProvider();
   const { temperature = 0.3, maxTokens = 2048 } = options;
 
-  // Gemini doesn't support SSE streaming in the same way — use non-streaming fallback
-  if (provider.provider === 'gemini') {
+  // Gemini and Anthropic use different streaming formats — use non-streaming fallback
+  if (provider.provider === 'gemini' || provider.provider === 'anthropic') {
     const result = await callLLM(messages, { temperature, maxTokens });
     if (result) onChunk(result);
     return;
@@ -1025,7 +1119,7 @@ export async function processQuestion(
   // Early exit: no API key configured
   if (!getApiKey()) {
     return {
-      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec une clé API valide.\n\n**Fournisseurs supportés :**\n- **Groq** (clé \`gsk_...\`) → [console.groq.com](https://console.groq.com)\n- **Google Gemini** (clé \`AIzaSy...\`) → [aistudio.google.com](https://aistudio.google.com)\n- **OpenAI** (clé \`sk-...\`) → [platform.openai.com](https://platform.openai.com)\n\nLe fournisseur est détecté automatiquement à partir du format de la clé.`,
+      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec une clé API valide.\n\n**Fournisseurs supportés (auto-détection) :**\n- **Groq** (clé \`gsk_...\`) → [console.groq.com](https://console.groq.com)\n- **Google Gemini** (clé \`AIzaSy...\`) → [aistudio.google.com](https://aistudio.google.com)\n- **OpenAI** (clé \`sk-...\`) → [platform.openai.com](https://platform.openai.com)\n- **Anthropic / Claude** (clé \`sk-ant-...\`) → [console.anthropic.com](https://console.anthropic.com)\n- **OpenRouter** (clé \`sk-or-...\`) → [openrouter.ai](https://openrouter.ai) (accès à Llama, Mistral, Claude, GPT, etc.)\n\n**Endpoint personnalisé** (Mistral, Azure, local) : ajoutez aussi \`VITE_LLM_BASE_URL\`.\n\nLe fournisseur est détecté automatiquement à partir du format de la clé.`,
       source: 'llm',
     };
   }
