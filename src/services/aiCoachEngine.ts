@@ -84,72 +84,265 @@ interface LLMCallOptions {
   temperature?: number;
   maxTokens?: number;
   jsonMode?: boolean;
+  model?: string;
+  useRouterModel?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONSTANTS
+// MULTI-PROVIDER LLM — Auto-détection depuis le format de clé API
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
+type LLMProvider = 'groq' | 'gemini' | 'openai' | 'anthropic' | 'openrouter';
+
+interface ProviderConfig {
+  name: string;
+  provider: LLMProvider;
+  apiUrl: (model: string, apiKey: string) => string;
+  mainModel: string;
+  routerModel: string;
+  headers: (apiKey: string) => Record<string, string>;
+  buildBody: (messages: LLMMessage[], model: string, temperature: number, maxTokens: number, jsonMode: boolean) => unknown;
+  parseResponse: (data: Record<string, unknown>) => string | null;
+  parseError: (data: Record<string, unknown>, status: number) => string;
+}
+
+function getCustomBaseUrl(): string | null {
+  const url = import.meta.env.VITE_LLM_BASE_URL;
+  if (!url || url.includes('your_') || url.length < 10) return null;
+  return url.replace(/\/+$/, '');
+}
+
+function detectProvider(apiKey: string): ProviderConfig {
+  // Custom base URL: OpenAI-compatible endpoint (Mistral, Azure, local, etc.)
+  const customUrl = getCustomBaseUrl();
+  if (customUrl) {
+    let hostname = 'custom';
+    try { hostname = new URL(customUrl).hostname; } catch { /* ignore */ }
+    return {
+      ...PROVIDERS.openai,
+      name: `Custom (${hostname})`,
+      apiUrl: () => `${customUrl}/chat/completions`,
+    };
+  }
+
+  // Auto-detect from key format (order matters: sk-ant- and sk-or- before sk-)
+  if (apiKey.startsWith('gsk_')) return PROVIDERS.groq;
+  if (apiKey.startsWith('AIzaSy')) return PROVIDERS.gemini;
+  if (apiKey.startsWith('sk-ant-')) return PROVIDERS.anthropic;
+  if (apiKey.startsWith('sk-or-')) return PROVIDERS.openrouter;
+  if (apiKey.startsWith('sk-')) return PROVIDERS.openai;
+  // Default: OpenAI-compatible format
+  return PROVIDERS.openai;
+}
+
+const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
+  groq: {
+    name: 'Groq',
+    provider: 'groq',
+    apiUrl: () => 'https://api.groq.com/openai/v1/chat/completions',
+    mainModel: 'llama-3.3-70b-versatile',
+    routerModel: 'llama-3.1-8b-instant',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model, messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Groq API error: ${status}`,
+  },
+
+  gemini: {
+    name: 'Google Gemini',
+    provider: 'gemini',
+    apiUrl: (model, apiKey) =>
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    mainModel: 'gemini-1.5-flash',
+    routerModel: 'gemini-1.5-flash',
+    headers: () => ({
+      'Content-Type': 'application/json',
+    }),
+    buildBody: (messages, _model, temperature, maxTokens, jsonMode) => {
+      // Gemini: separate system instructions from conversation
+      const systemParts = messages
+        .filter(m => m.role === 'system')
+        .map(m => ({ text: m.content }));
+      const contents = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        }));
+      // Gemini requires alternating user/model — merge consecutive same-role messages
+      const merged: { role: string; parts: { text: string }[] }[] = [];
+      for (const msg of contents) {
+        if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+          merged[merged.length - 1].parts.push(...msg.parts);
+        } else {
+          merged.push(msg);
+        }
+      }
+      const body: Record<string, unknown> = {
+        contents: merged,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+        },
+      };
+      if (systemParts.length > 0) {
+        body.systemInstruction = { parts: systemParts };
+      }
+      return body;
+    },
+    parseResponse: (data) => {
+      const candidates = (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] }).candidates;
+      return candidates?.[0]?.content?.parts?.[0]?.text || null;
+    },
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Gemini API error: ${status}`,
+  },
+
+  openai: {
+    name: 'OpenAI',
+    provider: 'openai',
+    apiUrl: () => 'https://api.openai.com/v1/chat/completions',
+    mainModel: 'gpt-4o-mini',
+    routerModel: 'gpt-4o-mini',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model, messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `OpenAI API error: ${status}`,
+  },
+
+  anthropic: {
+    name: 'Anthropic (Claude)',
+    provider: 'anthropic',
+    apiUrl: () => 'https://api.anthropic.com/v1/messages',
+    mainModel: 'claude-sonnet-4-5-20250929',
+    routerModel: 'claude-haiku-4-5-20251001',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    }),
+    buildBody: (messages, model, temperature, maxTokens, _jsonMode) => {
+      // Anthropic: system prompt is top-level, not in messages array
+      const systemContent = messages
+        .filter(m => m.role === 'system')
+        .map(m => m.content)
+        .join('\n\n');
+      const chatMessages = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({ role: m.role as string, content: m.content }));
+      // Anthropic requires alternating user/assistant, must start with user
+      const merged: { role: string; content: string }[] = [];
+      for (const msg of chatMessages) {
+        if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+          merged[merged.length - 1].content += '\n\n' + msg.content;
+        } else {
+          merged.push({ ...msg });
+        }
+      }
+      if (merged.length === 0 || merged[0].role !== 'user') {
+        merged.unshift({ role: 'user', content: '...' });
+      }
+      const body: Record<string, unknown> = {
+        model,
+        max_tokens: maxTokens,
+        messages: merged,
+      };
+      if (systemContent) body.system = systemContent;
+      if (temperature !== undefined) body.temperature = temperature;
+      return body;
+    },
+    parseResponse: (data) => {
+      const content = (data as { content?: { type: string; text?: string }[] }).content;
+      const textBlock = content?.find(c => c.type === 'text');
+      return textBlock?.text || null;
+    },
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Anthropic API error: ${status}`,
+  },
+
+  openrouter: {
+    name: 'OpenRouter',
+    provider: 'openrouter',
+    apiUrl: () => 'https://openrouter.ai/api/v1/chat/completions',
+    mainModel: 'meta-llama/llama-3.3-70b-instruct',
+    routerModel: 'meta-llama/llama-3.1-8b-instruct',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model, messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `OpenRouter API error: ${status}`,
+  },
+};
+
+// Cached provider detection (cached per key to handle hot-reload)
+let _cachedProvider: ProviderConfig | null = null;
+let _cachedKeyPrefix: string | null = null;
+function getProvider(): ProviderConfig {
+  const key = getApiKey() || '';
+  const prefix = key.substring(0, 6);
+  if (_cachedProvider && _cachedKeyPrefix === prefix) return _cachedProvider;
+  _cachedProvider = detectProvider(key);
+  _cachedKeyPrefix = prefix;
+  console.log(`[AICoachEngine] Provider detected: ${_cachedProvider.name} (model: ${_cachedProvider.mainModel})`);
+  return _cachedProvider;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROMPTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const ROUTER_SYSTEM_PROMPT = `Tu es le routeur intelligent d'ARIA Coach, un assistant CRM pharmaceutique pour Air Liquide Healthcare (oxygénothérapie à domicile).
+const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON.
 
-Analyse la question de l'utilisateur et classifie-la. Retourne UNIQUEMENT un objet JSON valide.
+Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle données), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), follow_up (suite de la conversation), general (salutations/hors sujet).
 
-## Intentions Disponibles
+Routage:
+- "graphique/montre-moi/affiche/diagramme/camembert/barres/courbe" → chart_create
+- "en camembert/en radar/change en/transforme en/mets ça en/plutôt en" → chart_modify (si graphique précédent)
+- Nom propre identifiable → practitioner_info
+- "combien/qui a le plus/liste des/quels sont" → data_query
+- "priorité/stratégie/recommandation/que faire" → strategic_advice
+- Référence implicite au contexte précédent → follow_up
 
-1. **chart_create** — L'utilisateur veut une NOUVELLE visualisation (graphique, répartition, top N visuel, comparaison visuelle, camembert, diagramme, barres)
-2. **chart_modify** — L'utilisateur veut MODIFIER le dernier graphique (changer type, ajouter métrique, changer nombre d'éléments, filtrer). Requiert un graphique précédent.
-3. **data_query** — Question factuelle sur les données (combien, qui, quel, total, moyenne, liste de praticiens)
-4. **practitioner_info** — Info spécifique sur UN praticien identifié par nom/prénom
-5. **strategic_advice** — Conseil stratégique, planification, priorités, recommandations d'action
-6. **follow_up** — Question de suivi sur la réponse précédente
-7. **general** — Salutations, remerciements, hors sujet, questions sur l'assistant
+groupBy: "city"|"specialty"|"vingtile"|"vingtileBucket"|"loyaltyBucket"|"riskLevel"|"visitBucket"|"isKOL"
+chartType: "bar"|"pie"|"line"|"composed"|"radar"
+dataScope: "specific" (1 praticien), "filtered" (sous-ensemble), "aggregated" (stats), "full" (question ouverte)
+needsChart = true pour chart_create et chart_modify.
 
-## Champs groupBy Disponibles
-"city", "specialty", "vingtile", "vingtileBucket", "loyaltyBucket", "riskLevel", "visitBucket", "isKOL"
-
-## Métriques Disponibles
-"volume" (volumeL), "loyalty" (loyaltyScore), "count" (nombre), "vingtile", "publications" (publicationsCount)
-
-## Règles de Routage
-- Si l'utilisateur mentionne "graphique", "montre-moi", "affiche", "diagramme", "camembert", "barres", "courbe" → intent=chart_create
-- Si "en camembert", "en radar", "change en", "transforme en", "plutôt en", "mets ça en", "ajoute", "fais un top X au lieu de" → intent=chart_modify (si graphique précédent)
-- Si question contient un nom propre identifiable → intent=practitioner_info
-- Si "combien", "qui a le plus", "liste des", "quels sont" → intent=data_query
-- Si "priorité", "stratégie", "comment", "recommandation", "que faire", "optimiser" → intent=strategic_advice
-- Si référence implicite au contexte précédent sans nouvelle demande claire → intent=follow_up
-- Le champ needsChart est true pour chart_create et chart_modify
-- dataScope: "specific" pour un praticien ciblé, "filtered" pour un sous-ensemble, "aggregated" pour des stats, "full" pour des questions ouvertes
-- responseGuidance: instruction brève pour orienter la réponse (en français)
-
-## Format de Sortie (JSON STRICT)
-{
-  "intent": "...",
-  "needsChart": boolean,
-  "chartModification": null ou "description de la modification demandée",
-  "dataScope": "specific" | "filtered" | "aggregated" | "full",
-  "searchTerms": {
-    "names": [],
-    "cities": [],
-    "specialties": [],
-    "isKOL": null ou boolean
-  },
-  "chartParams": {
-    "chartType": null ou "bar" | "pie" | "line" | "composed" | "radar",
-    "groupBy": null ou string,
-    "metrics": [],
-    "limit": null ou number,
-    "sortOrder": null ou "asc" | "desc",
-    "filters": []
-  },
-  "responseGuidance": "..."
-}`;
+JSON STRICT:
+{"intent":"...","needsChart":false,"chartModification":null,"dataScope":"...","searchTerms":{"names":[],"cities":[],"specialties":[],"isKOL":null},"chartParams":{"chartType":null,"groupBy":null,"metrics":[],"limit":null,"sortOrder":null,"filters":[]},"responseGuidance":"..."}`;
 
 const COACH_SYSTEM_PROMPT = `Tu es **ARIA Coach**, l'assistant stratégique expert pour les délégués pharmaceutiques d'Air Liquide Healthcare, spécialité oxygénothérapie à domicile.
 
@@ -300,7 +493,7 @@ Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même fo
 
 function getApiKey(): string | null {
   const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === 'your_llm_api_key_here' || apiKey.length < 10) {
+  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === 'your_llm_api_key_here' || apiKey === 'your_api_key_here' || apiKey.length < 10) {
     return null;
   }
   return apiKey;
@@ -317,45 +510,44 @@ async function callLLM(
   const apiKey = getApiKey();
   if (!apiKey) return null;
 
+  const provider = getProvider();
   const {
     temperature = 0.3,
-    maxTokens = 4096,
+    maxTokens = 2048,
     jsonMode = false,
+    model = options.useRouterModel ? provider.routerModel : provider.mainModel,
   } = options;
+
+  const resolvedModel = model;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const body: Record<string, unknown> = {
-        model: MODEL,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        stream: false,
-      };
+      const url = provider.apiUrl(resolvedModel, apiKey);
+      const headers = provider.headers(apiKey);
+      const body = provider.buildBody(messages, resolvedModel, temperature, maxTokens, jsonMode);
 
-      if (jsonMode) {
-        body.response_format = { type: 'json_object' };
-      }
-
-      const response = await fetch(GROQ_API_URL, {
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify(body),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = (errorData as { error?: { message?: string } }).error?.message ||
-          `Groq API error: ${response.status}`;
-        lastLLMError = `HTTP ${response.status}: ${errorMsg}`;
+        const errorMsg = provider.parseError(errorData as Record<string, unknown>, response.status);
+        lastLLMError = `[${provider.name}] HTTP ${response.status}: ${errorMsg}`;
         // Rate limit or server error — worth retrying
         if (response.status === 429 || response.status >= 500) {
-          console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} failed (${response.status}), ${attempt < retries ? 'retrying...' : 'giving up'}`);
+          let waitMs = 2000 * (attempt + 1);
+          if (response.status === 429) {
+            const waitMatch = errorMsg.match(/try again in (\d+\.?\d*)/i);
+            if (waitMatch) {
+              waitMs = Math.min(Math.ceil(parseFloat(waitMatch[1]) * 1000) + 500, 45000);
+            }
+          }
+          console.warn(`[AICoachEngine] ${provider.name} attempt ${attempt + 1} failed (${response.status}), ${attempt < retries ? `retrying in ${waitMs}ms...` : 'giving up'}`);
           if (attempt < retries) {
-            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            await new Promise(r => setTimeout(r, waitMs));
             continue;
           }
         }
@@ -364,16 +556,16 @@ async function callLLM(
 
       const data = await response.json();
       lastLLMError = null;
-      return data.choices?.[0]?.message?.content || null;
+      return provider.parseResponse(data as Record<string, unknown>);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      lastLLMError = lastLLMError || errMsg;
+      lastLLMError = lastLLMError || `[${provider.name}] ${errMsg}`;
       if (attempt < retries) {
-        console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} error, retrying...`, err);
+        console.warn(`[AICoachEngine] ${provider.name} attempt ${attempt + 1} error, retrying...`, err);
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-      console.error('[AICoachEngine] LLM call failed after retries:', err);
+      console.error(`[AICoachEngine] ${provider.name} call failed after retries:`, err);
       return null;
     }
   }
@@ -388,16 +580,22 @@ export async function streamLLM(
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('API key not configured');
 
-  const { temperature = 0.3, maxTokens = 4096 } = options;
+  const provider = getProvider();
+  const { temperature = 0.3, maxTokens = 2048 } = options;
 
-  const response = await fetch(GROQ_API_URL, {
+  // Gemini and Anthropic use different streaming formats — use non-streaming fallback
+  if (provider.provider === 'gemini' || provider.provider === 'anthropic') {
+    const result = await callLLM(messages, { temperature, maxTokens });
+    if (result) onChunk(result);
+    return;
+  }
+
+  // OpenAI-compatible streaming (Groq, OpenAI)
+  const response = await fetch(provider.apiUrl(provider.mainModel, apiKey), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: provider.headers(apiKey),
     body: JSON.stringify({
-      model: MODEL,
+      model: provider.mainModel,
       messages,
       temperature,
       max_tokens: maxTokens,
@@ -407,10 +605,7 @@ export async function streamLLM(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorData as { error?: { message?: string } }).error?.message ||
-      `Groq API error: ${response.status}`
-    );
+    throw new Error(provider.parseError(errorData as Record<string, unknown>, response.status));
   }
 
   const reader = response.body?.getReader();
@@ -481,7 +676,7 @@ Données: \n${dataPreview}`;
       { role: 'system', content: routerPrompt },
       { role: 'user', content: userContext },
     ],
-    { temperature: 0.0, maxTokens: 800, jsonMode: true }
+    { temperature: 0.0, maxTokens: 500, jsonMode: true, useRouterModel: true }
   );
 
   if (!result) return null;
@@ -632,17 +827,17 @@ function buildTargetedContext(
 
     case 'full':
     default: {
-      // Full database context — used for open-ended or complex questions
+      // Search-based context — find relevant practitioners instead of sending all 150
       const searchResult = universalSearch(question);
       if (searchResult.results.length > 0) {
         context += searchResult.context;
       }
 
-      // Include complete practitioner listing
-      context += `\n## Base Complète (${allPractitioners.length} praticiens)\n`;
-      allPractitioners.forEach(p => {
-        const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
-        context += `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}${pubCount > 0 ? ` | ${pubCount} pub` : ''}\n`;
+      // Top 20 practitioners summary (not all 150 — saves ~3000 tokens)
+      context += `\n## Praticiens Principaux (top 20 sur ${allPractitioners.length})\n`;
+      const sorted = [...allPractitioners].sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
+      sorted.slice(0, 20).forEach(p => {
+        context += `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}\n`;
       });
       break;
     }
@@ -700,7 +895,7 @@ async function generateChart(
 
   const chartResponse = await callLLM(messages, {
     temperature: 0.0,
-    maxTokens: 1500,
+    maxTokens: 1000,
   });
 
   if (!chartResponse) return null;
@@ -822,7 +1017,7 @@ INSTRUCTIONS: Un graphique a été généré et sera affiché. Ta réponse textu
   if (routing.intent === 'strategic_advice') temperature = 0.5;
   if (routing.intent === 'general') temperature = 0.6;
 
-  return callLLM(messages, { temperature, maxTokens: 4096 });
+  return callLLM(messages, { temperature, maxTokens: 2048 });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -868,12 +1063,7 @@ ${atRisk.slice(0, 8).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.ad
 
 ## Répartition par Ville
 ${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `- ${city}: ${count}`).join('\n')}
-${searchContext}
-## Base Complète (${allPractitioners.length} praticiens)
-${allPractitioners.map(p => {
-  const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
-  return `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}${pubCount > 0 ? ` | ${pubCount} pub` : ''}`;
-}).join('\n')}`;
+${searchContext}`;
 
   return context;
 }
@@ -900,7 +1090,7 @@ async function generateDirectResponse(
 
   messages.push({ role: 'user', content: question });
 
-  return callLLM(messages, { temperature: 0.4, maxTokens: 4096 }, 1);
+  return callLLM(messages, { temperature: 0.4, maxTokens: 2048 }, 1);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -929,7 +1119,7 @@ export async function processQuestion(
   // Early exit: no API key configured
   if (!getApiKey()) {
     return {
-      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, vous devez configurer votre clé API :\n\n1. Créez un compte sur [console.groq.com](https://console.groq.com)\n2. Générez une clé API\n3. Définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec votre clé\n4. Redémarrez l'application\n\nLe Coach IA utilise le modèle **Llama 3.3 70B** via Groq pour toutes ses fonctionnalités.`,
+      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec une clé API valide.\n\n**Fournisseurs supportés (auto-détection) :**\n- **Groq** (clé \`gsk_...\`) → [console.groq.com](https://console.groq.com)\n- **Google Gemini** (clé \`AIzaSy...\`) → [aistudio.google.com](https://aistudio.google.com)\n- **OpenAI** (clé \`sk-...\`) → [platform.openai.com](https://platform.openai.com)\n- **Anthropic / Claude** (clé \`sk-ant-...\`) → [console.anthropic.com](https://console.anthropic.com)\n- **OpenRouter** (clé \`sk-or-...\`) → [openrouter.ai](https://openrouter.ai) (accès à Llama, Mistral, Claude, GPT, etc.)\n\n**Endpoint personnalisé** (Mistral, Azure, local) : ajoutez aussi \`VITE_LLM_BASE_URL\`.\n\nLe fournisseur est détecté automatiquement à partir du format de la clé.`,
       source: 'llm',
     };
   }
@@ -1011,7 +1201,7 @@ export async function processQuestion(
   const errorDetail = lastLLMError || 'Aucune réponse du serveur';
   console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Clé API invalide ou expirée\n- Modèle indisponible sur Groq\n- Quota API dépassé\n- Problème de connexion réseau\n\n**Actions :**\n1. Vérifiez votre clé API sur [console.groq.com](https://console.groq.com)\n2. Vérifiez que la variable \`VITE_LLM_API_KEY\` est correcte\n3. Réessayez dans quelques instants`,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Clé API invalide ou expirée\n- Modèle indisponible\n- Quota API dépassé\n- Problème de connexion réseau\n\n**Actions :**\n1. Vérifiez votre clé API auprès de votre fournisseur\n2. Vérifiez que la variable \`VITE_LLM_API_KEY\` est correcte\n3. Réessayez dans quelques instants`,
     source: 'llm',
   };
 }
@@ -1047,4 +1237,10 @@ function findPractitionerCards(names: string[]): (Practitioner & { daysSinceVisi
 
 export function isLLMConfigured(): boolean {
   return getApiKey() !== null;
+}
+
+export function getLLMProviderName(): string {
+  const key = getApiKey();
+  if (!key) return 'Non configuré';
+  return detectProvider(key).name;
 }

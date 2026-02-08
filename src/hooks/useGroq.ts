@@ -1,8 +1,12 @@
 import { useState, useCallback } from 'react';
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+// ═══════════════════════════════════════════════════════════════════════════════
+// Multi-provider LLM Hook
+// Auto-detects provider from VITE_LLM_API_KEY format
+// Supports: Groq, Gemini, OpenAI, Anthropic, OpenRouter, custom endpoints
+// ═══════════════════════════════════════════════════════════════════════════════
 
-interface GroqMessage {
+interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
 }
@@ -13,150 +17,268 @@ interface UseGroqOptions {
   maxTokens?: number;
 }
 
+type ProviderType = 'openai-compat' | 'gemini' | 'anthropic';
+
+interface ProviderInfo {
+  type: ProviderType;
+  name: string;
+  url: string;
+  defaultModel: string;
+  headers: Record<string, string>;
+}
+
+function getProviderConfig(apiKey: string): ProviderInfo {
+  const customUrl = import.meta.env.VITE_LLM_BASE_URL;
+  if (customUrl && !customUrl.includes('your_') && customUrl.length >= 10) {
+    const baseUrl = (customUrl as string).replace(/\/+$/, '');
+    return {
+      type: 'openai-compat', name: 'Custom', url: `${baseUrl}/chat/completions`,
+      defaultModel: 'gpt-4o-mini',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    };
+  }
+  if (apiKey.startsWith('gsk_')) return {
+    type: 'openai-compat', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions',
+    defaultModel: 'llama-3.3-70b-versatile',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+  };
+  if (apiKey.startsWith('AIzaSy')) return {
+    type: 'gemini', name: 'Gemini', url: '',
+    defaultModel: 'gemini-1.5-flash',
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (apiKey.startsWith('sk-ant-')) return {
+    type: 'anthropic', name: 'Anthropic', url: 'https://api.anthropic.com/v1/messages',
+    defaultModel: 'claude-sonnet-4-5-20250929',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+  };
+  if (apiKey.startsWith('sk-or-')) return {
+    type: 'openai-compat', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions',
+    defaultModel: 'meta-llama/llama-3.3-70b-instruct',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+  };
+  return {
+    type: 'openai-compat', name: 'OpenAI', url: 'https://api.openai.com/v1/chat/completions',
+    defaultModel: 'gpt-4o-mini',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+  };
+}
+
+// ── Gemini helpers ───────────────────────────────────────────────────────────
+
+function buildGeminiRequest(apiKey: string, model: string, messages: LLMMessage[], temperature: number, maxTokens: number) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const systemParts = messages.filter(m => m.role === 'system').map(m => ({ text: m.content }));
+  const contents = messages.filter(m => m.role !== 'system').map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+  // Merge consecutive same-role messages (Gemini requirement)
+  const merged: typeof contents = [];
+  for (const msg of contents) {
+    if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+      merged[merged.length - 1].parts.push(...msg.parts);
+    } else { merged.push(msg); }
+  }
+  const body: Record<string, unknown> = {
+    contents: merged,
+    generationConfig: { temperature, maxOutputTokens: maxTokens },
+  };
+  if (systemParts.length > 0) body.systemInstruction = { parts: systemParts };
+  return { url, body };
+}
+
+function parseGeminiResponse(data: Record<string, unknown>): string | null {
+  const candidates = (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] }).candidates;
+  return candidates?.[0]?.content?.parts?.[0]?.text || null;
+}
+
+// ── Anthropic helpers ────────────────────────────────────────────────────────
+
+function buildAnthropicRequest(messages: LLMMessage[], model: string, temperature: number, maxTokens: number) {
+  const systemContent = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const chatMessages = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as string, content: m.content }));
+  // Merge consecutive same-role messages, ensure starts with user
+  const merged: typeof chatMessages = [];
+  for (const msg of chatMessages) {
+    if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+      merged[merged.length - 1].content += '\n\n' + msg.content;
+    } else { merged.push({ ...msg }); }
+  }
+  if (merged.length === 0 || merged[0].role !== 'user') merged.unshift({ role: 'user', content: '...' });
+  const body: Record<string, unknown> = { model, max_tokens: maxTokens, messages: merged, temperature };
+  if (systemContent) body.system = systemContent;
+  return body;
+}
+
+function parseAnthropicResponse(data: Record<string, unknown>): string | null {
+  const content = (data as { content?: { type: string; text?: string }[] }).content;
+  return content?.find(c => c.type === 'text')?.text || null;
+}
+
+// ── Simulate streaming for non-streaming providers ──────────────────────────
+
+async function simulateStream(text: string, onChunk: (chunk: string) => void) {
+  const words = text.split(' ');
+  for (const word of words) {
+    onChunk(word + ' ');
+    await new Promise(r => setTimeout(r, 12));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN HOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export function useGroq(options: UseGroqOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const {
-    model = 'llama-3.3-70b-versatile',
-    temperature = 0.7,
-    maxTokens = 2048,
-  } = options;
+  const { temperature = 0.7, maxTokens = 2048 } = options;
 
   const apiKey = import.meta.env.VITE_LLM_API_KEY;
+  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
 
-  // Vérifier si la clé API est configurée
-  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey.length > 10;
-
-  // Streaming completion - LE PLUS IMPORTANT POUR L'EFFET WOW
+  // Streaming completion
   const streamCompletion = useCallback(
-    async (
-      messages: GroqMessage[],
-      onChunk: (chunk: string) => void,
-      onComplete?: () => void
-    ) => {
+    async (messages: LLMMessage[], onChunk: (chunk: string) => void, onComplete?: () => void) => {
       setIsLoading(true);
       setError(null);
 
-      // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        setError('Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setError('Clé API LLM non configurée. Consultez CONFIGURATION_IA.md.');
         setIsLoading(false);
         return;
       }
 
       try {
-        const response = await fetch(GROQ_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model,
-            messages,
-            temperature,
-            max_tokens: maxTokens,
-            stream: true,
-          }),
-        });
+        const provider = getProviderConfig(apiKey);
+        const model = options.model || provider.defaultModel;
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `Groq API error: ${response.status}`);
-        }
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-
-        if (!reader) throw new Error('No reader available');
-
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data: ')) {
-              const data = trimmed.slice(6);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  onChunk(content);
-                }
-              } catch (e) {
-                // Ignore parsing errors for incomplete chunks
+        if (provider.type === 'gemini') {
+          const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+          const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Gemini error: ${response.status}`);
+          }
+          const data = await response.json();
+          const text = parseGeminiResponse(data) || '';
+          await simulateStream(text, onChunk);
+        } else if (provider.type === 'anthropic') {
+          const body = buildAnthropicRequest(messages, model, temperature, maxTokens);
+          const response = await fetch(provider.url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Anthropic error: ${response.status}`);
+          }
+          const data = await response.json();
+          const text = parseAnthropicResponse(data) || '';
+          await simulateStream(text, onChunk);
+        } else {
+          // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, custom)
+          const response = await fetch(provider.url, {
+            method: 'POST',
+            headers: provider.headers,
+            body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: true }),
+          });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `API error: ${response.status}`);
+          }
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error('No reader available');
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('data: ')) {
+                const d = trimmed.slice(6);
+                if (d === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(d);
+                  const content = parsed.choices?.[0]?.delta?.content;
+                  if (content) onChunk(content);
+                } catch { /* incomplete chunk */ }
               }
             }
           }
         }
-
         onComplete?.();
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        console.error('Groq API Error:', errorMessage);
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setError(msg);
+        console.error('LLM API Error:', msg);
       } finally {
         setIsLoading(false);
       }
     },
-    [model, temperature, maxTokens, apiKey, isApiKeyValid]
+    [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
   );
 
-  // Non-streaming completion (pour régénération de section)
+  // Non-streaming completion
   const complete = useCallback(
-    async (messages: GroqMessage[]): Promise<string | null> => {
+    async (messages: LLMMessage[]): Promise<string | null> => {
       setIsLoading(true);
       setError(null);
 
-      // Vérifier la clé API avant d'appeler l'API
       if (!isApiKeyValid) {
-        setError('Clé API Groq non configurée. Consultez CONFIGURATION_IA.md pour configurer votre clé API Groq.');
+        setError('Clé API LLM non configurée. Consultez CONFIGURATION_IA.md.');
         setIsLoading(false);
         return null;
       }
 
       try {
-        const response = await fetch(GROQ_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model,
-            messages,
-            temperature,
-            max_tokens: maxTokens,
-            stream: false,
-          }),
-        });
+        const provider = getProviderConfig(apiKey);
+        const model = options.model || provider.defaultModel;
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `Groq API error: ${response.status}`);
+        if (provider.type === 'gemini') {
+          const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+          const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Gemini error: ${response.status}`);
+          }
+          return parseGeminiResponse(await response.json());
         }
 
+        if (provider.type === 'anthropic') {
+          const body = buildAnthropicRequest(messages, model, temperature, maxTokens);
+          const response = await fetch(provider.url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Anthropic error: ${response.status}`);
+          }
+          return parseAnthropicResponse(await response.json());
+        }
+
+        // OpenAI-compatible (Groq, OpenAI, OpenRouter, custom)
+        const response = await fetch(provider.url, {
+          method: 'POST',
+          headers: provider.headers,
+          body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error?.message || `API error: ${response.status}`);
+        }
         const data = await response.json();
         return data.choices?.[0]?.message?.content || null;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setError(msg);
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [model, temperature, maxTokens, apiKey, isApiKeyValid]
+    [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
   );
 
   return { streamCompletion, complete, isLoading, error };
