@@ -306,6 +306,9 @@ function getApiKey(): string | null {
   return apiKey;
 }
 
+// Last error captured for diagnostic display
+let lastLLMError: string | null = null;
+
 async function callLLM(
   messages: LLMMessage[],
   options: LLMCallOptions = {},
@@ -347,6 +350,7 @@ async function callLLM(
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = (errorData as { error?: { message?: string } }).error?.message ||
           `Groq API error: ${response.status}`;
+        lastLLMError = `HTTP ${response.status}: ${errorMsg}`;
         // Rate limit or server error — worth retrying
         if (response.status === 429 || response.status >= 500) {
           console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} failed (${response.status}), ${attempt < retries ? 'retrying...' : 'giving up'}`);
@@ -359,8 +363,11 @@ async function callLLM(
       }
 
       const data = await response.json();
+      lastLLMError = null;
       return data.choices?.[0]?.message?.content || null;
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      lastLLMError = lastLLMError || errMsg;
       if (attempt < retries) {
         console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} error, retrying...`, err);
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
@@ -1000,10 +1007,11 @@ export async function processQuestion(
     };
   }
 
-  // ─── ALL LLM CALLS FAILED: Explicit error ─────────────────────────────
-  console.error('[AICoachEngine] All LLM calls failed — returning error to user');
+  // ─── ALL LLM CALLS FAILED: Explicit error with diagnostic ──────────────
+  const errorDetail = lastLLMError || 'Aucune réponse du serveur';
+  console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est temporairement indisponible.**\n\nJe ne peux pas traiter votre demande pour le moment. Cela peut être dû à :\n- Une surcharge temporaire du service\n- Un problème de connexion réseau\n\n**Veuillez réessayer dans quelques instants.** Si le problème persiste, vérifiez la configuration de la clé API Groq.`,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Clé API invalide ou expirée\n- Modèle indisponible sur Groq\n- Quota API dépassé\n- Problème de connexion réseau\n\n**Actions :**\n1. Vérifiez votre clé API sur [console.groq.com](https://console.groq.com)\n2. Vérifiez que la variable \`VITE_LLM_API_KEY\` est correcte\n3. Réessayez dans quelques instants`,
     source: 'llm',
   };
 }
