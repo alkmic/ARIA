@@ -85,15 +85,146 @@ interface LLMCallOptions {
   maxTokens?: number;
   jsonMode?: boolean;
   model?: string;
+  useRouterModel?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONSTANTS
+// MULTI-PROVIDER LLM — Auto-détection depuis le format de clé API
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
-const ROUTER_MODEL = 'llama-3.1-8b-instant'; // Lighter model for routing — higher TPM limits on Groq
+type LLMProvider = 'groq' | 'gemini' | 'openai';
+
+interface ProviderConfig {
+  name: string;
+  provider: LLMProvider;
+  apiUrl: (model: string, apiKey: string) => string;
+  mainModel: string;
+  routerModel: string;
+  headers: (apiKey: string) => Record<string, string>;
+  buildBody: (messages: LLMMessage[], model: string, temperature: number, maxTokens: number, jsonMode: boolean) => unknown;
+  parseResponse: (data: Record<string, unknown>) => string | null;
+  parseError: (data: Record<string, unknown>, status: number) => string;
+}
+
+function detectProvider(apiKey: string): ProviderConfig {
+  if (apiKey.startsWith('gsk_')) return PROVIDERS.groq;
+  if (apiKey.startsWith('AIzaSy')) return PROVIDERS.gemini;
+  if (apiKey.startsWith('sk-')) return PROVIDERS.openai;
+  // Default: try OpenAI-compatible format (works with Groq, Together, etc.)
+  return PROVIDERS.groq;
+}
+
+const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
+  groq: {
+    name: 'Groq',
+    provider: 'groq',
+    apiUrl: () => 'https://api.groq.com/openai/v1/chat/completions',
+    mainModel: 'llama-3.3-70b-versatile',
+    routerModel: 'llama-3.1-8b-instant',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model, messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Groq API error: ${status}`,
+  },
+
+  gemini: {
+    name: 'Google Gemini',
+    provider: 'gemini',
+    apiUrl: (model, apiKey) =>
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    mainModel: 'gemini-2.0-flash',
+    routerModel: 'gemini-2.0-flash',
+    headers: () => ({
+      'Content-Type': 'application/json',
+    }),
+    buildBody: (messages, _model, temperature, maxTokens, jsonMode) => {
+      // Gemini: separate system instructions from conversation
+      const systemParts = messages
+        .filter(m => m.role === 'system')
+        .map(m => ({ text: m.content }));
+      const contents = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        }));
+      // Gemini requires alternating user/model — merge consecutive same-role messages
+      const merged: { role: string; parts: { text: string }[] }[] = [];
+      for (const msg of contents) {
+        if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+          merged[merged.length - 1].parts.push(...msg.parts);
+        } else {
+          merged.push(msg);
+        }
+      }
+      const body: Record<string, unknown> = {
+        contents: merged,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+        },
+      };
+      if (systemParts.length > 0) {
+        body.systemInstruction = { parts: systemParts };
+      }
+      return body;
+    },
+    parseResponse: (data) => {
+      const candidates = (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] }).candidates;
+      return candidates?.[0]?.content?.parts?.[0]?.text || null;
+    },
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Gemini API error: ${status}`,
+  },
+
+  openai: {
+    name: 'OpenAI',
+    provider: 'openai',
+    apiUrl: () => 'https://api.openai.com/v1/chat/completions',
+    mainModel: 'gpt-4o-mini',
+    routerModel: 'gpt-4o-mini',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model, messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `OpenAI API error: ${status}`,
+  },
+};
+
+// Cached provider detection (cached per key to handle hot-reload)
+let _cachedProvider: ProviderConfig | null = null;
+let _cachedKeyPrefix: string | null = null;
+function getProvider(): ProviderConfig {
+  const key = getApiKey() || '';
+  const prefix = key.substring(0, 6);
+  if (_cachedProvider && _cachedKeyPrefix === prefix) return _cachedProvider;
+  _cachedProvider = detectProvider(key);
+  _cachedKeyPrefix = prefix;
+  console.log(`[AICoachEngine] Provider detected: ${_cachedProvider.name} (model: ${_cachedProvider.mainModel})`);
+  return _cachedProvider;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROMPTS
@@ -268,7 +399,7 @@ Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même fo
 
 function getApiKey(): string | null {
   const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === 'your_llm_api_key_here' || apiKey.length < 10) {
+  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === 'your_llm_api_key_here' || apiKey === 'your_api_key_here' || apiKey.length < 10) {
     return null;
   }
   return apiKey;
@@ -285,44 +416,34 @@ async function callLLM(
   const apiKey = getApiKey();
   if (!apiKey) return null;
 
+  const provider = getProvider();
   const {
     temperature = 0.3,
-    maxTokens = 4096,
+    maxTokens = 2048,
     jsonMode = false,
-    model = MODEL,
+    model = options.useRouterModel ? provider.routerModel : provider.mainModel,
   } = options;
+
+  const resolvedModel = model;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const body: Record<string, unknown> = {
-        model,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        stream: false,
-      };
+      const url = provider.apiUrl(resolvedModel, apiKey);
+      const headers = provider.headers(apiKey);
+      const body = provider.buildBody(messages, resolvedModel, temperature, maxTokens, jsonMode);
 
-      if (jsonMode) {
-        body.response_format = { type: 'json_object' };
-      }
-
-      const response = await fetch(GROQ_API_URL, {
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify(body),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = (errorData as { error?: { message?: string } }).error?.message ||
-          `Groq API error: ${response.status}`;
-        lastLLMError = `HTTP ${response.status}: ${errorMsg}`;
+        const errorMsg = provider.parseError(errorData as Record<string, unknown>, response.status);
+        lastLLMError = `[${provider.name}] HTTP ${response.status}: ${errorMsg}`;
         // Rate limit or server error — worth retrying
         if (response.status === 429 || response.status >= 500) {
-          // Parse suggested wait time from 429 error (e.g. "try again in 40.77s")
           let waitMs = 2000 * (attempt + 1);
           if (response.status === 429) {
             const waitMatch = errorMsg.match(/try again in (\d+\.?\d*)/i);
@@ -330,7 +451,7 @@ async function callLLM(
               waitMs = Math.min(Math.ceil(parseFloat(waitMatch[1]) * 1000) + 500, 45000);
             }
           }
-          console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} failed (${response.status}), ${attempt < retries ? `retrying in ${waitMs}ms...` : 'giving up'}`);
+          console.warn(`[AICoachEngine] ${provider.name} attempt ${attempt + 1} failed (${response.status}), ${attempt < retries ? `retrying in ${waitMs}ms...` : 'giving up'}`);
           if (attempt < retries) {
             await new Promise(r => setTimeout(r, waitMs));
             continue;
@@ -341,16 +462,16 @@ async function callLLM(
 
       const data = await response.json();
       lastLLMError = null;
-      return data.choices?.[0]?.message?.content || null;
+      return provider.parseResponse(data as Record<string, unknown>);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      lastLLMError = lastLLMError || errMsg;
+      lastLLMError = lastLLMError || `[${provider.name}] ${errMsg}`;
       if (attempt < retries) {
-        console.warn(`[AICoachEngine] LLM call attempt ${attempt + 1} error, retrying...`, err);
+        console.warn(`[AICoachEngine] ${provider.name} attempt ${attempt + 1} error, retrying...`, err);
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-      console.error('[AICoachEngine] LLM call failed after retries:', err);
+      console.error(`[AICoachEngine] ${provider.name} call failed after retries:`, err);
       return null;
     }
   }
@@ -365,16 +486,22 @@ export async function streamLLM(
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('API key not configured');
 
-  const { temperature = 0.3, maxTokens = 4096 } = options;
+  const provider = getProvider();
+  const { temperature = 0.3, maxTokens = 2048 } = options;
 
-  const response = await fetch(GROQ_API_URL, {
+  // Gemini doesn't support SSE streaming in the same way — use non-streaming fallback
+  if (provider.provider === 'gemini') {
+    const result = await callLLM(messages, { temperature, maxTokens });
+    if (result) onChunk(result);
+    return;
+  }
+
+  // OpenAI-compatible streaming (Groq, OpenAI)
+  const response = await fetch(provider.apiUrl(provider.mainModel, apiKey), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: provider.headers(apiKey),
     body: JSON.stringify({
-      model: MODEL,
+      model: provider.mainModel,
       messages,
       temperature,
       max_tokens: maxTokens,
@@ -384,10 +511,7 @@ export async function streamLLM(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorData as { error?: { message?: string } }).error?.message ||
-      `Groq API error: ${response.status}`
-    );
+    throw new Error(provider.parseError(errorData as Record<string, unknown>, response.status));
   }
 
   const reader = response.body?.getReader();
@@ -458,7 +582,7 @@ Données: \n${dataPreview}`;
       { role: 'system', content: routerPrompt },
       { role: 'user', content: userContext },
     ],
-    { temperature: 0.0, maxTokens: 500, jsonMode: true, model: ROUTER_MODEL }
+    { temperature: 0.0, maxTokens: 500, jsonMode: true, useRouterModel: true }
   );
 
   if (!result) return null;
@@ -901,7 +1025,7 @@ export async function processQuestion(
   // Early exit: no API key configured
   if (!getApiKey()) {
     return {
-      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, vous devez configurer votre clé API :\n\n1. Créez un compte sur [console.groq.com](https://console.groq.com)\n2. Générez une clé API\n3. Définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec votre clé\n4. Redémarrez l'application\n\nLe Coach IA utilise le modèle **Llama 3.3 70B** via Groq pour toutes ses fonctionnalités.`,
+      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec une clé API valide.\n\n**Fournisseurs supportés :**\n- **Groq** (clé \`gsk_...\`) → [console.groq.com](https://console.groq.com)\n- **Google Gemini** (clé \`AIzaSy...\`) → [aistudio.google.com](https://aistudio.google.com)\n- **OpenAI** (clé \`sk-...\`) → [platform.openai.com](https://platform.openai.com)\n\nLe fournisseur est détecté automatiquement à partir du format de la clé.`,
       source: 'llm',
     };
   }
@@ -983,7 +1107,7 @@ export async function processQuestion(
   const errorDetail = lastLLMError || 'Aucune réponse du serveur';
   console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Clé API invalide ou expirée\n- Modèle indisponible sur Groq\n- Quota API dépassé\n- Problème de connexion réseau\n\n**Actions :**\n1. Vérifiez votre clé API sur [console.groq.com](https://console.groq.com)\n2. Vérifiez que la variable \`VITE_LLM_API_KEY\` est correcte\n3. Réessayez dans quelques instants`,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Clé API invalide ou expirée\n- Modèle indisponible\n- Quota API dépassé\n- Problème de connexion réseau\n\n**Actions :**\n1. Vérifiez votre clé API auprès de votre fournisseur\n2. Vérifiez que la variable \`VITE_LLM_API_KEY\` est correcte\n3. Réessayez dans quelques instants`,
     source: 'llm',
   };
 }
@@ -1019,4 +1143,10 @@ function findPractitionerCards(names: string[]): (Practitioner & { daysSinceVisi
 
 export function isLLMConfigured(): boolean {
   return getApiKey() !== null;
+}
+
+export function getLLMProviderName(): string {
+  const key = getApiKey();
+  if (!key) return 'Non configuré';
+  return detectProvider(key).name;
 }
