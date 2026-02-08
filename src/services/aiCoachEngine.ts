@@ -25,6 +25,7 @@ import {
 } from './agenticChartEngine';
 import { universalSearch } from './universalSearch';
 import { calculatePeriodMetrics, getTopPractitioners } from './metricsCalculator';
+import { retrieveKnowledge, shouldUseRAG } from './ragService';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
 
@@ -51,13 +52,15 @@ export interface AICoachResult {
   practitioners?: (Practitioner & { daysSinceVisit?: number })[];
   suggestions?: string[];
   source: 'llm' | 'local';
+  ragSources?: { title: string; sourceUrl: string; source: string }[];
+  usedRAG?: boolean;
 }
 
 interface RouterResult {
-  intent: 'chart_create' | 'chart_modify' | 'data_query' | 'practitioner_info' | 'strategic_advice' | 'follow_up' | 'general';
+  intent: 'chart_create' | 'chart_modify' | 'data_query' | 'practitioner_info' | 'strategic_advice' | 'knowledge_query' | 'follow_up' | 'general';
   needsChart: boolean;
   chartModification: string | null;
-  dataScope: 'specific' | 'filtered' | 'aggregated' | 'full';
+  dataScope: 'specific' | 'filtered' | 'aggregated' | 'full' | 'knowledge';
   searchTerms: {
     names: string[];
     cities: string[];
@@ -326,19 +329,21 @@ function getProvider(): ProviderConfig {
 
 const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON.
 
-Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle données), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), follow_up (suite de la conversation), general (salutations/hors sujet).
+Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle données CRM), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), knowledge_query (question métier: BPCO, oxygénothérapie, réglementation, concurrence, Air Liquide, GOLD, HAS, LPPR, épidémiologie), follow_up (suite de la conversation), general (salutations/hors sujet).
 
 Routage:
 - "graphique/montre-moi/affiche/diagramme/camembert/barres/courbe" → chart_create
 - "en camembert/en radar/change en/transforme en/mets ça en/plutôt en" → chart_modify (si graphique précédent)
 - Nom propre identifiable → practitioner_info
-- "combien/qui a le plus/liste des/quels sont" → data_query
+- "combien/qui a le plus/liste des/quels sont" (données CRM praticiens) → data_query
 - "priorité/stratégie/recommandation/que faire" → strategic_advice
+- Questions sur BPCO, oxygénothérapie, GOLD, HAS, réglementation, LPPR, concurrence, Vivisol, Orkyn', Air Liquide (organisation), OLD, OCT, spirométrie, épidémiologie, traitements, classification, exacerbation, télésuivi → knowledge_query
+- "qu'est-ce que/c'est quoi/explique/définition/comment fonctionne" → knowledge_query (sauf si CRM)
 - Référence implicite au contexte précédent → follow_up
 
 groupBy: "city"|"specialty"|"vingtile"|"vingtileBucket"|"loyaltyBucket"|"riskLevel"|"visitBucket"|"isKOL"
 chartType: "bar"|"pie"|"line"|"composed"|"radar"
-dataScope: "specific" (1 praticien), "filtered" (sous-ensemble), "aggregated" (stats), "full" (question ouverte)
+dataScope: "specific" (1 praticien), "filtered" (sous-ensemble), "aggregated" (stats), "full" (question ouverte), "knowledge" (base de connaissances métier)
 needsChart = true pour chart_create et chart_modify.
 
 JSON STRICT:
@@ -347,19 +352,21 @@ JSON STRICT:
 const COACH_SYSTEM_PROMPT = `Tu es **ARIA Coach**, l'assistant stratégique expert pour les délégués pharmaceutiques d'Air Liquide Healthcare, spécialité oxygénothérapie à domicile.
 
 ## Ton Identité
-Tu combines trois expertises rares :
-1. **Expertise médicale** — Pneumologie, oxygénothérapie (O₂ liquide, concentrateurs, extracteurs), pathologies respiratoires chroniques (BPCO, insuffisance respiratoire, apnée du sommeil)
-2. **Intelligence commerciale** — Gestion de portefeuille prescripteurs, planification territoriale, analyse concurrentielle, scoring de potentiel (vingtiles), fidélisation KOL
+Tu combines quatre expertises rares :
+1. **Expertise médicale** — Pneumologie, oxygénothérapie (O₂ liquide, concentrateurs, extracteurs), pathologies respiratoires chroniques (BPCO, insuffisance respiratoire, apnée du sommeil), recommandations GOLD et HAS
+2. **Intelligence commerciale** — Gestion de portefeuille prescripteurs, planification territoriale, analyse concurrentielle (Vivisol, France Oxygène, Bastide, SOS Oxygène), scoring de potentiel (vingtiles), fidélisation KOL
 3. **Maîtrise analytique** — Interprétation de données CRM, détection de signaux faibles, modélisation de risque de churn, identification d'opportunités de croissance
+4. **Connaissances réglementaires & marché** — LPPR/LPP, forfaits d'oxygénothérapie, remboursement, arrêtés Légifrance, données épidémiologiques BPCO France & monde
 
 ## Principes Directeurs
-- **Précision data-driven** : Chaque affirmation s'appuie sur des données réelles. Cite les chiffres exacts.
+- **Précision data-driven** : Chaque affirmation s'appuie sur des données réelles. Cite les chiffres exacts et les sources quand ils proviennent de la base de connaissances.
 - **Pertinence stratégique** : Priorise par impact business → KOL > Volume élevé > Urgence (risque churn) > Fidélité en baisse
 - **Proactivité** : N'attends pas qu'on te pose la bonne question. Si tu détectes un risque ou une opportunité dans les données, signale-le.
 - **Concision actionable** : Réponds de façon concise mais complète. Termine par des recommandations concrètes quand c'est pertinent.
+- **Sources fiables** : Quand tu cites des connaissances métier (BPCO, réglementation, concurrence), mentionne la source (ex: "selon les recommandations GOLD 2025", "d'après la HAS").
 
 ## Ce que tu CONNAIS (ton périmètre)
-Tu as accès à une base de données CRM contenant :
+**Données CRM :**
 - Les **praticiens** (médecins prescripteurs) : pneumologues et médecins généralistes
 - Leurs **métriques** : volumes de prescription, fidélité, vingtile, statut KOL, risque de churn
 - Leurs **coordonnées** : adresse, téléphone, email
@@ -367,15 +374,21 @@ Tu as accès à une base de données CRM contenant :
 - L'**historique de visites** et notes de visite
 - Les **statistiques du territoire** : objectifs, répartitions géographiques
 
+**Base de connaissances métier (RAG) :**
+- **Air Liquide Santé** : organisation, chiffres clés, Orkyn', ALMS, Chronic Care Connect
+- **BPCO** : recommandations GOLD 2025 (classification ABE, traitements LABA/LAMA/CSI), recommandations HAS (parcours de soins, 10 messages clés), données épidémiologiques
+- **Oxygénothérapie** : OLD vs OCT, seuils PaO2, sources d'O2, indications, forfaits LPPR
+- **Concurrence** : Vivisol, France Oxygène, SOL Group, panorama PSAD, 12 acteurs clés
+- **Réglementation** : LPPR/LPP, tarifs, arrêtés Légifrance, FEDEPSAD
+- **Épidémiologie** : 3,5M patients BPCO en France, 75% sous-diagnostiqués, 100 000 patients OLD, +23% cas BPCO d'ici 2050
+
 ## Ce que tu NE CONNAIS PAS (hors périmètre)
 Tu n'as PAS accès à :
-- Le **catalogue de produits** ou la gamme Air Liquide (dispositifs, tarifs, références)
-- Les **données de facturation** ou commandes
+- Les **données de facturation** ou commandes internes
 - Les **données d'autres territoires** ou d'autres délégués
-- Les **données en temps réel** (tes données sont un snapshot CRM)
-- Les **protocoles médicaux** détaillés ou posologies
+- Les **données en temps réel** (tes données CRM sont un snapshot)
 
-**RÈGLE CRITIQUE** : Si l'utilisateur pose une question hors de ton périmètre, dis-le CLAIREMENT et HONNÊTEMENT. Ne fabrique JAMAIS de données. Propose ce que tu peux faire à la place. Exemple : "Je n'ai pas accès au catalogue de produits, mais je peux vous montrer les volumes de prescription par praticien."
+**RÈGLE CRITIQUE** : Si l'utilisateur pose une question hors de ton périmètre, dis-le CLAIREMENT. Ne fabrique JAMAIS de données. Propose ce que tu peux faire à la place.
 
 ## Vocabulaire Métier
 - **Vingtile** : Segmentation des prescripteurs de 1 (meilleur) à 20 (plus faible). V1-V5 = Top prescripteurs à prioriser.
@@ -383,13 +396,19 @@ Tu n'as PAS accès à :
 - **Fidélité** : Score de 0 à 10 mesurant la régularité des prescriptions en faveur d'Air Liquide.
 - **Volume** : Volume annuel de prescription d'oxygène en litres (K L/an).
 - **Churn risk** : Risque de perte du prescripteur (low/medium/high).
+- **OLD** : Oxygénothérapie de Longue Durée (>15h/j, PaO2 ≤ 55 mmHg).
+- **OCT** : Oxygénothérapie de Courte Durée (temporaire, post-hospitalisation).
+- **LPPR/LPP** : Liste des Produits et Prestations Remboursables.
+- **PSAD** : Prestataire de Santé à Domicile (ex: Orkyn').
+- **GOLD** : Global Initiative for Chronic Obstructive Lung Disease (référentiel international BPCO).
+- **VEMS** : Volume Expiratoire Maximal par Seconde (spirométrie).
 
 ## Format de Réponse
 - Utilise le **Markdown** : **gras** pour les chiffres clés et noms, *italique* pour les nuances
 - Structure avec des listes à puces pour la clarté
 - Fournis TOUJOURS des chiffres précis quand ils sont disponibles dans le contexte
 - Adapte la longueur : court pour les questions simples, détaillé pour les analyses
-- Ne mentionne jamais le fonctionnement interne de ton système (routage, contexte, API)
+- Ne mentionne jamais le fonctionnement interne de ton système (routage, contexte, API, RAG)
 - Réponds TOUJOURS en français
 - Pour les salutations : réponds brièvement et propose ton aide
 - Si la question est ambiguë, demande une clarification plutôt que deviner`;
@@ -684,7 +703,7 @@ Données: \n${dataPreview}`;
   try {
     const parsed = JSON.parse(result);
     // Validate and normalize
-    const validIntents = ['chart_create', 'chart_modify', 'data_query', 'practitioner_info', 'strategic_advice', 'follow_up', 'general'];
+    const validIntents = ['chart_create', 'chart_modify', 'data_query', 'practitioner_info', 'strategic_advice', 'knowledge_query', 'follow_up', 'general'];
     if (!validIntents.includes(parsed.intent)) {
       parsed.intent = 'general';
     }
@@ -840,6 +859,16 @@ function buildTargetedContext(
         context += `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}\n`;
       });
       break;
+    }
+  }
+
+  // ── RAG Knowledge Injection ──────────────────────────────────────────────
+  // For knowledge queries or when the question touches métier topics,
+  // retrieve relevant chunks from the knowledge base and append them.
+  if (routing.dataScope === 'knowledge' || routing.intent === 'knowledge_query' || shouldUseRAG(question)) {
+    const ragResult = retrieveKnowledge(question, 5, 10);
+    if (ragResult.chunks.length > 0) {
+      context += ragResult.context;
     }
   }
 
@@ -1065,6 +1094,14 @@ ${atRisk.slice(0, 8).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.ad
 ${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `- ${city}: ${count}`).join('\n')}
 ${searchContext}`;
 
+  // ── RAG Knowledge Injection (fallback path) ────────────────────────────
+  if (shouldUseRAG(question)) {
+    const ragResult = retrieveKnowledge(question, 5, 10);
+    if (ragResult.chunks.length > 0) {
+      context += ragResult.context;
+    }
+  }
+
   return context;
 }
 
@@ -1133,6 +1170,22 @@ export async function processQuestion(
     // ─── Build Targeted Context ────────────────────────────────────────────
     const dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
 
+    // ─── Track RAG usage ───────────────────────────────────────────────────
+    let ragSources: AICoachResult['ragSources'] = undefined;
+    let usedRAG = false;
+    if (routing.intent === 'knowledge_query' || routing.dataScope === 'knowledge' || shouldUseRAG(question)) {
+      const ragResult = retrieveKnowledge(question, 5, 10);
+      if (ragResult.chunks.length > 0) {
+        usedRAG = true;
+        ragSources = ragResult.chunks.map(c => ({
+          title: c.chunk.title,
+          sourceUrl: c.chunk.sourceUrl,
+          source: c.chunk.source,
+        }));
+        console.log(`[AICoachEngine] RAG: ${ragResult.chunks.length} chunks retrieved (scores: ${ragResult.chunks.map(c => c.score.toFixed(0)).join(', ')})`);
+      }
+    }
+
     // ─── Phase 2A: Chart Generation (if needed) ────────────────────────────
     let chartResult: AICoachResult['chart'] | null = null;
     if (routing.needsChart) {
@@ -1157,6 +1210,8 @@ export async function processQuestion(
       const result: AICoachResult = {
         textContent: textResponse,
         source: 'llm',
+        usedRAG,
+        ragSources,
       };
 
       if (chartResult) {
@@ -1191,9 +1246,25 @@ export async function processQuestion(
 
   if (directResponse) {
     console.log('[AICoachEngine] Direct LLM succeeded');
+    // Check if RAG was used in the direct path
+    let directRAGSources: AICoachResult['ragSources'] = undefined;
+    let directUsedRAG = false;
+    if (shouldUseRAG(question)) {
+      const ragResult = retrieveKnowledge(question, 5, 10);
+      if (ragResult.chunks.length > 0) {
+        directUsedRAG = true;
+        directRAGSources = ragResult.chunks.map(c => ({
+          title: c.chunk.title,
+          sourceUrl: c.chunk.sourceUrl,
+          source: c.chunk.source,
+        }));
+      }
+    }
     return {
       textContent: directResponse,
       source: 'llm',
+      usedRAG: directUsedRAG,
+      ragSources: directRAGSources,
     };
   }
 
@@ -1244,3 +1315,6 @@ export function getLLMProviderName(): string {
   if (!key) return 'Non configuré';
   return detectProvider(key).name;
 }
+
+export { getRAGStats, getKnowledgeSources, getDownloadableSources } from './ragService';
+export type { KnowledgeSource } from '../data/ragKnowledgeBase';

@@ -20,7 +20,13 @@ import {
   PieChart as PieChartIcon,
   TrendingUp,
   Code2,
-  Lightbulb
+  Lightbulb,
+  BookOpen,
+  ExternalLink,
+  Database,
+  FileText,
+  X,
+  Shield
 } from 'lucide-react';
 import {
   BarChart,
@@ -48,6 +54,8 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import {
   processQuestion,
   isLLMConfigured,
+  getRAGStats,
+  getKnowledgeSources,
   type ConversationMessage
 } from '../services/aiCoachEngine';
 import {
@@ -79,6 +87,8 @@ interface Message {
   timestamp: Date;
   isMarkdown?: boolean;
   source?: 'llm' | 'local' | 'agentic';
+  usedRAG?: boolean;
+  ragSources?: { title: string; sourceUrl: string; source: string }[];
 }
 
 // Couleurs pour les graphiques
@@ -91,6 +101,7 @@ export default function AICoach() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
+  const [showKnowledgePanel, setShowKnowledgePanel] = useState(false);
   const { practitioners, currentUser, upcomingVisits } = useAppStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
@@ -99,17 +110,20 @@ export default function AICoach() {
   const recognitionRef = useRef<any>(null);
   // Conversation history for the engine (role + content, no UI metadata)
   const conversationHistoryRef = useRef<ConversationMessage[]>([]);
+  // RAG Knowledge Base stats
+  const ragStats = getRAGStats();
+  const knowledgeSources = getKnowledgeSources();
 
-  // Suggestions contextuelles - Talk to My Data (approche agentique LLM-First)
+  // Suggestions contextuelles - Talk to My Data + Knowledge Base
   const SUGGESTION_CHIPS = [
     "Montre-moi un graphique des volumes par ville",
-    "Compare les KOLs aux autres praticiens en volume",
-    "Top 15 prescripteurs avec leur fidélité",
-    "Camembert de la répartition par niveau de risque",
-    "Analyse les pneumologues vs généralistes",
     "Quels KOLs n'ai-je pas vus depuis 60 jours ?",
-    "Qui a le plus de publications ?",
     `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
+    "Compare les KOLs aux autres praticiens en volume",
+    "Qu'est-ce que la classification GOLD ABE ?",
+    "Quels sont les concurrents d'Air Liquide sur le marché PSAD ?",
+    "Quels sont les seuils d'oxygénothérapie longue durée ?",
+    "Quels sont les indicateurs qualité BPCO en France ?",
   ];
 
   // Auto-scroll vers le bas
@@ -253,7 +267,9 @@ export default function AICoach() {
         suggestions: result.suggestions || result.chart?.suggestions,
         timestamp: new Date(),
         isMarkdown: true,
-        source: result.source === 'llm' ? (result.chart ? 'agentic' : 'llm') : 'local'
+        source: result.source === 'llm' ? (result.chart ? 'agentic' : 'llm') : 'local',
+        usedRAG: result.usedRAG,
+        ragSources: result.ragSources,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -332,11 +348,26 @@ export default function AICoach() {
             </h1>
             <p className="text-slate-600 text-sm sm:text-base flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
-              Assistant stratégique intelligent avec accès complet aux données
+              Assistant stratégique avec base de connaissances BPCO, O₂ & Air Liquide
             </p>
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowKnowledgePanel(!showKnowledgePanel)}
+              className={`px-3 py-2 text-sm flex items-center gap-2 rounded-lg transition-all border-2 ${
+                showKnowledgePanel
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+              }`}
+              title="Base de connaissances"
+            >
+              <Database className="w-4 h-4" />
+              <span className="hidden sm:inline">Connaissances</span>
+              <span className="text-[10px] font-bold bg-emerald-500 text-white rounded-full px-1.5 py-0.5 leading-none">
+                {ragStats.totalChunks}
+              </span>
+            </button>
             {messages.length > 0 && (
               <>
                 <button
@@ -391,11 +422,124 @@ export default function AICoach() {
             </div>
           )}
 
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs border border-emerald-200">
+            <Shield className="w-4 h-4" />
+            <span>RAG actif — {ragStats.totalChunks} docs</span>
+          </div>
+
           <span className="text-xs text-slate-500 px-2 hidden sm:inline">
-            Posez n'importe quelle question sur vos praticiens
+            CRM + connaissances BPCO, O₂, concurrence, réglementation
           </span>
         </div>
       </div>
+
+      {/* Knowledge Base Panel */}
+      <AnimatePresence>
+        {showKnowledgePanel && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-3 overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-semibold text-emerald-800">Base de connaissances RAG</h3>
+                  <span className="text-[10px] px-2 py-0.5 bg-emerald-200 text-emerald-700 rounded-full font-medium">
+                    ~{ragStats.estimatedTokens.toLocaleString()} tokens
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowKnowledgePanel(false)}
+                  className="p-1 hover:bg-emerald-200 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4 text-emerald-600" />
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
+                  <div className="text-lg font-bold text-emerald-700">{ragStats.totalChunks}</div>
+                  <div className="text-[10px] text-slate-500">Documents</div>
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
+                  <div className="text-lg font-bold text-emerald-700">{ragStats.totalSources}</div>
+                  <div className="text-[10px] text-slate-500">Sources</div>
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
+                  <div className="text-lg font-bold text-emerald-700">{Object.keys(ragStats.byCategory).length}</div>
+                  <div className="text-[10px] text-slate-500">Catégories</div>
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
+                  <div className="text-lg font-bold text-emerald-700">{ragStats.downloadableSources}</div>
+                  <div className="text-[10px] text-slate-500">Téléchargeables</div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="mb-4">
+                <p className="text-xs font-medium text-emerald-700 mb-2">Domaines couverts :</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(ragStats.byTag)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 12)
+                    .map(([tag, count]) => (
+                      <span key={tag} className="text-[10px] px-2 py-0.5 bg-white text-emerald-600 rounded-full border border-emerald-200">
+                        {tag.replace(/_/g, ' ')} ({count})
+                      </span>
+                    ))}
+                </div>
+              </div>
+
+              {/* Sources with download */}
+              <div>
+                <p className="text-xs font-medium text-emerald-700 mb-2 flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  Sources de référence ({knowledgeSources.length}) :
+                </p>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {knowledgeSources
+                    .sort((a, b) => a.priority - b.priority)
+                    .map((src) => (
+                      <div
+                        key={src.id}
+                        className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs border border-emerald-100 hover:border-emerald-300 transition-colors group"
+                      >
+                        <span className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[9px] font-bold ${
+                          src.priority === 1 ? 'bg-emerald-500 text-white' :
+                          src.priority === 2 ? 'bg-emerald-200 text-emerald-700' :
+                          'bg-slate-100 text-slate-500'
+                        }`}>
+                          P{src.priority}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-700 truncate">{src.name}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{src.description}</p>
+                        </div>
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors flex-shrink-0"
+                          title={src.downloadable ? 'Télécharger / Consulter' : 'Consulter la source'}
+                        >
+                          {src.downloadable ? (
+                            <Download className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
+                          )}
+                        </a>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Container */}
       <div className="flex-1 glass-card flex flex-col overflow-hidden border-2 border-slate-200/50">
@@ -462,17 +606,43 @@ export default function AICoach() {
 
                         {/* Source indicator */}
                         {message.source && (
-                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
-                              {message.source === 'agentic' ? 'ARIA Engine + LLM' : 'ARIA Engine'}
-                            </span>
-                            <button
-                              onClick={() => speak(message.content)}
-                              className="p-1 hover:bg-slate-100 rounded transition-colors"
-                              title="Lire à voix haute"
-                            >
-                              <Volume2 className="w-3.5 h-3.5 text-slate-400" />
-                            </button>
+                          <div className="mt-2 pt-2 border-t border-slate-100">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                                {message.source === 'agentic' ? 'ARIA Engine + LLM' : 'ARIA Engine'}
+                              </span>
+                              {message.usedRAG && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                                  <BookOpen className="w-2.5 h-2.5" />
+                                  Base de connaissances
+                                </span>
+                              )}
+                              <button
+                                onClick={() => speak(message.content)}
+                                className="p-1 hover:bg-slate-100 rounded transition-colors"
+                                title="Lire à voix haute"
+                              >
+                                <Volume2 className="w-3.5 h-3.5 text-slate-400" />
+                              </button>
+                            </div>
+                            {/* RAG Sources */}
+                            {message.ragSources && message.ragSources.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-[10px] text-slate-400 font-medium">Sources :</p>
+                                {message.ragSources.slice(0, 3).map((src, i) => (
+                                  <a
+                                    key={i}
+                                    href={src.sourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-[10px] text-blue-500 hover:text-blue-700 hover:underline transition-colors"
+                                  >
+                                    <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                                    <span className="truncate">{src.title}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -792,7 +962,7 @@ export default function AICoach() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend(input)}
-              placeholder="Posez votre question sur vos praticiens..."
+              placeholder="Question sur vos praticiens, la BPCO, l'oxygénothérapie, la concurrence..."
               className="input-field flex-1 text-sm sm:text-base"
               disabled={isTyping}
             />
