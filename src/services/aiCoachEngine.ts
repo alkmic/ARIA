@@ -927,7 +927,8 @@ function buildTargetedContext(
   if (isVisitQuery && upcomingVisits.length > 0) {
     context += `\n## Visites Planifiées (${upcomingVisits.length} prochaines)\n`;
     upcomingVisits.slice(0, 10).forEach(v => {
-      context += `- ${v.date} ${v.time} — ${v.practitioner} (${v.specialty || ''}, ${v.city || ''})\n`;
+      const p = v.practitioner;
+      context += `- ${v.date} ${v.time} — ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}, ${p.city})\n`;
     });
   }
 
@@ -1234,7 +1235,8 @@ ${searchContext}`;
   if (visitKeywords.some(kw => lowerQ.includes(kw)) && upcomingVisits.length > 0) {
     context += `\n## Visites Planifiées (${upcomingVisits.length})\n`;
     upcomingVisits.slice(0, 8).forEach(v => {
-      context += `- ${v.date} ${v.time} — ${v.practitioner}\n`;
+      const p = v.practitioner;
+      context += `- ${v.date} ${v.time} — ${p.title} ${p.firstName} ${p.lastName}\n`;
     });
   }
 
