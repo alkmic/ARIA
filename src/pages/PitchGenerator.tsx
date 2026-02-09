@@ -30,7 +30,7 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useGroq } from '../hooks/useGroq';
 import { useSpeech } from '../hooks/useSpeech';
-import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary, SECTION_ID_TO_TAG } from '../services/pitchPromptsEnhanced';
+import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary, SECTION_ID_TO_TAG, generateLocalPitch } from '../services/pitchPromptsEnhanced';
 import { DataService } from '../services/dataService';
 import { quickSearch } from '../services/universalSearch';
 import { SkeletonPitchSection } from '../components/ui/Skeleton';
@@ -116,15 +116,21 @@ export function PitchGenerator() {
   const [copied, setCopied] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editInstruction, setEditInstruction] = useState('');
+  const [isDemo, setIsDemo] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Previsualisation praticien (kept for future use)
   const [, setPractitionerSummary] = useState<string>('');
 
   // Hooks IA et Speech
-  const { streamCompletion, complete, isLoading: groqLoading } = useGroq({
+  const { streamCompletion, complete, isLoading: groqLoading, error: llmError } = useGroq({
     temperature: 0.8,
     maxTokens: 4096,
   });
+
+  // Detect if LLM API key is configured
+  const apiKey = import.meta.env.VITE_LLM_API_KEY;
+  const hasValidApiKey = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
   const { speak, pause, resume, stop, isSpeaking, isPaused, isSupported: speechSupported } = useSpeech();
 
   // Filtrage des praticiens
@@ -207,6 +213,22 @@ export function PitchGenerator() {
     return parsed;
   };
 
+  // Simulate streaming for local pitch (word-by-word reveal)
+  const simulateLocalStream = async (text: string) => {
+    const words = text.split(' ');
+    let accumulated = '';
+    for (let i = 0; i < words.length; i++) {
+      accumulated += (i > 0 ? ' ' : '') + words[i];
+      const parsed = parsePitchSections(accumulated);
+      if (parsed.length > 0) {
+        setSections(parsed);
+      }
+      setStreamedText(accumulated);
+      // Stream faster: batch 3 words at a time with small delay
+      if (i % 3 === 0) await new Promise(r => setTimeout(r, 8));
+    }
+  };
+
   // Generer le pitch complet
   const generatePitch = async () => {
     if (!selectedPractitioner) return;
@@ -214,30 +236,64 @@ export function PitchGenerator() {
     setIsGenerating(true);
     setStreamedText('');
     setSections([]);
+    setGenerateError(null);
     setStep('generate');
 
-    const systemPrompt = buildEnhancedSystemPrompt(config, selectedPractitioner);
-    const userPrompt = buildEnhancedUserPrompt(selectedPractitioner, config);
+    try {
+      if (hasValidApiKey) {
+        // LLM mode
+        setIsDemo(false);
+        const systemPrompt = buildEnhancedSystemPrompt(config, selectedPractitioner);
+        const userPrompt = buildEnhancedUserPrompt(selectedPractitioner, config);
+        let receivedChunks = false;
 
-    await streamCompletion(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      (chunk) => {
-        setStreamedText((prev) => {
-          const newText = prev + chunk;
-          const parsed = parsePitchSections(newText);
-          if (parsed.length > 0) {
-            setSections(parsed);
+        await streamCompletion(
+          [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          (chunk) => {
+            receivedChunks = true;
+            setStreamedText((prev) => {
+              const newText = prev + chunk;
+              const parsed = parsePitchSections(newText);
+              if (parsed.length > 0) {
+                setSections(parsed);
+              }
+              return newText;
+            });
+          },
+          () => {
+            // Success callback — streaming complete
           }
-          return newText;
-        });
-      },
-      () => {
-        setIsGenerating(false);
+        );
+
+        // If LLM returned an error or produced no output, fallback to local
+        if (!receivedChunks) {
+          setIsDemo(true);
+          const localPitch = generateLocalPitch(selectedPractitioner, config);
+          await simulateLocalStream(localPitch);
+        }
+      } else {
+        // No API key — generate locally from real data
+        setIsDemo(true);
+        const localPitch = generateLocalPitch(selectedPractitioner, config);
+        await simulateLocalStream(localPitch);
       }
-    );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      setGenerateError(msg);
+      // Fallback to local on any error
+      try {
+        setIsDemo(true);
+        const localPitch = generateLocalPitch(selectedPractitioner, config);
+        await simulateLocalStream(localPitch);
+      } catch {
+        setGenerateError('Impossible de générer le pitch. Veuillez réessayer.');
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Regenerer une section specifique
@@ -304,6 +360,42 @@ export function PitchGenerator() {
     }
   };
 
+  // Step progress indicator
+  const STEPS = [
+    { key: 'select', label: 'Praticien', num: 1 },
+    { key: 'preview', label: 'Apercu', num: 2 },
+    { key: 'configure', label: 'Config.', num: 3 },
+    { key: 'generate', label: 'Pitch', num: 4 },
+  ] as const;
+
+  const currentStepIndex = STEPS.findIndex(s => s.key === step);
+
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6">
+      {STEPS.map((s, i) => (
+        <div key={s.key} className="flex items-center">
+          <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
+            i === currentStepIndex
+              ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-300'
+              : i < currentStepIndex
+                ? 'bg-green-100 text-green-700'
+                : 'bg-slate-100 text-slate-400'
+          }`}>
+            {i < currentStepIndex ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <span className="w-4 h-4 rounded-full bg-current/10 flex items-center justify-center text-[10px] font-bold">{s.num}</span>
+            )}
+            <span className="hidden sm:inline">{s.label}</span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div className={`w-4 sm:w-8 h-0.5 mx-0.5 ${i < currentStepIndex ? 'bg-green-300' : 'bg-slate-200'}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
   // Etape 1: Selection du praticien
   if (step === 'select') {
     return (
@@ -313,6 +405,7 @@ export function PitchGenerator() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
+          <StepIndicator />
           {/* Header */}
           <div className="flex items-center gap-4">
             <button
@@ -450,6 +543,7 @@ export function PitchGenerator() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
+          <StepIndicator />
           {/* Header */}
           <div className="flex items-center gap-4">
             <button
@@ -643,6 +737,7 @@ export function PitchGenerator() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
+          <StepIndicator />
           {/* Header */}
           <div className="flex items-center gap-4">
             <button
@@ -834,6 +929,17 @@ export function PitchGenerator() {
             </div>
           </div>
 
+          {/* API status info */}
+          {!hasValidApiKey && (
+            <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-blue-800">Mode hors-ligne</p>
+                <p className="text-sm text-blue-600">Le pitch sera genere a partir des donnees reelles du praticien (notes, publications, historique, metriques). Pour une generation IA avancee, ajoutez une cle API dans .env (VITE_LLM_API_KEY).</p>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-between">
             <button
@@ -848,7 +954,7 @@ export function PitchGenerator() {
               className="btn-primary flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5" />
-              Generer le pitch
+              {hasValidApiKey ? 'Generer le pitch (IA)' : 'Generer le pitch'}
             </button>
           </div>
         </motion.div>
@@ -864,6 +970,7 @@ export function PitchGenerator() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
+        <StepIndicator />
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -948,6 +1055,28 @@ export function PitchGenerator() {
           )}
         </div>
 
+        {/* Demo mode banner */}
+        {isDemo && !isGenerating && sections.length > 0 && (
+          <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <Sparkles className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-amber-800">Mode demonstration</p>
+              <p className="text-sm text-amber-600">Ce pitch a ete genere localement a partir des donnees reelles du praticien. Pour des pitchs plus riches et adaptatifs, configurez une cle API dans le fichier .env (VITE_LLM_API_KEY).</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error display */}
+        {generateError && !isGenerating && sections.length === 0 && (
+          <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-red-800">Erreur de generation</p>
+              <p className="text-sm text-red-600">{generateError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Contenu du pitch */}
         <AnimatePresence mode="wait">
           {isGenerating && sections.length === 0 ? (
@@ -962,7 +1091,7 @@ export function PitchGenerator() {
                 <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
                 <div>
                   <p className="font-medium text-purple-800">Generation en cours...</p>
-                  <p className="text-sm text-purple-600">L'IA cree votre pitch ultra-personnalise</p>
+                  <p className="text-sm text-purple-600">{hasValidApiKey ? "L'IA cree votre pitch ultra-personnalise" : 'Generation du pitch a partir des donnees du praticien...'}</p>
                 </div>
               </div>
               {[1, 2, 3, 4].map((i) => (
@@ -1007,16 +1136,18 @@ export function PitchGenerator() {
                         >
                           <Copy className="w-4 h-4 text-slate-500" />
                         </button>
-                        <button
-                          onClick={() => {
-                            setEditingSection(section.id);
-                            setEditInstruction('');
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-purple-50"
-                          title="Modifier cette section"
-                        >
-                          <RefreshCw className="w-4 h-4 text-purple-500" />
-                        </button>
+                        {!isDemo && (
+                          <button
+                            onClick={() => {
+                              setEditingSection(section.id);
+                              setEditInstruction('');
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-purple-50"
+                            title="Modifier cette section"
+                          >
+                            <RefreshCw className="w-4 h-4 text-purple-500" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1107,6 +1238,8 @@ export function PitchGenerator() {
                       setSelectedPractitioner(null);
                       setSections([]);
                       setStreamedText('');
+                      setIsDemo(false);
+                      setGenerateError(null);
                     }}
                     className="btn-secondary flex-1 sm:flex-none"
                   >

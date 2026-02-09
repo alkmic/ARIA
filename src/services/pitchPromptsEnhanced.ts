@@ -646,3 +646,221 @@ export function generatePractitionerSummary(practitionerId: string): string {
 
   return summary;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOCAL PITCH GENERATION — Fallback when no LLM API key is configured
+// Uses real practitioner data + RAG knowledge to generate structured pitch
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Generates a structured pitch locally using practitioner data, without LLM.
+ * Returns text in the same [SECTION] format as the LLM would produce.
+ */
+export function generateLocalPitch(practitioner: Practitioner, config: PitchConfig): string {
+  const profile = getEnrichedPractitionerData(practitioner.id);
+  const publications = profile?.news?.filter(n => n.type === 'publication') || [];
+  const conferences = profile?.news?.filter(n => n.type === 'conference') || [];
+  const awards = profile?.news?.filter(n => n.type === 'award') || [];
+  const notes = profile?.notes || [];
+  const visits = profile?.visitHistory || [];
+  const topProducts = profile ? getProductFrequency(profile).slice(0, 3) : [];
+
+  const daysSinceLastVisit = profile?.lastVisitDate
+    ? Math.floor((Date.now() - new Date(profile.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const isKOL = profile?.metrics.isKOL || practitioner.isKOL;
+  const isPneumo = practitioner.specialty === 'Pneumologue';
+  const churnRisk = profile?.metrics.churnRisk || 'low';
+  const city = profile?.address?.city || practitioner.city;
+  const titre = `${practitioner.title} ${practitioner.lastName}`;
+
+  // ── ACCROCHE ──
+  let accroche = '';
+  if (publications.length > 0) {
+    const pub = publications[0];
+    const pubDate = new Date(pub.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    accroche = `${titre}, j'ai eu l'occasion de lire votre publication « ${pub.title} » parue en ${pubDate}. `;
+    if (isPneumo) {
+      accroche += `Votre travail sur ce sujet contribue significativement à faire avancer la prise en charge des patients respiratoires dans la région. `;
+    } else {
+      accroche += `Ce type de travaux est essentiel pour sensibiliser les médecins généralistes à l'importance du dépistage précoce. `;
+    }
+    if (isKOL) {
+      accroche += `En tant que leader d'opinion reconnu, votre expertise est précieuse pour nos patients.`;
+    }
+  } else if (conferences.length > 0) {
+    accroche = `${titre}, j'ai noté votre participation à « ${conferences[0].title} ». Votre engagement dans la formation continue est un atout majeur pour vos patients. `;
+    accroche += `Je souhaitais justement échanger avec vous sur les dernières avancées en matière de prise en charge respiratoire.`;
+  } else if (daysSinceLastVisit !== null && daysSinceLastVisit < 60) {
+    accroche = `${titre}, lors de notre dernier échange il y a ${daysSinceLastVisit} jours, nous avions abordé des sujets importants. `;
+    if (notes.length > 0) {
+      const lastNote = notes[0].content.substring(0, 80);
+      accroche += `Vous m'aviez notamment fait part de : « ${lastNote}… ». Je reviens aujourd'hui avec des éléments concrets pour avancer.`;
+    } else {
+      accroche += `Je souhaitais faire un point de suivi et vous présenter nos dernières nouveautés.`;
+    }
+  } else if (daysSinceLastVisit !== null && daysSinceLastVisit > 90) {
+    accroche = `${titre}, cela fait ${daysSinceLastVisit} jours que nous n'avons pas eu l'occasion d'échanger. `;
+    accroche += `Beaucoup de choses ont évolué chez Air Liquide Santé depuis notre dernier contact, et je tenais à vous en faire part personnellement.`;
+  } else {
+    accroche = `${titre}, en tant que ${isPneumo ? 'pneumologue' : 'médecin généraliste'} à ${city}, vous êtes un partenaire clé dans la prise en charge des patients sous oxygénothérapie de votre secteur. `;
+    if (isKOL) {
+      accroche += `Votre statut de leader d'opinion et votre expertise reconnue font de vous un interlocuteur privilégié pour Air Liquide Santé.`;
+    } else {
+      accroche += `Je souhaitais vous présenter comment nous pouvons optimiser ensemble le parcours de vos patients respiratoires.`;
+    }
+  }
+
+  // ── PROPOSITION ──
+  let proposition = '';
+  const selectedProducts = config.products;
+
+  if (config.focusArea === 'innovation' || selectedProducts.some(p => p.toLowerCase().includes('telesuivi'))) {
+    proposition = `**Télésuivi O2 Connect** — Notre plateforme EOVE vous permet de suivre en temps réel l'observance et les paramètres (SpO2, débit) de vos patients, directement depuis votre espace praticien. `;
+    if (isPneumo) {
+      proposition += `Pour un pneumologue comme vous, c'est la possibilité de détecter précocement les exacerbations et d'ajuster le traitement à distance. `;
+    }
+    proposition += `Le télésuivi est inclus sans surcoût dans nos forfaits — aucun frais supplémentaire pour le patient ni pour vous.\n\n`;
+  }
+
+  if (selectedProducts.some(p => p.toLowerCase().includes('vitalaire'))) {
+    proposition += `**VitalAire Confort+** — Notre concentrateur premium offre un niveau sonore inférieur à 39 dB, permettant un usage nocturne confortable. `;
+    proposition += `Connecté à notre plateforme de télésuivi, il remonte automatiquement les données d'observance.\n\n`;
+  }
+
+  if (selectedProducts.some(p => p.toLowerCase().includes('freestyle'))) {
+    proposition += `**FreeStyle Comfort** — À seulement 2,1 kg avec 8 heures d'autonomie, c'est la solution idéale pour vos patients actifs qui ne veulent pas sacrifier leur mobilité.\n\n`;
+  }
+
+  if (selectedProducts.some(p => p.toLowerCase().includes('vni') || p.toLowerCase().includes('bilevel'))) {
+    proposition += `**DreamStation BiLevel** — Pour vos patients BPCO hypercapniques, notre VNI avec algorithme auto-adaptatif offre un confort optimal et améliore significativement l'adhésion au traitement.\n\n`;
+  }
+
+  if (topProducts.length > 0 && proposition.length < 100) {
+    proposition += `Lors de nos échanges précédents, vous aviez montré de l'intérêt pour ${topProducts[0][0]}. `;
+    proposition += `Je vous propose aujourd'hui d'aller plus loin avec une offre complémentaire adaptée au profil de vos patients.\n\n`;
+  }
+
+  if (config.focusArea === 'service') {
+    proposition += `Notre engagement service se traduit par une **astreinte 24h/24, 7j/7** avec intervention d'un technicien en moins de 4 heures, partout en France. `;
+    proposition += `Votre tranquillité et celle de vos patients sont notre priorité absolue.`;
+  } else if (config.focusArea === 'price') {
+    proposition += `Côté remboursement, nos solutions sont intégralement prises en charge par l'Assurance Maladie pour les patients en ALD. `;
+    proposition += `Le forfait concentrateur (LPPR 2025) est à environ 12€/jour, et le télésuivi est inclus sans surcoût — un avantage significatif pour vos patients.`;
+  } else if (proposition.length < 100) {
+    proposition += `Chez Air Liquide Santé, nous mettons à votre disposition une gamme complète et intégrée : de l'oxygénothérapie fixe et portable au télésuivi connecté, en passant par l'éducation thérapeutique certifiée HAS. `;
+    proposition += `Tout est pensé pour simplifier votre quotidien et améliorer l'observance de vos patients.`;
+  }
+
+  // ── CONCURRENCE ──
+  let competition = '';
+  if (config.competitors.length > 0) {
+    competition = `Face à ${config.competitors.join(' et ')}, Air Liquide Santé se distingue sur plusieurs points concrets :\n\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('vivisol'))) {
+      competition += `- **vs Vivisol** : Notre couverture nationale garantit un service homogène sur tout le territoire, avec un SAV en moins de 4h (contre 8h en moyenne pour Vivisol). Notre plateforme de télésuivi, développée en interne, est nativement intégrée à nos équipements.\n`;
+    }
+    if (config.competitors.some(c => c.toLowerCase().includes('linde'))) {
+      competition += `- **vs Linde Healthcare** : Notre gamme portable (FreeStyle Comfort 2,1 kg) surpasse leur offre en termes d'autonomie et de légèreté. Notre espace praticien digital est un outil unique sur le marché.\n`;
+    }
+    if (config.competitors.some(c => c.toLowerCase().includes('sos'))) {
+      competition += `- **vs SOS Oxygène** : En tant qu'acteur global, nous maîtrisons l'ensemble de la chaîne — de la production d'oxygène à la maintenance des équipements — là où SOS Oxygène dépend de fournisseurs tiers.\n`;
+    }
+    if (config.competitors.some(c => c.toLowerCase().includes('bastide'))) {
+      competition += `- **vs Bastide Medical** : Notre spécialisation respiratoire nous permet d'offrir une expertise que les généralistes du MAD ne peuvent pas égaler, avec des techniciens formés exclusivement aux pathologies respiratoires.\n`;
+    }
+  } else {
+    // Check notes for competitor mentions
+    const noteContent = notes.map(n => n.content).join(' ').toLowerCase();
+    if (noteContent.includes('vivisol') || noteContent.includes('concurrent')) {
+      competition = `Nous savons que d'autres acteurs vous sollicitent. Ce qui différencie Air Liquide Santé :\n\n`;
+      competition += `- **Couverture nationale** avec techniciens dédiés respiratoire — intervention en moins de 4h\n`;
+      competition += `- **Télésuivi natif** intégré sans surcoût dans tous nos équipements connectés\n`;
+      competition += `- **Programme d'éducation thérapeutique** certifié HAS, unique dans le secteur\n`;
+      competition += `- **Innovation continue** : nous investissons 300M€/an en R&D santé\n`;
+    } else {
+      competition = `Ce qui fait la force d'Air Liquide Santé par rapport aux autres prestataires :\n\n`;
+      competition += `- **Leader français** de l'assistance respiratoire à domicile, avec plus de 50 ans d'expérience\n`;
+      competition += `- **Astreinte 24/7** avec engagement d'intervention sous 4 heures\n`;
+      competition += `- **Télésuivi intégré** sans surcoût : monitoring en temps réel de l'observance\n`;
+      competition += `- **Éducation thérapeutique** certifiée HAS, dispensée par des professionnels dédiés\n`;
+    }
+  }
+
+  // ── CTA ──
+  let cta = '';
+  const pendingActions = notes.filter(n => n.nextAction).map(n => n.nextAction!);
+
+  if (pendingActions.length > 0) {
+    cta = `Lors de notre dernier échange, nous avions convenu de : « ${pendingActions[0]} ». `;
+    cta += `Je vous propose de concrétiser cela dès maintenant.\n\n`;
+  }
+
+  if (config.focusArea === 'innovation') {
+    cta += `**Proposition concrète** : Je peux organiser une démonstration de notre plateforme de télésuivi directement dans votre cabinet, avec un cas patient simulé. Cela vous permettra de voir en 15 minutes comment suivre l'observance de vos patients en temps réel. Seriez-vous disponible la semaine prochaine ?`;
+  } else if (config.focusArea === 'service') {
+    cta += `**Proposition concrète** : Je vous propose de planifier une rencontre avec notre responsable qualité régional pour vous présenter notre nouveau protocole de prise en charge et répondre à toutes vos questions sur notre engagement de service. Quel créneau vous conviendrait ?`;
+  } else if (churnRisk === 'high') {
+    cta += `**Proposition concrète** : Votre satisfaction est notre priorité absolue. Je souhaite organiser un point complet sur votre expérience avec nos services, identifier les axes d'amélioration et vous présenter les évolutions récentes que nous avons mises en place. Pouvons-nous nous voir cette semaine ?`;
+  } else {
+    cta += `**Proposition concrète** : Je vous propose ${isPneumo ? 'un rendez-vous de 30 minutes pour approfondir les solutions les plus adaptées à votre patientèle' : 'une présentation ciblée de 20 minutes sur les solutions qui correspondent le mieux à vos besoins'}. Je peux m'adapter à votre agenda — quel jour vous conviendrait le mieux ?`;
+  }
+
+  // ── OBJECTIONS ──
+  let objections = '';
+  if (config.includeObjections) {
+    objections += `**Objection : « Je suis déjà équipé et satisfait de mon prestataire actuel. »**\n→ Je comprends tout à fait. Mon objectif n'est pas de tout changer, mais de vous montrer en quoi le télésuivi intégré d'Air Liquide Santé peut compléter votre dispositif actuel et améliorer l'observance de vos patients, sans surcoût.\n\n`;
+
+    if (config.focusArea === 'price' || notes.some(n => n.content.toLowerCase().includes('prix'))) {
+      objections += `**Objection : « C'est trop cher pour mes patients. »**\n→ Nos solutions sont intégralement remboursées dans le cadre de l'ALD. Le forfait concentrateur LPPR 2025 est d'environ 12€/jour, et le télésuivi est inclus sans aucun surcoût. Le reste à charge pour le patient en ALD est nul.\n\n`;
+    }
+
+    objections += `**Objection : « Je n'ai pas le temps pour une formation. »**\n→ Notre programme est conçu pour s'intégrer à votre pratique : ${isPneumo ? 'sessions de 45 minutes en visioconférence, DPC accrédité, à votre rythme' : 'supports synthétiques de 15 minutes, directement applicables en consultation'}.\n\n`;
+
+    if (isPneumo) {
+      objections += `**Objection : « Les données de télésuivi, c'est encore un écran de plus à surveiller. »**\n→ Notre plateforme est conçue pour être proactive : elle vous alerte uniquement en cas d'anomalie (chute d'observance, désaturation). Vous n'avez pas besoin de la consulter quotidiennement — elle vient à vous quand c'est nécessaire.\n\n`;
+    }
+
+    objections += `**Objection : « Mon patient ne saura pas utiliser un appareil connecté. »**\n→ Nos techniciens assurent l'installation et la formation du patient à domicile. L'interface patient est volontairement simplifiée. Et notre astreinte 24/7 est là pour accompagner le patient en cas de difficulté.`;
+  }
+
+  // ── TALKING POINTS ──
+  let talkingPoints = '';
+  if (config.includeTalkingPoints) {
+    talkingPoints += `1. **Accroche personnalisée** : ${publications.length > 0 ? `Mentionner la publication « ${publications[0].title} »` : daysSinceLastVisit !== null ? `Rappeler le dernier échange il y a ${daysSinceLastVisit} jours` : `Valoriser son expertise en ${practitioner.specialty} à ${city}`}\n`;
+    talkingPoints += `2. **Suivi des engagements** : ${pendingActions.length > 0 ? `Faire le point sur : « ${pendingActions[0]} »` : 'Demander comment les choses ont évolué depuis le dernier contact'}\n`;
+    talkingPoints += `3. **Produit phare** : Présenter ${config.products[0] || 'VitalAire Confort+'} avec focus sur ${config.focusArea === 'innovation' ? 'le télésuivi intégré' : config.focusArea === 'service' ? 'l\'astreinte 24/7' : config.focusArea === 'price' ? 'le remboursement intégral' : 'les bénéfices patient'}\n`;
+    talkingPoints += `4. **Donnée clinique** : ${isPneumo ? 'Étude GOLD 2024 — la téléréhabilitation réduit de 30% les réhospitalisations à 90 jours' : 'La BPCO touche 3,5 millions de Français, dont 2/3 non diagnostiqués — rôle clé du MG dans le dépistage'}\n`;
+    talkingPoints += `5. **Question ouverte** : « ${isPneumo ? 'Comment gérez-vous actuellement le suivi de l\'observance de vos patients sous O2 ?' : 'Combien de vos patients BPCO sont actuellement sous oxygénothérapie à domicile ?'} »\n`;
+    talkingPoints += `6. **Proposition concrète** : Fixer un prochain RDV avec action définie (démo, essai, rencontre technique)\n`;
+    if (awards.length > 0) {
+      talkingPoints += `7. **Félicitations** : Mentionner la distinction « ${awards[0].title} »\n`;
+    }
+    if (churnRisk === 'high') {
+      talkingPoints += `${awards.length > 0 ? '8' : '7'}. **Rétention** : Aborder proactivement la satisfaction — « Comment évaluez-vous notre service actuel ? Y a-t-il des points à améliorer ? »\n`;
+    }
+  }
+
+  // ── FOLLOW UP ──
+  let followUp = `**J+1 — Récapitulatif et engagement**\n`;
+  followUp += `Envoyer un email de remerciement personnalisé à ${titre} récapitulant les points abordés, les produits présentés (${config.products.slice(0, 2).join(', ') || 'gamme discutée'}) et les prochaines étapes convenues.\n\n`;
+  followUp += `**J+7 — Suivi proactif**\n`;
+  followUp += `${pendingActions.length > 0 ? `Relance sur l'action convenue : « ${pendingActions[0]} ». ` : ''}Partager ${isPneumo ? 'un article clinique pertinent ou les dernières recommandations GOLD/HAS' : 'un cas patient anonymisé illustrant les bénéfices du télésuivi'}. Proposer une date pour ${config.focusArea === 'innovation' ? 'la démonstration' : 'le prochain rendez-vous'}.\n\n`;
+  followUp += `**J+30 — Consolidation**\n`;
+  followUp += `${churnRisk === 'high' ? 'Point de satisfaction formalisé. ' : ''}Faire le bilan des actions engagées. ${isKOL ? 'Proposer une collaboration (intervention lors d\'un événement Air Liquide, retour d\'expérience). ' : `Évaluer l'opportunité d'élargir l'offre (${topProducts.length > 0 ? `passage de ${topProducts[0][0]} vers une solution complémentaire` : 'nouveaux produits adaptés à sa patientèle'}).`}`;
+
+  // ── ASSEMBLE ──
+  let pitch = `[ACCROCHE]\n${accroche}\n\n`;
+  pitch += `[PROPOSITION]\n${proposition}\n\n`;
+  pitch += `[CONCURRENCE]\n${competition}\n\n`;
+  pitch += `[CALL_TO_ACTION]\n${cta}`;
+  if (config.includeObjections) {
+    pitch += `\n\n[OBJECTIONS]\n${objections}`;
+  }
+  if (config.includeTalkingPoints) {
+    pitch += `\n\n[TALKING_POINTS]\n${talkingPoints}`;
+  }
+  pitch += `\n\n[FOLLOW_UP]\n${followUp}`;
+
+  return pitch;
+}
