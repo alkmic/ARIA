@@ -30,7 +30,7 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useGroq } from '../hooks/useGroq';
 import { useSpeech } from '../hooks/useSpeech';
-import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary } from '../services/pitchPromptsEnhanced';
+import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary, SECTION_ID_TO_TAG } from '../services/pitchPromptsEnhanced';
 import { DataService } from '../services/dataService';
 import { quickSearch } from '../services/universalSearch';
 import { SkeletonPitchSection } from '../components/ui/Skeleton';
@@ -52,9 +52,12 @@ const SECTION_STYLES: Record<string, { gradient: string; bg: string; icon: strin
 // Produits Air Liquide disponibles
 const PRODUCTS = [
   { id: 'vitalaire', name: 'VitalAire Confort+', description: 'Concentrateur haut de gamme' },
+  { id: 'freestyle', name: 'FreeStyle Comfort', description: 'Portable 2,1kg, autonomie 8h' },
   { id: 'telesuivi', name: 'Telesuivi O2', description: 'Suivi a distance connecte' },
   { id: 'extracteur', name: 'Station extracteur', description: 'Solution fixe performante' },
   { id: 'portable', name: 'O2 liquide portable', description: 'Mobilite maximale' },
+  { id: 'vni', name: 'DreamStation BiLevel VNI', description: 'VNI BPCO hypercapnique' },
+  { id: 'ppc', name: 'ResMed AirSense 11 PPC', description: 'PPC connectee derniere gen.' },
   { id: 'service247', name: 'Service 24/7', description: 'Assistance permanente' },
   { id: 'formation', name: 'Formation patients', description: 'Education therapeutique' },
 ];
@@ -120,7 +123,7 @@ export function PitchGenerator() {
   // Hooks IA et Speech
   const { streamCompletion, complete, isLoading: groqLoading } = useGroq({
     temperature: 0.8,
-    maxTokens: 3000,
+    maxTokens: 4096,
   });
   const { speak, pause, resume, stop, isSpeaking, isPaused, isSupported: speechSupported } = useSpeech();
 
@@ -152,6 +155,21 @@ export function PitchGenerator() {
   const handleSelectPractitioner = (p: Practitioner) => {
     setSelectedPractitioner(p);
     navigate(`/pitch?practitionerId=${p.id}`, { replace: true });
+
+    // Auto-selectionner les produits deja discutes avec ce praticien
+    const profile = DataService.getPractitionerById(p.id);
+    if (profile?.visitHistory) {
+      const discussed = new Set<string>();
+      profile.visitHistory.forEach(v => v.productsDiscussed?.forEach(prod => discussed.add(prod)));
+      if (discussed.size > 0) {
+        const matchedProducts = PRODUCTS
+          .filter(prod => discussed.has(prod.name) || [...discussed].some(d => prod.name.toLowerCase().includes(d.toLowerCase().split(' ')[0])))
+          .map(prod => prod.name);
+        if (matchedProducts.length > 0) {
+          setConfig(prev => ({ ...prev, products: matchedProducts }));
+        }
+      }
+    }
 
     // Generer le resume
     const summary = generatePractitionerSummary(p.id);
@@ -252,9 +270,10 @@ export function PitchGenerator() {
         )
       );
 
+      const tag = SECTION_ID_TO_TAG[section.id] || section.id.toUpperCase();
       const updatedText = streamedText.replace(
-        new RegExp(`\\[${section.id.toUpperCase()}\\][\\s\\S]*?(?=\\n\\[|$)`),
-        `[${section.id.toUpperCase()}]\n${newContent.trim()}`
+        new RegExp(`\\[${tag}\\][\\s\\S]*?(?=\\n\\[|$)`),
+        `[${tag}]\n${newContent.trim()}`
       );
       setStreamedText(updatedText);
     }

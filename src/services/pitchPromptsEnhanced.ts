@@ -31,6 +31,34 @@ const FOCUS_DESCRIPTIONS = {
   loyalty: 'fidélisation, partenariat long terme, programme de suivi',
 };
 
+/** Mapping section IDs → tag names used in generated pitch text */
+export const SECTION_ID_TO_TAG: Record<string, string> = {
+  hook: 'ACCROCHE',
+  proposition: 'PROPOSITION',
+  competition: 'CONCURRENCE',
+  cta: 'CALL_TO_ACTION',
+  objections: 'OBJECTIONS',
+  talking_points: 'TALKING_POINTS',
+  follow_up: 'FOLLOW_UP',
+};
+
+const VISIT_TYPE_FR: Record<string, string> = {
+  completed: 'Réalisée',
+  scheduled: 'Planifiée',
+  cancelled: 'Annulée',
+};
+
+/** Shared helper: compute product frequency from visit history */
+function getProductFrequency(profile: PractitionerProfile): [string, number][] {
+  const freq: Record<string, number> = {};
+  profile.visitHistory?.forEach(visit => {
+    visit.productsDiscussed?.forEach(p => {
+      freq[p] = (freq[p] || 0) + 1;
+    });
+  });
+  return Object.entries(freq).sort((a, b) => b[1] - a[1]);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // RAG KNOWLEDGE RETRIEVAL — Sélection intelligente par contexte
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -45,13 +73,20 @@ function getRelevantRAGKnowledge(
 ): string {
   const chunks: { title: string; content: string; source: string }[] = [];
   const addedTitles = new Set<string>();
+  const MAX_CHUNK_CHARS = 400;
 
   const addChunks = (items: { title: string; content: string; source: string }[], max: number) => {
     for (const item of items) {
-      if (chunks.length >= 12) return; // cap global
+      if (chunks.length >= 12) return;
       if (addedTitles.has(item.title)) continue;
       if (max <= 0) return;
-      chunks.push(item);
+      chunks.push({
+        title: item.title,
+        content: item.content.length > MAX_CHUNK_CHARS
+          ? item.content.substring(0, MAX_CHUNK_CHARS) + '…'
+          : item.content,
+        source: item.source,
+      });
       addedTitles.add(item.title);
       max--;
     }
@@ -63,9 +98,11 @@ function getRelevantRAGKnowledge(
     addChunks(searchByCategory('bpco_has'), 2);
     addChunks(searchByCategory('bpco_clinique'), 1);
     addChunks(searchByTag('spirometrie'), 1);
+    addChunks(searchByTag('exacerbation'), 1);
   } else {
     addChunks(searchByCategory('epidemiologie'), 2);
     addChunks(searchByTag('parcours_soins'), 1);
+    addChunks(searchByTag('ameli'), 1);
   }
 
   // 2. Connaissances produits selon la sélection
@@ -74,12 +111,18 @@ function getRelevantRAGKnowledge(
     addChunks(searchByCategory('telesuivi'), 2);
   }
   if (productKeywords.includes('vitalaire') || productKeywords.includes('extracteur') ||
-      productKeywords.includes('portable') || productKeywords.includes('o2')) {
+      productKeywords.includes('portable') || productKeywords.includes('o2') ||
+      productKeywords.includes('freestyle')) {
     addChunks(searchByCategory('oxygenotherapie'), 2);
   }
   if (productKeywords.includes('vni') || productKeywords.includes('ppc') ||
-      productKeywords.includes('ventil')) {
+      productKeywords.includes('ventil') || productKeywords.includes('bilevel') ||
+      productKeywords.includes('airsense')) {
     addChunks(searchByTag('ventilation'), 1);
+    addChunks(searchByTag('sommeil'), 1);
+  }
+  if (productKeywords.includes('dispositif') || productKeywords.includes('alms')) {
+    addChunks(searchByTag('dispositif_medical'), 1);
   }
 
   // 3. Intelligence concurrentielle selon les concurrents sélectionnés
@@ -103,8 +146,10 @@ function getRelevantRAGKnowledge(
     addChunks(searchByCategory(cat), 1);
   }
 
-  // 5. Réglementation/remboursement (toujours utile)
-  addChunks(searchByCategory('lppr_remboursement'), 1);
+  // 5. Réglementation/remboursement (toujours utile, dedup handled by addedTitles)
+  if (config.focusArea !== 'price') {
+    addChunks(searchByCategory('lppr_remboursement'), 1);
+  }
 
   if (chunks.length === 0) return '';
 
@@ -139,19 +184,9 @@ function analyzeVisitPatterns(profile: PractitionerProfile): string {
   }
 
   const visits = profile.visitHistory;
-  const productFrequency: Record<string, number> = {};
+  const topProducts = getProductFrequency(profile).slice(0, 3);
   let completedCount = 0;
-
-  visits.forEach(visit => {
-    if (visit.type === 'completed') completedCount++;
-    visit.productsDiscussed?.forEach(p => {
-      productFrequency[p] = (productFrequency[p] || 0) + 1;
-    });
-  });
-
-  const topProducts = Object.entries(productFrequency)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+  visits.forEach(visit => { if (visit.type === 'completed') completedCount++; });
 
   const daysSinceLastVisit = profile.lastVisitDate
     ? Math.floor((Date.now() - new Date(profile.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -197,25 +232,27 @@ function extractNoteInsights(profile: PractitionerProfile): string {
   const nextActions: string[] = [];
   const allContent = notes.map(n => n.content).join(' ').toLowerCase();
 
-  if (allContent.includes('prix') || allContent.includes('coût') || allContent.includes('tarif') || allContent.includes('cher')) {
+  const matchWord = (pattern: string) => new RegExp(`\\b${pattern}\\b`, 'i').test(allContent);
+
+  if (matchWord('prix') || matchWord('coût') || matchWord('coûteu') || matchWord('tarif') || matchWord('cher|chère') || matchWord('économi')) {
     themes.push('Sensibilité prix/coûts');
   }
-  if (allContent.includes('concurrent') || allContent.includes('vivisol') || allContent.includes('linde') || allContent.includes('sos')) {
+  if (matchWord('concurrent') || matchWord('vivisol') || matchWord('linde') || matchWord('sos oxygène') || matchWord('bastide')) {
     themes.push('Veille concurrentielle active');
   }
-  if (allContent.includes('télésuivi') || allContent.includes('connect') || allContent.includes('digital') || allContent.includes('appli')) {
+  if (matchWord('télésuivi') || matchWord('connecté') || matchWord('digital') || matchWord('appli') || matchWord('plateforme')) {
     themes.push('Intérêt pour le digital/télésuivi');
   }
-  if (allContent.includes('observance') || allContent.includes('compliance') || allContent.includes('patient')) {
+  if (matchWord('observance') || matchWord('compliance') || matchWord('adhésion') || matchWord('fidél.*traitement')) {
     themes.push('Focus sur l\'observance patient');
   }
-  if (allContent.includes('satisfait') || allContent.includes('content') || allContent.includes('bien')) {
+  if (matchWord('satisfait') || matchWord('très bien') || matchWord('excellent') || matchWord('ravi') || matchWord('apprécié')) {
     themes.push('Globalement satisfait du service');
   }
-  if (allContent.includes('problème') || allContent.includes('plainte') || allContent.includes('retard') || allContent.includes('insatisf')) {
+  if (matchWord('problème') || matchWord('plainte') || matchWord('retard') || matchWord('insatisf') || matchWord('déçu') || matchWord('mécontent')) {
     themes.push('Points d\'insatisfaction signalés');
   }
-  if (allContent.includes('formation') || allContent.includes('éducation') || allContent.includes('dpc')) {
+  if (matchWord('formation') || matchWord('éducation thérapeutique') || matchWord('dpc') || matchWord('congrès')) {
     themes.push('Intérêt pour la formation/DPC');
   }
 
@@ -304,7 +341,8 @@ function formatVisitHistory(profile: PractitionerProfile): string {
   return profile.visitHistory.slice(0, 5).map(visit => {
     const date = new Date(visit.date).toLocaleDateString('fr-FR');
     const products = visit.productsDiscussed?.join(', ') || 'Non renseigné';
-    return `- [${date}] ${visit.type} (${visit.duration || '?'} min)\n  Produits: ${products}${visit.notes ? `\n  Notes: ${visit.notes}` : ''}`;
+    const typeFr = VISIT_TYPE_FR[visit.type] || visit.type;
+    return `- [${date}] ${typeFr} (${visit.duration || '?'} min)\n  Produits: ${products}${visit.notes ? `\n  Notes: ${visit.notes}` : ''}`;
   }).join('\n');
 }
 
@@ -329,38 +367,15 @@ export function buildEnhancedSystemPrompt(config: PitchConfig, practitioner?: Pr
 Tu génères des pitchs commerciaux ULTRA-PERSONNALISÉS. Chaque phrase doit être spécifique à CE praticien. INTERDIT de générer des phrases génériques comme "nous avons une gamme complète" ou "notre service est excellent". Utilise les données réelles fournies.
 
 ═══════════════════════════════════════════════════════════════
-CONNAISSANCE PRODUITS AIR LIQUIDE SANTÉ
+GAMME PRODUITS & SERVICES AIR LIQUIDE SANTÉ (référence rapide)
 ═══════════════════════════════════════════════════════════════
-**Oxygénothérapie (OLD / OCT):**
-- VitalAire Confort+ : concentrateur premium, <39dB, connecté, télésuivi intégré
-- FreeStyle Comfort : concentrateur portable 2,1kg, débit pulsé jusqu'à 6, autonomie 8h
-- O2 liquide portable : système Helios/Companion pour patients très mobiles
-- Station extracteur fixe : solution économique, fiabilité > 99,5%
-- Télésuivi O2 Connect : monitoring SpO2, débit, observance en temps réel (plateforme EOVE)
-- Critères OLD : PaO2 ≤ 55 mmHg ou PaO2 56-59 avec complications
-
-**VNI / PPC:**
-- DreamStation BiLevel : VNI pour BPCO hypercapnique, algorithme auto-adaptatif
-- ResMed AirSense 11 : PPC dernière génération, connectée, masque confort
-
-**Services différenciants:**
-- Astreinte 24/7/365 : technicien en moins de 4h partout en France
-- Éducation thérapeutique : programme certifié HAS pour patients BPCO
-- Plateforme digitale : espace praticien avec suivi patients en temps réel
-- Formation continue : DPC accrédité pour les professionnels de santé
-
-**Remboursement (LPPR 2025):**
-- OLD forfait 1 (concentrateur) : ~12€/jour | forfait 3 (O2 liquide) : ~18€/jour
-- VNI : ~14€/jour (100% Sécu si ALD) | Télésuivi : inclus, pas de surcoût
+**O2:** VitalAire Confort+ (concentrateur <39dB, connecté) | FreeStyle Comfort (portable 2,1kg, 8h) | O2 liquide Helios (mobilité) | Station extracteur (économique, >99,5%)
+**Télésuivi:** O2 Connect via EOVE (SpO2, débit, observance temps réel) — inclus, pas de surcoût
+**VNI/PPC:** DreamStation BiLevel (BPCO hypercapnique) | ResMed AirSense 11 (PPC connectée)
+**Services:** Astreinte 24/7 (<4h) | Éducation thérapeutique certifiée HAS | Plateforme praticien | DPC accrédité
+**LPPR 2025:** OLD forfait 1 ~12€/j | forfait 3 ~18€/j | VNI ~14€/j (100% Sécu si ALD)
+**Avantages vs concurrents:** Couverture nationale (vs Vivisol régional) | Télésuivi natif (vs Linde sans) | Spécialiste respiratoire (vs Bastide généraliste) | Innovation propre (vs SOS dépendant tiers)
 ${ragKnowledge}
-
-═══════════════════════════════════════════════════════════════
-INTELLIGENCE CONCURRENTIELLE
-═══════════════════════════════════════════════════════════════
-**vs Vivisol** : Moins de couverture territoriale, pas de télésuivi natif, SAV plus lent (8h vs 4h AL)
-**vs Linde Healthcare** : Gamme limitée en portable, pas de plateforme digitale praticien
-**vs SOS Oxygène** : Acteur régional, pas d'innovation produit, dépendant fournisseurs tiers
-**vs Bastide Médical** : Généraliste MAD, pas spécialiste respiratoire, formation patients limitée
 
 RÈGLES IMPÉRATIVES:
 - Ton: ${TONE_DESCRIPTIONS[config.tone]}
@@ -422,16 +437,8 @@ export function buildEnhancedUserPrompt(practitioner: Practitioner, config: Pitc
     ? Math.floor((Date.now() - new Date(profile.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const productsMentioned: Record<string, number> = {};
-  profile.visitHistory?.forEach(visit => {
-    visit.productsDiscussed?.forEach(product => {
-      productsMentioned[product] = (productsMentioned[product] || 0) + 1;
-    });
-  });
-  const topProducts = Object.entries(productsMentioned)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([product, count]) => `${product} (${count}x)`);
+  const topProductsRaw = getProductFrequency(profile).slice(0, 3);
+  const topProducts = topProductsRaw.map(([product, count]) => `${product} (${count}x)`);
 
   return `Génère un pitch ULTRA-PERSONNALISÉ pour ce praticien. Chaque section doit mentionner des éléments SPÉCIFIQUES tirés des données ci-dessous. INTERDIT de rester générique.
 
