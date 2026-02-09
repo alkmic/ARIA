@@ -11,7 +11,6 @@ import {
   FileText,
   Route,
   Brain,
-  BarChart3,
   X,
   ChevronRight,
   Loader2,
@@ -71,13 +70,6 @@ const QUICK_ACTIONS = [
     path: '/visit-report'
   },
   {
-    id: 'explorer',
-    keywords: ['explorer', 'données', 'donnees', 'stats', 'statistiques', 'analyser', 'graphique'],
-    title: 'Explorer les données',
-    icon: <BarChart3 className="w-4 h-4" />,
-    path: '/data-explorer'
-  },
-  {
     id: 'actions',
     keywords: ['actions', 'priorité', 'priorite', 'faire', 'todo', 'tâches', 'taches'],
     title: 'Voir mes actions prioritaires',
@@ -110,7 +102,6 @@ const VOICE_COMMANDS = [
   { pattern: /(?:planifier?|organiser?)\s+(?:une?\s+)?tournée/i, type: 'nav', path: '/tour-optimization' },
   { pattern: /compte[- ]?rendu|rapport\s+(?:de\s+)?visite/i, type: 'nav', path: '/visit-report' },
   { pattern: /(?:mes\s+)?actions?\s+(?:prioritaires?)?/i, type: 'nav', path: '/next-actions' },
-  { pattern: /explorer?\s+(?:les\s+)?données/i, type: 'nav', path: '/data-explorer' },
 ];
 
 export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ className = '' }) => {

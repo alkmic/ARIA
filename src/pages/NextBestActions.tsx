@@ -644,11 +644,11 @@ export default function NextBestActions() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/data-explorer')}
+            onClick={() => navigate('/dashboard')}
             className="text-sm text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
           >
             <BarChart3 className="w-4 h-4" />
-            Voir analytics
+            Voir dashboard
           </button>
         </div>
       </div>

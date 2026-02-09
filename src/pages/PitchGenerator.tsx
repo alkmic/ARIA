@@ -198,7 +198,7 @@ export function PitchGenerator() {
     setSections([]);
     setStep('generate');
 
-    const systemPrompt = buildEnhancedSystemPrompt(config);
+    const systemPrompt = buildEnhancedSystemPrompt(config, selectedPractitioner);
     const userPrompt = buildEnhancedUserPrompt(selectedPractitioner, config);
 
     await streamCompletion(
@@ -231,7 +231,7 @@ export function PitchGenerator() {
 
     setEditingSection(sectionId);
 
-    const systemPrompt = buildEnhancedSystemPrompt(config);
+    const systemPrompt = buildEnhancedSystemPrompt(config, selectedPractitioner);
     const regeneratePrompt = buildEnhancedRegenerateSectionPrompt(
       sectionId,
       section.content,
@@ -363,7 +363,6 @@ export function PitchGenerator() {
               return (
                 <motion.div
                   key={p.id}
-                  whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleSelectPractitioner(p)}
                   className="glass-card p-4 cursor-pointer hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-300"
