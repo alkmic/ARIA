@@ -77,6 +77,8 @@ interface OptimizedDay {
   totalDistance: number;
   totalTravelTime: number;
   totalVisitTime: number;
+  returnDistance: number;
+  returnTravelTime: number;
   endTime: string;
 }
 
@@ -242,6 +244,13 @@ export const TourOptimizationPage: React.FC = () => {
     return R * c;
   };
 
+  // Temps de trajet réaliste selon la distance (vitesse adaptative)
+  const estimateTravelMinutes = (distKm: number): number => {
+    if (distKm <= 5) return Math.ceil((distKm / 25) * 60);   // 25 km/h urbain
+    if (distKm <= 30) return Math.ceil((distKm / 45) * 60);  // 45 km/h périurbain
+    return Math.ceil((distKm / 70) * 60);                     // 70 km/h interurbain
+  };
+
   // Algorithme Nearest Neighbor
   const nearestNeighborTSP = (
     practs: PractitionerWithCoords[],
@@ -377,8 +386,9 @@ export const TourOptimizationPage: React.FC = () => {
         }
     }
 
-    // Diviser en jours
+    // Diviser en jours (distribution équilibrée)
     const numDays = Math.ceil(sortedPractitioners.length / visitsPerDay);
+    const balancedPerDay = Math.ceil(sortedPractitioners.length / numDays);
     const days: OptimizedDay[] = [];
 
     // Pré-calculer les dates ouvrées (sauter weekends correctement)
@@ -397,11 +407,29 @@ export const TourOptimizationPage: React.FC = () => {
       }
     }
 
+    // Calculer le baseline AVANT optimisation TSP (même groupement, ordre du tri)
+    let baselineDistance = 0;
+    let baselineTravelTime = 0;
+    for (let d = 0; d < numDays; d++) {
+      const dayPracts = sortedPractitioners.slice(d * balancedPerDay, (d + 1) * balancedPerDay);
+      if (dayPracts.length === 0) continue;
+      let prev = start;
+      for (const p of dayPracts) {
+        const segDist = calculateDistance(prev, p.coords);
+        baselineDistance += segDist;
+        baselineTravelTime += estimateTravelMinutes(segDist);
+        prev = p.coords;
+      }
+      const retDist = calculateDistance(prev, start);
+      baselineDistance += retDist;
+      baselineTravelTime += estimateTravelMinutes(retDist);
+    }
+
     let totalDistanceAll = 0;
     let totalTravelTimeAll = 0;
 
     for (let d = 0; d < numDays; d++) {
-      const dayPractitioners = sortedPractitioners.slice(d * visitsPerDay, (d + 1) * visitsPerDay);
+      const dayPractitioners = sortedPractitioners.slice(d * balancedPerDay, (d + 1) * balancedPerDay);
       if (dayPractitioners.length === 0) continue;
 
       // Optimiser l'ordre pour ce jour
@@ -422,7 +450,7 @@ export const TourOptimizationPage: React.FC = () => {
       for (let i = 0; i < optimizedRoute.length; i++) {
         const p = optimizedRoute[i];
         const dist = calculateDistance(prevCoords, p.coords);
-        const travel = Math.ceil(dist / 0.6); // 36 km/h moyenne
+        const travel = estimateTravelMinutes(dist);
 
         dayDistance += dist;
         dayTravelTime += travel;
@@ -454,52 +482,40 @@ export const TourOptimizationPage: React.FC = () => {
 
       // Calculer l'heure de fin de journée (retour)
       const returnDist = calculateDistance(prevCoords, start);
-      const returnTime = Math.ceil(returnDist / 0.6);
+      const returnTravelTime = estimateTravelMinutes(returnDist);
       dayDistance += returnDist;
-      dayTravelTime += returnTime;
-      currentTime += returnTime;
+      dayTravelTime += returnTravelTime;
+      currentTime += returnTravelTime;
       const endTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
 
       const dayDate = workingDates[d];
+      const roundedDayDistance = Math.round(dayDistance * 10) / 10;
+      const roundedDayTravelTime = Math.round(dayTravelTime);
 
       days.push({
         day: d + 1,
         date: dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
         isoDate: dayDate.toISOString().split('T')[0],
         visits,
-        totalDistance: Math.round(dayDistance * 10) / 10,
-        totalTravelTime: Math.round(dayTravelTime),
+        totalDistance: roundedDayDistance,
+        totalTravelTime: roundedDayTravelTime,
         totalVisitTime: dayVisitTime,
+        returnDistance: Math.round(returnDist * 10) / 10,
+        returnTravelTime: Math.round(returnTravelTime),
         endTime,
       });
 
-      totalDistanceAll += dayDistance;
-      totalTravelTimeAll += dayTravelTime;
+      totalDistanceAll += roundedDayDistance;
+      totalTravelTimeAll += roundedDayTravelTime;
     }
 
-    // Calcul des gains vs. ordre de sélection original (sans optimisation TSP)
-    let nonOptimizedDistance = 0;
-    let nonOptimizedTravelTime = 0;
-    for (let d = 0; d < numDays; d++) {
-      const dayPracts = selectedPractitioners.slice(d * visitsPerDay, (d + 1) * visitsPerDay);
-      if (dayPracts.length === 0) continue;
-      let prev = start;
-      let dist = 0;
-      for (const p of dayPracts) {
-        dist += calculateDistance(prev, p.coords);
-        prev = p.coords;
-      }
-      dist += calculateDistance(prev, start);
-      nonOptimizedDistance += dist;
-      nonOptimizedTravelTime += Math.ceil(dist / 0.6);
-    }
-
+    // Gains = baseline (tri sans TSP) - optimisé (avec TSP + 2-opt)
     const finalResult: OptimizationResult = {
       days,
       totalDistance: Math.round(totalDistanceAll * 10) / 10,
       totalTravelTime: Math.round(totalTravelTimeAll),
-      kmSaved: Math.max(0, Math.round((nonOptimizedDistance - totalDistanceAll) * 10) / 10),
-      timeSaved: Math.max(0, Math.round(nonOptimizedTravelTime - totalTravelTimeAll)),
+      kmSaved: Math.max(0, Math.round((baselineDistance - totalDistanceAll) * 10) / 10),
+      timeSaved: Math.max(0, Math.round(baselineTravelTime - totalTravelTimeAll)),
     };
 
     setResult(finalResult);
@@ -1159,7 +1175,9 @@ export const TourOptimizationPage: React.FC = () => {
                   <TrendingDown className="w-5 h-5 text-green-600" />
                   <span className="text-sm text-slate-600">Distance économisée</span>
                 </div>
-                <div className="text-2xl font-bold text-green-700">{result.kmSaved} km</div>
+                <div className="text-2xl font-bold text-green-700">
+                  {result.kmSaved > 0 ? `${result.kmSaved} km` : '—'}
+                </div>
               </div>
 
               <div className="glass-card p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
@@ -1168,7 +1186,9 @@ export const TourOptimizationPage: React.FC = () => {
                   <span className="text-sm text-slate-600">Temps gagné</span>
                 </div>
                 <div className="text-2xl font-bold text-blue-700">
-                  {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')}
+                  {result.timeSaved >= 60
+                    ? `${Math.floor(result.timeSaved / 60)}h${(result.timeSaved % 60).toString().padStart(2, '0')}`
+                    : result.timeSaved > 0 ? `${result.timeSaved} min` : '—'}
                 </div>
               </div>
 
@@ -1321,6 +1341,9 @@ export const TourOptimizationPage: React.FC = () => {
                     <div className="flex-1">
                       <span className="font-medium text-sm text-slate-700">Retour à la base</span>
                     </div>
+                    <div className="text-right text-xs text-slate-500">
+                      {editableResult[activeDay]?.returnTravelTime} min • {editableResult[activeDay]?.returnDistance} km
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1344,7 +1367,11 @@ export const TourOptimizationPage: React.FC = () => {
                     <>
                       <h3 className="font-bold text-lg text-slate-800">Tournée optimisée avec succès !</h3>
                       <p className="text-sm text-slate-600 mt-1">
-                        Économie de {result.kmSaved} km et {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')} de trajet
+                        {result.kmSaved > 0 || result.timeSaved > 0
+                          ? `Économie de ${result.kmSaved > 0 ? `${result.kmSaved} km` : ''}${result.kmSaved > 0 && result.timeSaved > 0 ? ' et ' : ''}${result.timeSaved >= 60
+                              ? `${Math.floor(result.timeSaved / 60)}h${(result.timeSaved % 60).toString().padStart(2, '0')}`
+                              : result.timeSaved > 0 ? `${result.timeSaved} min` : ''} de trajet`
+                          : `${result.days.reduce((s, d) => s + d.visits.length, 0)} visites planifiées sur ${result.days.length} jours`}
                       </p>
                     </>
                   )}
