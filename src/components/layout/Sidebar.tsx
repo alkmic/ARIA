@@ -12,7 +12,8 @@ import {
   X,
   Brain,
   Mic,
-  Zap
+  Zap,
+  Search
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -34,6 +35,7 @@ const aiItems = [
   { id: 'visit-report', icon: Mic, label: 'Compte-rendu', path: '/visit-report' },
   { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
   { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach', badge: 'Data' },
+  { id: 'data-explorer', icon: Search, label: 'Data Explorer', path: '/data-explorer' },
 ];
 
 const managerItems = [

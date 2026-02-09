@@ -39,10 +39,10 @@ function analyzePractitionerContext(p: PractitionerProfile): ActionContext {
     ? Math.floor((today.getTime() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
     : 999;
 
-  // Calcul du percentile volume
-  const volumes = allPractitioners.map(pr => pr.metrics.volumeL).sort((a, b) => b - a);
-  const volumeRank = volumes.indexOf(p.metrics.volumeL) + 1;
-  const volumePercentile = Math.round((1 - volumeRank / volumes.length) * 100);
+  // Calcul du percentile volume (utilise le rang réel, pas indexOf qui déduplique)
+  const sortedPractitioners = [...allPractitioners].sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
+  const volumeRank = sortedPractitioners.findIndex(pr => pr.id === p.id) + 1;
+  const volumePercentile = Math.round((1 - volumeRank / sortedPractitioners.length) * 100);
 
   // Analyse tendance fidélité (simulée basée sur les notes récentes)
   const recentNotes = p.notes.filter(n => {
@@ -82,11 +82,11 @@ function analyzePractitionerContext(p: PractitionerProfile): ActionContext {
     });
   });
 
-  // Contexte territorial
+  // Contexte territorial (utilise le rang réel par id)
   const cityPractitioners = allPractitioners.filter(pr => pr.address.city === p.address.city);
-  const cityVolumes = cityPractitioners.map(pr => pr.metrics.volumeL).sort((a, b) => b - a);
-  const cityRank = cityVolumes.indexOf(p.metrics.volumeL) + 1;
-  const cityVolume = cityVolumes.reduce((a, b) => a + b, 0);
+  const sortedCityPractitioners = [...cityPractitioners].sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
+  const cityRank = sortedCityPractitioners.findIndex(pr => pr.id === p.id) + 1;
+  const cityVolume = cityPractitioners.reduce((a, b) => a + b.metrics.volumeL, 0);
 
   return {
     daysSinceVisit,
@@ -99,7 +99,7 @@ function analyzePractitionerContext(p: PractitionerProfile): ActionContext {
       cityTotal: cityPractitioners.length,
       cityVolume,
     },
-    historicalSuccess: 65 + Math.random() * 25, // Simulé pour démo
+    historicalSuccess: 65 + ((p.id.charCodeAt(0) + p.id.charCodeAt(1)) % 25), // Déterministe par praticien
   };
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -107,7 +107,9 @@ export default function AICoach() {
   const { visitReports, userNotes } = useUserDataStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const llmConfigured = isLLMConfigured();
+  const autoSentRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   // Conversation history for the engine (role + content, no UI metadata)
@@ -116,16 +118,20 @@ export default function AICoach() {
   const ragStats = getRAGStats();
   const knowledgeSources = getKnowledgeSources();
 
-  // Suggestions contextuelles - Talk to My Data + Knowledge Base
+  // Suggestions contextuelles — 3 catégories : Data, Stratégie, Connaissances
   const SUGGESTION_CHIPS = [
-    "Montre-moi un graphique des volumes par ville",
-    "Quels KOLs n'ai-je pas vus depuis 60 jours ?",
-    `Qui dois-je voir en priorité ${periodLabel.toLowerCase()} ?`,
-    "Compare les KOLs aux autres praticiens en volume",
-    "Qu'est-ce que la classification GOLD ABE ?",
-    "Quels sont les concurrents d'Air Liquide sur le marché PSAD ?",
-    "Quels sont les seuils d'oxygénothérapie longue durée ?",
-    "Quels sont les indicateurs qualité BPCO en France ?",
+    // Data & Charts
+    "📊 Top 15 praticiens par volume",
+    "📊 Compare KOLs vs autres en volume et fidélité",
+    "📊 Répartition par ville et spécialité",
+    // Stratégie
+    `🎯 Qui voir en priorité ${periodLabel.toLowerCase()} ?`,
+    "🎯 Quels praticiens sont à risque de churn ?",
+    "🎯 Mes KOLs non vus depuis 60 jours",
+    // Connaissances métier
+    "📖 Quels produits propose Air Liquide Santé ?",
+    "📖 Classification GOLD ABE 2025 et traitements",
+    "📖 Concurrents sur le marché PSAD en France",
   ];
 
   // Auto-scroll vers le bas
@@ -311,6 +317,17 @@ export default function AICoach() {
 
     setIsTyping(false);
   }, [periodLabel, practitioners, upcomingVisits, currentUser.objectives, autoSpeak]);
+
+  // Auto-send question from URL ?q= parameter (e.g., from "Demander au Coach IA" button)
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q && !autoSentRef.current && llmConfigured) {
+      autoSentRef.current = true;
+      setSearchParams({}, { replace: true }); // Clear URL param
+      // Small delay to let component mount
+      setTimeout(() => handleSend(q), 300);
+    }
+  }, [searchParams, handleSend, llmConfigured, setSearchParams]);
 
   const clearConversation = () => {
     if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
@@ -698,7 +715,16 @@ export default function AICoach() {
                               {p.daysSinceVisit}j
                             </span>
                           )}
-                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 flex-shrink-0" />
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/pitch?practitionerId=${p.id}`); }}
+                              title="Générer un pitch"
+                              className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                            </button>
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 self-center" />
+                          </div>
                         </motion.div>
                       ))}
                     </div>

@@ -1067,38 +1067,68 @@ export function PitchGenerator() {
 
         {/* Actions finales */}
         {sections.length > 0 && !isGenerating && (
-          <div className="glass-card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
-                  <Check className="w-6 h-6 text-white" />
+          <div className="space-y-4">
+            <div className="glass-card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                    <Check className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-green-800">Pitch pret a l'emploi !</h3>
+                    <p className="text-sm text-green-700">
+                      {sections.length} sections generees pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-green-800">Pitch pret a l'emploi !</h3>
-                  <p className="text-sm text-green-700">
-                    {sections.length} sections generees pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
-                  </p>
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      stop();
+                      setStep('select');
+                      setSelectedPractitioner(null);
+                      setSections([]);
+                      setStreamedText('');
+                    }}
+                    className="btn-secondary flex-1 sm:flex-none"
+                  >
+                    Nouveau pitch
+                  </button>
+                  <button
+                    onClick={copyToClipboard}
+                    className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copie!' : 'Copier tout'}
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-3 w-full sm:w-auto">
+            </div>
+
+            {/* Next Steps CTA */}
+            <div className="glass-card p-4 bg-gradient-to-r from-al-blue-50 to-sky-50 border border-al-blue-200">
+              <p className="text-sm font-semibold text-al-navy mb-3">Prochaines etapes</p>
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => {
-                    stop();
-                    setStep('select');
-                    setSelectedPractitioner(null);
-                    setSections([]);
-                    setStreamedText('');
-                  }}
-                  className="btn-secondary flex-1 sm:flex-none"
+                  onClick={() => navigate(`/visit-report?practitionerId=${selectedPractitioner?.id}`)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700 transition-all"
                 >
-                  Nouveau pitch
+                  <Clock className="w-4 h-4" />
+                  Faire le compte-rendu apres la visite
                 </button>
                 <button
-                  onClick={copyToClipboard}
-                  className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                  onClick={() => navigate(`/practitioner/${selectedPractitioner?.id}`)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-al-blue-50 hover:border-al-blue-200 hover:text-al-blue-700 transition-all"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copie!' : 'Copier tout'}
+                  <FileText className="w-4 h-4" />
+                  Voir le profil complet
+                </button>
+                <button
+                  onClick={() => navigate('/next-actions')}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-all"
+                >
+                  <Zap className="w-4 h-4" />
+                  Voir mes autres actions
                 </button>
               </div>
             </div>

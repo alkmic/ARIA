@@ -1183,7 +1183,8 @@ function formatUserCRMContext(data: UserCRMData, question: string): string {
     const relevantReports = data.visitReports
       .filter(r => {
         // If question mentions a specific practitioner name, prioritize their reports
-        const nameMatch = lowerQ.includes(r.practitionerName.toLowerCase().split(' ').pop() || '');
+        const nameParts = r.practitionerName.toLowerCase().split(' ');
+        const nameMatch = nameParts.some(part => part.length > 2 && lowerQ.includes(part));
         return nameMatch || data.visitReports.indexOf(r) < 5;
       })
       .slice(0, 8);

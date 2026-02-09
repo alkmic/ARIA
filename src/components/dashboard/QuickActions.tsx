@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, MessageCircle, Map, Route, Users, Calendar } from 'lucide-react';
+import { Sparkles, MessageCircle, Map, Route, Mic, Zap } from 'lucide-react';
 
 interface QuickAction {
   id: string;
@@ -14,12 +14,28 @@ interface QuickAction {
 
 const actions: QuickAction[] = [
   {
+    id: 'actions',
+    icon: Zap,
+    label: 'Mes Actions',
+    description: 'Actions IA prioritaires',
+    path: '/next-actions',
+    color: 'from-amber-500 to-red-500',
+  },
+  {
     id: 'pitch',
     icon: Sparkles,
     label: 'Pitch IA',
     description: 'Générer un pitch personnalisé',
     path: '/pitch',
     color: 'from-purple-500 to-indigo-500',
+  },
+  {
+    id: 'visit-report',
+    icon: Mic,
+    label: 'Compte-rendu',
+    description: 'Dicter un CRV vocal',
+    path: '/visit-report',
+    color: 'from-teal-500 to-cyan-500',
   },
   {
     id: 'coach',
@@ -44,22 +60,6 @@ const actions: QuickAction[] = [
     description: 'Visualiser votre secteur',
     path: '/map',
     color: 'from-amber-500 to-orange-500',
-  },
-  {
-    id: 'practitioners',
-    icon: Users,
-    label: 'Praticiens',
-    description: 'Voir votre portefeuille',
-    path: '/practitioners',
-    color: 'from-cyan-500 to-blue-500',
-  },
-  {
-    id: 'visits',
-    icon: Calendar,
-    label: 'Visites',
-    description: 'Gérer votre agenda',
-    path: '/visits',
-    color: 'from-rose-500 to-pink-500',
   },
 ];
 

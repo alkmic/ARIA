@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Phone, Mail, MapPin, TrendingUp, Sparkles, Target,
-  CheckCircle, Lightbulb, Swords, Calendar, Wand2, Newspaper, FileEdit
+  CheckCircle, Lightbulb, Swords, Calendar, Wand2, Newspaper, FileEdit,
+  MessageCircle, Mic
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { Badge } from '../components/ui/Badge';
@@ -169,14 +170,30 @@ export default function PractitionerProfile() {
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Button
               variant="primary"
               className="w-full"
               onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}
             >
               <Wand2 className="w-5 h-5 mr-2" />
-              Générer un pitch
+              Préparer la visite
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => navigate(`/visit-report?practitionerId=${practitioner.id}`)}
+            >
+              <Mic className="w-5 h-5 mr-2" />
+              Compte-rendu de visite
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => navigate(`/coach?q=Analyse complète de ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}`)}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Demander au Coach IA
             </Button>
             <Button variant="secondary" className="w-full">
               <Phone className="w-5 h-5 mr-2" />
@@ -236,6 +253,7 @@ export default function PractitionerProfile() {
 
 // Tab Synthesis
 function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoints: string[] }) {
+  const navigate = useNavigate();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -277,17 +295,33 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           <div className="p-4 bg-white/80 rounded-xl">
             <p className="text-sm font-semibold text-amber-700 mb-2">vs Vivisol</p>
             <p className="text-sm text-slate-600">
-              ✓ Réactivité SAV +30%<br />
-              ✓ Télésuivi inclus gratuitement<br />
-              ✓ Formation patient à domicile
+              ✓ Réactivité SAV +30% (astreinte 24/7)<br />
+              ✓ Télésuivi O₂ inclus gratuitement<br />
+              ✓ Formation patient à domicile par IDE
             </p>
           </div>
           <div className="p-4 bg-white/80 rounded-xl">
             <p className="text-sm font-semibold text-amber-700 mb-2">vs Linde Healthcare</p>
             <p className="text-sm text-slate-600">
-              ✓ Connectivité IoT native<br />
-              ✓ Formation continue incluse<br />
-              ✓ Plateforme digitale dédiée
+              ✓ Connectivité IoT native sur tous les DM<br />
+              ✓ Chronic Care Connect (suivi digital)<br />
+              ✓ Plateforme Orkyn' patient dédiée
+            </p>
+          </div>
+          <div className="p-4 bg-white/80 rounded-xl">
+            <p className="text-sm font-semibold text-amber-700 mb-2">vs SOS Oxygène</p>
+            <p className="text-sm text-slate-600">
+              ✓ Couverture nationale (vs régionale)<br />
+              ✓ Gamme VNI/PPC complète (ALMS)<br />
+              ✓ R&D interne et innovation continue
+            </p>
+          </div>
+          <div className="p-4 bg-white/80 rounded-xl">
+            <p className="text-sm font-semibold text-amber-700 mb-2">vs Bastide Médical</p>
+            <p className="text-sm text-slate-600">
+              ✓ Expertise respiratoire pure (vs multi-activité)<br />
+              ✓ LPPR spécialiste avec forfaits optimisés<br />
+              ✓ Support technique spécialisé 24/7
             </p>
           </div>
         </div>
@@ -300,9 +334,16 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           Prochaine meilleure action
         </h3>
         <p className="text-slate-700 mb-4">{practitioner.nextBestAction}</p>
-        <Button variant="primary" size="sm">
-          Planifier cette action
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="primary" size="sm" onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}>
+            <Wand2 className="w-4 h-4 mr-1" />
+            Préparer le pitch
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/visit-report?practitionerId=${practitioner.id}`)}>
+            <Mic className="w-4 h-4 mr-1" />
+            Compte-rendu
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
@@ -477,15 +518,17 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
   );
 }
 
-// Helper to generate volume history
+// Helper to generate volume history (deterministic, no Math.random() during render)
 function generateVolumeHistory(annualVolume: number) {
   const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
   const monthlyBase = annualVolume / 12;
   const vingtileAvg = monthlyBase * 0.95;
+  // Deterministic seasonal pattern (winter peak for respiratory)
+  const seasonalFactors = [0.92, 0.88, 0.95, 1.0, 1.02, 0.98, 0.90, 0.88, 0.95, 1.05, 1.10, 1.08];
 
-  return months.map(month => ({
+  return months.map((month, i) => ({
     month,
-    volume: Math.round(monthlyBase * (0.85 + Math.random() * 0.3)),
-    vingtileAvg: Math.round(vingtileAvg * (0.95 + Math.random() * 0.1))
+    volume: Math.round(monthlyBase * seasonalFactors[i]),
+    vingtileAvg: Math.round(vingtileAvg * (0.97 + (i % 3) * 0.015))
   }));
 }

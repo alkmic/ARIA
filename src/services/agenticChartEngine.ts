@@ -345,10 +345,10 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
       ? Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24))
       : 999;
 
-    // Calculer le niveau de risque
+    // Calculer le niveau de risque (aligné avec actionIntelligence: >60j/loyalty<5 = high)
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    if (daysSinceVisit > 90 || p.metrics.loyaltyScore < 4) riskLevel = 'high';
-    else if (daysSinceVisit > 60 || p.metrics.loyaltyScore < 6) riskLevel = 'medium';
+    if (daysSinceVisit > 60 || p.metrics.loyaltyScore < 5) riskLevel = 'high';
+    else if (daysSinceVisit > 30 || p.metrics.loyaltyScore < 7) riskLevel = 'medium';
 
     return {
       ...p,
