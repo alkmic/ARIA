@@ -212,7 +212,8 @@ const NOTES_GENERALISTE = [
 // ═══════════════════════════════════════════════════════════
 // TEMPLATES D'ACTUALITÉS ET PUBLICATIONS
 // ═══════════════════════════════════════════════════════════
-const NEWS_TEMPLATES = {
+// Separate news templates per specialty for maximum diversity
+const NEWS_TEMPLATES_PNEUMO = {
   publication: [
     {
       title: "Publication dans l'European Respiratory Journal",
@@ -246,10 +247,28 @@ const NEWS_TEMPLATES = {
         "les bénéfices de l'oxygénothérapie de déambulation",
       ],
     },
+    {
+      title: "Lettre à l'éditeur dans Thorax",
+      contentTemplate: "Commentaire sur {topic}",
+      topics: [
+        "les critères de sevrage de l'oxygénothérapie longue durée",
+        "l'utilisation du NO exhalé dans le suivi BPCO",
+        "la place de la réhabilitation pulmonaire précoce",
+      ],
+    },
+    {
+      title: "Revue systématique dans Respiratory Medicine",
+      contentTemplate: "Analyse de la littérature sur {topic}",
+      topics: [
+        "l'observance de l'OLD au-delà de 15h/jour et mortalité",
+        "la VNI versus l'O2 seul en BPCO sévère hypercapnique",
+        "les dispositifs connectés en pneumologie ambulatoire",
+      ],
+    },
   ],
   certification: [
     {
-      title: "Certification Universitaire en Pneumologie",
+      title: "Certification Universitaire",
       contentTemplate: "Obtention d'un {cert} en {domain}",
       certs: ["DU", "DIU", "Master 2", "Capacité"],
       domains: [
@@ -264,7 +283,7 @@ const NEWS_TEMPLATES = {
   ],
   conference: [
     {
-      title: "Intervention au Congrès de Pneumologie",
+      title: "Intervention au congrès",
       contentTemplate: "Présentation sur {topic} au {event}",
       topics: [
         "les avancées en oxygénothérapie",
@@ -272,13 +291,17 @@ const NEWS_TEMPLATES = {
         "l'éducation thérapeutique du patient respiratoire",
         "l'observance du traitement par O2 au long cours",
         "les parcours de soins innovants en pneumologie",
+        "le rôle du télésuivi en post-hospitalisation BPCO",
+        "les nouvelles cibles thérapeutiques dans l'asthme sévère",
       ],
       events: [
         "Congrès de la SPLF",
         "Congrès ERS (European Respiratory Society)",
         "Journées de Pneumologie Rhône-Alpes",
-        "Congrès CPLF (Congrès de Pneumologie de Langue Française)",
+        "Congrès CPLF",
         "Journées Francophones d'Allergologie",
+        "Assises Nationales de la BPCO",
+        "Congrès CHEST (American College of Chest Physicians)",
       ],
     },
   ],
@@ -292,6 +315,7 @@ const NEWS_TEMPLATES = {
         "son engagement dans l'éducation thérapeutique",
         "son rôle dans l'amélioration du parcours de soins BPCO dans la région",
         "sa participation au réseau sentinelle de surveillance BPCO",
+        "son implication dans le programme de dépistage BPCO en médecine de ville",
       ],
     },
   ],
@@ -299,13 +323,111 @@ const NEWS_TEMPLATES = {
     {
       title: "Organisation d'un événement médical",
       contentTemplate: "{event} sur {topic}",
-      events: ["Formation continue", "Atelier pratique", "Table ronde", "Séminaire", "Journée d'étude"],
+      events: ["Formation continue", "Atelier pratique", "Table ronde", "Séminaire", "Journée d'étude", "Webinaire"],
       topics: [
         "la gestion de l'oxygénothérapie en ville",
         "les nouvelles technologies en assistance respiratoire",
         "le parcours de soins du patient BPCO",
         "l'interprofessionnalité dans la prise en charge respiratoire",
         "les innovations en ventilation à domicile",
+        "l'utilisation des données connectées en pneumologie",
+      ],
+    },
+  ],
+};
+
+const NEWS_TEMPLATES_GENERALISTE = {
+  publication: [
+    {
+      title: "Article dans la Revue du Praticien",
+      contentTemplate: "Publication sur {topic}",
+      topics: [
+        "le dépistage de la BPCO en soins primaires",
+        "la coordination ville-hôpital pour les patients sous O2",
+        "les red flags en consultation pour orientation pneumologique",
+        "l'accompagnement du patient BPCO en médecine générale",
+        "le rôle du médecin traitant dans le renouvellement de l'OLD",
+      ],
+    },
+    {
+      title: "Publication dans Exercer - Revue de médecine générale",
+      contentTemplate: "Retour d'expérience sur {topic}",
+      topics: [
+        "l'organisation de la consultation BPCO en cabinet libéral",
+        "la place de la spirométrie au cabinet du généraliste",
+        "l'éducation thérapeutique du patient insuffisant respiratoire",
+        "le suivi à domicile des patients sous assistance respiratoire",
+      ],
+    },
+    {
+      title: "Contribution au Quotidien du Médecin",
+      contentTemplate: "Tribune sur {topic}",
+      topics: [
+        "l'enjeu du dépistage précoce de la BPCO en France",
+        "la prise en charge ambulatoire de l'insuffisance respiratoire chronique",
+        "l'apport du numérique dans le suivi des maladies chroniques",
+      ],
+    },
+  ],
+  certification: [
+    {
+      title: "Formation certifiante",
+      contentTemplate: "Obtention d'un {cert} en {domain}",
+      certs: ["DU", "DIU", "Attestation", "DPC"],
+      domains: [
+        "éducation thérapeutique du patient",
+        "tabacologie",
+        "médecine du sommeil",
+        "gérontologie et polypathologies",
+        "coordination des soins à domicile",
+        "maladies respiratoires chroniques",
+      ],
+    },
+  ],
+  conference: [
+    {
+      title: "Participation à un congrès",
+      contentTemplate: "Intervention sur {topic} au {event}",
+      topics: [
+        "le repérage des maladies respiratoires en soins primaires",
+        "les outils numériques pour le médecin traitant",
+        "la coordination des acteurs du domicile (HAD, PSAD, IDE)",
+        "l'optimisation du suivi des patients chroniques",
+        "les parcours de soins des patients insuffisants respiratoires",
+      ],
+      events: [
+        "Congrès de la Médecine Générale France",
+        "Journées Nationales de Médecine Générale (JNMG)",
+        "Journées régionales de FMC",
+        "Rencontres de la HAS",
+        "Colloque Soins Primaires et Coordination",
+      ],
+    },
+  ],
+  award: [
+    {
+      title: "Distinction professionnelle",
+      contentTemplate: "Reconnaissance pour {achievement}",
+      achievements: [
+        "son engagement dans le dépistage des maladies respiratoires",
+        "sa qualité de coordination avec les prestataires de santé à domicile",
+        "son rôle de maître de stage universitaire",
+        "son implication dans la maison de santé pluriprofessionnelle",
+        "sa participation active au réseau de soins respiratoire régional",
+      ],
+    },
+  ],
+  event: [
+    {
+      title: "Événement médical local",
+      contentTemplate: "{event} sur {topic}",
+      events: ["Soirée FMC", "Atelier pratique", "Groupe de pairs", "Journée MSP", "Réunion pluriprofessionnelle"],
+      topics: [
+        "le bon usage des dispositifs médicaux respiratoires",
+        "la prise en charge du patient BPCO en médecine de ville",
+        "les innovations du PSAD et télésuivi",
+        "la prévention et le sevrage tabagique",
+        "la gestion des poly-pathologies chez le sujet âgé",
       ],
     },
   ],
@@ -417,19 +539,27 @@ function generateNews(
   rng: () => number,
 ): PractitionerNews[] {
   const news: PractitionerNews[] = [];
-  const newsCount = isKOL ? randomInt(3, 6, rng) : randomInt(0, 2, rng);
+  // KOLs: 3-6, non-KOL pneumologues: 1-3, non-KOL generalistes: 0-2
+  const newsCount = isKOL
+    ? randomInt(3, 6, rng)
+    : specialty === 'Pneumologue'
+      ? randomInt(1, 3, rng)
+      : randomInt(0, 2, rng);
   const usedTitles = new Set<string>();
 
+  // Select specialty-specific templates
+  const NEWS_TEMPLATES = specialty === 'Pneumologue' ? NEWS_TEMPLATES_PNEUMO : NEWS_TEMPLATES_GENERALISTE;
+
+  // Type distribution per specialty
+  const typeDistribution = specialty === 'Pneumologue'
+    ? ['publication', 'publication', 'conference', 'conference', 'certification', 'award', 'event'] as const
+    : ['event', 'event', 'certification', 'publication', 'conference', 'award'] as const;
+
   for (let i = 0; i < newsCount; i++) {
-    // Pneumologues have more publications/conferences, generalistes more events
-    let type: keyof typeof NEWS_TEMPLATES;
-    if (specialty === 'Pneumologue') {
-      type = randomChoice(['publication', 'publication', 'conference', 'certification', 'award', 'event'] as const, rng);
-    } else {
-      type = randomChoice(['event', 'certification', 'event', 'publication'] as const, rng);
-    }
+    const type = randomChoice([...typeDistribution], rng) as keyof typeof NEWS_TEMPLATES;
 
     const templates = NEWS_TEMPLATES[type];
+    if (!templates || templates.length === 0) continue;
     const template: any = randomChoice(templates as any, rng);
 
     let content: string = template.contentTemplate;
@@ -446,20 +576,38 @@ function generateNews(
     if (usedTitles.has(uniqueKey)) continue;
     usedTitles.add(uniqueKey);
 
-    const daysAgo = randomInt(10, 180, rng);
+    const daysAgo = randomInt(10, 200, rng);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
 
+    // More specific relevance messages
+    const relevanceMessages = isKOL
+      ? [
+          `Opportunité de renforcer le partenariat avec ${firstName} ${lastName}`,
+          `Levier de discussion stratégique sur nos innovations`,
+          `Sujet aligné avec notre offre de télésuivi`,
+          `Occasion de proposer un partenariat académique`,
+        ]
+      : [
+          `Point d'accroche pour la prochaine visite`,
+          `Occasion de présenter nos services complémentaires`,
+          `Sujet en lien avec notre gamme de produits`,
+          `Bon prétexte pour reprendre contact`,
+        ];
+
     news.push({
-      id: `news-${i + 1}`,
+      id: `news-${firstName.toLowerCase()}-${i + 1}`,
       date: date.toISOString().split('T')[0],
       title,
       content,
       type,
-      relevance: isKOL
-        ? `Pertinence : Opportunité de renforcer le partenariat avec ${firstName} ${lastName}`
-        : `Pertinence : Point d'accroche pour la prochaine visite`,
-      source: type === 'publication' ? 'Base bibliographique médicale' : undefined,
+      relevance: randomChoice(relevanceMessages, rng),
+      source: type === 'publication' ? randomChoice([
+        'PubMed',
+        'Base bibliographique médicale',
+        'Google Scholar',
+        'SUDOC',
+      ], rng) : undefined,
     });
   }
 

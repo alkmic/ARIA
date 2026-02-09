@@ -364,6 +364,8 @@ Routage:
 - "en camembert/en radar/change en/transforme en/mets ça en/plutôt en" → chart_modify (si graphique précédent)
 - Nom propre identifiable de praticien → practitioner_info
 - Questions sur données CRM praticiens (volumes, visites, fidélité, vingtile, villes, KOL) → data_query
+- "publication/publié/article/actualité/conférence/certification/distinction/événement" + nom de praticien → practitioner_info (avec le nom dans searchTerms.names)
+- "toutes les publications/liste les publications/qui a publié/publications des" (question globale sans nom spécifique) → data_query (dataScope: "full")
 - "priorité/stratégie/recommandation/que faire" → strategic_advice
 - Questions sur BPCO, oxygénothérapie, GOLD, HAS, réglementation, LPPR, concurrence, Vivisol, Orkyn', Air Liquide (organisation, produits, services), OLD, OCT, spirométrie, traitements, classification, exacerbation, télésuivi, dispositifs, ventilateurs, masques, PPC → knowledge_query
 - "qu'est-ce que/c'est quoi/explique/définition/comment fonctionne" → knowledge_query
@@ -398,7 +400,7 @@ Tu combines quatre expertises rares :
 - Les **praticiens** (médecins prescripteurs) : pneumologues et médecins généralistes
 - Leurs **métriques** : volumes de prescription, fidélité, vingtile, statut KOL, risque de churn
 - Leurs **coordonnées** : adresse, téléphone, email
-- Leurs **publications** et actualités académiques
+- Leurs **publications scientifiques**, actualités académiques, conférences, certifications et distinctions — tu peux chercher les publications d'un praticien spécifique ou lister toutes les publications par type/prénom
 - L'**historique de visites** et notes de visite
 - Les **statistiques du territoire** : objectifs, répartitions géographiques
 
@@ -895,6 +897,38 @@ function buildTargetedContext(
     }
   }
 
+  // ── News/Publications Injection ─────────────────────────────────────────
+  // For questions about publications, actualités, news across practitioners
+  const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'award', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'publications des', 'a publié', 'a publie'];
+  const lowerQuestion = question.toLowerCase();
+  const isNewsQuery = newsKeywords.some(kw => lowerQuestion.includes(kw));
+
+  if (isNewsQuery) {
+    // If the question targets a specific practitioner, their news is already in context via getCompletePractitionerContext
+    // But for cross-practitioner queries ("toutes les publications des Bernard"), we need the full digest
+    const hasSpecificName = routing.searchTerms.names.length > 0;
+
+    if (!hasSpecificName || routing.dataScope === 'filtered' || routing.dataScope === 'full') {
+      // Full news digest for cross-practitioner queries
+      context += DataService.getNewsDigestForLLM(60);
+    } else {
+      // For specific names, also search news specifically in case the context missed something
+      for (const name of routing.searchTerms.names) {
+        const newsResults = DataService.searchNews(name);
+        if (newsResults.length > 0) {
+          context += `\n## Actualités trouvées pour "${name}" (${newsResults.length})\n`;
+          for (const item of newsResults.slice(0, 10)) {
+            const dateStr = new Date(item.news.date).toLocaleDateString('fr-FR');
+            context += `- [${dateStr}] ${item.practitioner.title} ${item.practitioner.firstName} ${item.practitioner.lastName} : "${item.news.title}" (${item.news.type})`;
+            if (item.news.content) context += ` — ${item.news.content}`;
+            if (item.news.source) context += ` | Source: ${item.news.source}`;
+            context += '\n';
+          }
+        }
+      }
+    }
+  }
+
   // ── RAG Knowledge Injection ──────────────────────────────────────────────
   // For knowledge queries or when the question touches métier topics,
   // retrieve relevant chunks from the knowledge base and append them.
@@ -1126,6 +1160,13 @@ ${atRisk.slice(0, 8).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.ad
 ## Répartition par Ville
 ${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `- ${city}: ${count}`).join('\n')}
 ${searchContext}`;
+
+  // ── News/Publications Injection (fallback path) ────────────────────────
+  const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'a publié', 'a publie'];
+  const lowerQ = question.toLowerCase();
+  if (newsKeywords.some(kw => lowerQ.includes(kw))) {
+    context += DataService.getNewsDigestForLLM(40);
+  }
 
   // ── RAG Knowledge Injection (fallback path) ────────────────────────────
   if (shouldUseRAG(question)) {
