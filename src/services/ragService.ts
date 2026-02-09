@@ -80,6 +80,22 @@ const KEYWORD_TAG_MAP: Record<string, KnowledgeTag[]> = {
   'al': ['air_liquide'],
   'groupe': ['air_liquide'],
   'healthcare': ['air_liquide'],
+  'produit': ['air_liquide', 'dispositif_medical'],
+  'produits': ['air_liquide', 'dispositif_medical'],
+  'catalogue': ['air_liquide', 'dispositif_medical'],
+  'gamme': ['air_liquide', 'dispositif_medical'],
+  'offre': ['air_liquide', 'orkyn'],
+  'service': ['air_liquide', 'orkyn'],
+  'services': ['air_liquide', 'orkyn'],
+  'solution': ['air_liquide', 'orkyn'],
+  'solutions': ['air_liquide', 'orkyn'],
+  'propose': ['air_liquide'],
+  'vend': ['air_liquide'],
+  'vendu': ['air_liquide'],
+  'matériel': ['dispositif_medical', 'oxygenotherapie'],
+  'materiel': ['dispositif_medical', 'oxygenotherapie'],
+  'équipement': ['dispositif_medical'],
+  'equipement': ['dispositif_medical'],
 
   // Orkyn
   'orkyn': ['orkyn', 'air_liquide'],
@@ -206,6 +222,15 @@ const KEYWORD_CATEGORY_MAP: Record<string, KnowledgeCategory[]> = {
   'orkyn': ['orkyn'],
   'alms': ['alms_devices'],
   'dispositif': ['alms_devices'],
+  'produit': ['air_liquide_corporate', 'orkyn', 'alms_devices'],
+  'produits': ['air_liquide_corporate', 'orkyn', 'alms_devices'],
+  'catalogue': ['air_liquide_corporate', 'orkyn', 'alms_devices'],
+  'gamme': ['air_liquide_corporate', 'orkyn', 'alms_devices'],
+  'service': ['orkyn', 'air_liquide_corporate'],
+  'services': ['orkyn', 'air_liquide_corporate'],
+  'offre': ['orkyn', 'air_liquide_corporate'],
+  'solution': ['orkyn', 'air_liquide_corporate', 'telesuivi'],
+  'matériel': ['alms_devices', 'oxygenotherapie'],
   'bpco': ['bpco_gold', 'bpco_has', 'bpco_clinique'],
   'gold': ['bpco_gold'],
   'has': ['bpco_has'],
@@ -265,21 +290,40 @@ function analyzeQuery(question: string): QueryAnalysis {
 
   // Detect if this is a "métier" question (about industry knowledge, not CRM data)
   const metierIndicators = [
+    // Produits / Services / Catalogue
+    'produit', 'produits', 'catalogue', 'gamme', 'offre', 'offres',
+    'service', 'services', 'solution', 'solutions', 'dispositif',
+    'matériel', 'materiel', 'équipement', 'equipement',
+    'que vend', 'que propose', 'quoi vend', 'quoi propose',
+    'vendu', 'vendus', 'commercialise', 'distribue',
+    // Pathologies & Clinique
     'bpco', 'oxygène', 'oxygene', 'o2', 'gold', 'has', 'lppr', 'lpp',
-    'concurrent', 'vivisol', 'orkyn', 'air liquide', 'réglementation',
+    'réglementation', 'reglementation',
     'remboursement', 'tarif', 'forfait', 'épidémiologie', 'prévalence',
-    'mortalité', 'classification', 'spirométrie', 'vems', 'exacerbation',
+    'mortalité', 'classification', 'spirométrie', 'spirometrie', 'vems', 'exacerbation',
     'traitement', 'recommandation', 'indication', 'old', 'oct',
-    'concentrateur', 'ventilation', 'vni', 'ppc', 'apnée', 'sommeil',
-    'télésuivi', 'télésurveillance', 'parcours de soins',
-    'qu\'est-ce que', 'c\'est quoi', 'explique', 'définition',
-    'comment fonctionne', 'quel est le', 'quels sont les',
-    'parle-moi de', 'donne-moi des infos', 'informations sur',
-    'marché', 'psad', 'dispositif médical', 'médicament',
+    'concentrateur', 'extracteur', 'ventilation', 'ventilateur', 'vni', 'ppc', 'cpap',
+    'apnée', 'apnee', 'sommeil', 'masque',
+    'télésuivi', 'telesuivi', 'télésurveillance', 'telesurveillance', 'parcours de soins',
+    // Questions ouvertes
+    'qu\'est-ce que', 'c\'est quoi', 'explique', 'définition', 'definition',
+    'comment fonctionne', 'quel est le', 'quels sont les', 'quelles sont',
+    'parle-moi de', 'donne-moi des infos', 'informations sur', 'dis-moi',
+    // Concurrence & Marché
+    'concurrent', 'concurrence', 'vivisol', 'france oxygène', 'france oxygene',
+    'bastide', 'sos oxygène', 'linde', 'marché', 'marche', 'psad',
+    // Organisations
+    'orkyn', 'air liquide', 'alms', 'alsf',
+    'chronic care', 'event', 'melchior',
+    // Médical
+    'dispositif médical', 'médicament', 'medicament',
     'patient', 'prescription', 'médecin', 'pneumologue',
     'tabac', 'tabagisme', 'sevrage', 'vaccination',
     'ameli', 'sécurité sociale', 'assurance maladie',
-    'chronic care', 'alms', 'event', 'melchior',
+    // Gaz médicaux
+    'gaz médic', 'gaz medic', 'oxygène médic', 'oxygene medic',
+    'cuve', 'bouteille', 'déambulation', 'deambulation',
+    'perfusion', 'nutrition', 'diabète', 'diabete', 'parkinson', 'neurologie',
   ];
 
   const isMetierQuestion = metierIndicators.some(ind => normalized.includes(ind));

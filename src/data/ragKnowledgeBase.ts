@@ -433,6 +433,123 @@ ALMS est un acteur reconnu de l'innovation dans le domaine respiratoire, avec un
   },
 
   // ──────────────────────────────────────────────────────────────────────────
+  // 1.3b CATALOGUE PRODUITS & SERVICES — Vue d'ensemble Air Liquide Santé
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: 'al-catalogue-complet',
+    title: 'Air Liquide Santé — Catalogue complet des produits et services',
+    content: `Catalogue des produits et services d'Air Liquide Santé (vue d'ensemble de toutes les filiales) :
+
+**1. OXYGÉNOTHÉRAPIE (Orkyn' + ALSF)**
+- Concentrateurs d'oxygène fixes (jusqu'à 5 L/min, fonctionnement électrique)
+- Concentrateurs d'oxygène portables (pour la déambulation, acceptés en avion)
+- Oxygène liquide médical : cuves fixes + portables rechargeables (haute autonomie)
+- Bouteilles d'oxygène gazeux comprimé (200 bar) pour secours et déplacements
+- Oxygène médicinal Air Liquide Santé France (AMM, O₂ ≥ 99,5%)
+- Consommables : lunettes nasales, masques à oxygène, tubulures, humidificateurs
+- Forfait OLD (Oxygénothérapie Longue Durée >15h/j)
+- Forfait OCT (Oxygénothérapie Courte Durée)
+- Forfait ODYSP (dyspnée soins palliatifs)
+
+**2. VENTILATION & RESPIRATOIRE (ALMS + Orkyn')**
+- Ventilateurs domicile pour Ventilation Non Invasive (VNI)
+- Ventilateurs pour ventilation invasive (trachéotomie)
+- Appareils PPC/CPAP (Pression Positive Continue) pour l'apnée du sommeil
+- Masques VNI : nasaux, faciaux, narinaires — interfaces patient ALMS
+- Bag CPAP néonatal (ventilation des nouveau-nés)
+- Humidificateurs chauffants pour circuits de ventilation
+- Consommables ventilation : circuits, filtres, joints, harnais
+
+**3. GAZ MÉDICINAUX HÔPITAUX (ALSF)**
+- Oxygène médicinal (bouteilles et réseaux hospitaliers)
+- Protoxyde d'azote médical
+- Mélange MEOPA (50% O₂ / 50% N₂O — analgésie procédurale)
+- Hélium médical (Héliox — bronchospasme sévère)
+- Azote médical (cryochirurgie, cryoconservation)
+- Air médical (alimentation respirateurs)
+- Installation et maintenance de réseaux de gaz hospitaliers
+- Audit sécurité des installations de gaz médicaux
+
+**4. PERFUSION À DOMICILE (Orkyn')**
+- Pompes à perfusion ambulatoires (antibiothérapie IV, chimiothérapie, nutrition parentérale)
+- Diffuseurs portables
+- Consommables de perfusion
+
+**5. DIABÈTE (Orkyn')**
+- Pompes à insuline externes
+- Capteurs de glycémie en continu (CGM)
+- Consommables diabète (cathéters, réservoirs, sets de perfusion)
+
+**6. NEUROLOGIE (Orkyn')**
+- Pompes à apomorphine (traitement de la maladie de Parkinson avancée)
+- Consommables neurologie
+
+**7. NUTRITION (Orkyn')**
+- Nutrition entérale à domicile (sondes, pompes, poches)
+- Nutrition parentérale à domicile
+
+**8. SOLUTIONS NUMÉRIQUES & TÉLÉSUIVI**
+- Plateformes de télésuivi PPC (observance apnée du sommeil)
+- Télésuivi VNI (algorithmes d'alertes, cellule experte)
+- Chronic Care Connect (télésurveillance insuffisance cardiaque & diabète)
+- Applications patient et portails professionnels
+
+**9. SERVICES ASSOCIÉS**
+- Installation et mise en service à domicile
+- Formation des patients (éducation thérapeutique)
+- Astreinte 24h/24, 7j/7
+- Maintenance préventive et curative
+- Livraison d'oxygène et consommables
+- Coordination ville-hôpital
+- Pré-visite pharmacien
+
+Au total, Air Liquide Santé couvre environ **25-30 familles de produits et services** à travers ses filiales, répartis sur 8 domaines thérapeutiques principaux.`,
+    category: 'air_liquide_corporate',
+    tags: ['air_liquide', 'orkyn', 'dispositif_medical', 'oxygenotherapie', 'ventilation', 'sommeil'],
+    source: 'Synthèse Air Liquide Healthcare / Orkyn\' / ALMS / ALSF',
+    sourceUrl: 'https://healthcare.airliquide.com/fr/nos-activites-dans-la-sante-en-bref',
+    date: '2025',
+    priority: 1,
+  },
+  {
+    id: 'al-services-domicile-detail',
+    title: 'Air Liquide / Orkyn\' — Services de santé à domicile (détail)',
+    content: `Services proposés par Air Liquide / Orkyn' dans le cadre de la santé à domicile :
+
+**Modèle de service PSAD :**
+Orkyn' ne vend pas directement des produits aux patients. Le modèle économique repose sur des **forfaits de prestations** remboursés par l'Assurance Maladie (LPPR). Chaque forfait inclut :
+- Le dispositif médical (prêt ou location)
+- L'installation et la mise en service au domicile du patient
+- La formation initiale du patient et de ses aidants
+- La maintenance préventive et curative
+- Le renouvellement des consommables
+- L'astreinte 24h/24, 7j/7 pour les urgences
+- Le suivi régulier par un technicien ou infirmier
+
+**Prestations respiratoires (cœur de métier) :**
+- Oxygénothérapie : installation concentrateur ou cuve O₂ liquide, livraison bouteilles, suivi SpO₂
+- Ventilation : installation et réglage VNI, suivi observance, télésuivi avec alertes
+- Apnée du sommeil : PPC avec télésuivi obligatoire, choix du masque, accompagnement observance
+
+**Valeur ajoutée différenciante :**
+- Réseau national de 62 sites = proximité géographique
+- Pharmaciens responsables de la conformité réglementaire
+- Cellule experte infirmiers pour le télésuivi VNI
+- Coordination ville-hôpital (lien prescripteur-patient)
+- Programme d'éducation thérapeutique structuré
+- Partenariats technologiques (FeetMe, beatHealth, Libheros)
+
+**Nombre de produits au catalogue :**
+En combinant l'ensemble des filiales (Orkyn', ALMS, ALSF), Air Liquide Santé France propose environ **25 à 30 familles de produits/dispositifs médicaux** et une dizaine de **services associés**, couvrant 8 domaines thérapeutiques (respiratoire, sommeil, diabète, neurologie, nutrition, perfusion, gaz médicaux hospitaliers, solutions numériques).`,
+    category: 'orkyn',
+    tags: ['orkyn', 'air_liquide', 'dispositif_medical', 'oxygenotherapie'],
+    source: 'Synthèse Orkyn\' / Air Liquide Healthcare',
+    sourceUrl: 'https://www.orkyn.fr/',
+    date: '2025',
+    priority: 1,
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
   // 1.4 ORKYN' (PSAD — Santé à domicile France)
   // ──────────────────────────────────────────────────────────────────────────
   {
