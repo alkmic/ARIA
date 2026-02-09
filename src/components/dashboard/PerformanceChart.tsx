@@ -22,13 +22,13 @@ export const PerformanceChart: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.6 }}
-      className="glass-card p-6"
+      className="glass-card p-3 sm:p-4"
     >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-slate-800">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-bold text-slate-800">
           Performance {periodLabelShort}
         </h2>
-        <div className="flex gap-4 text-sm">
+        <div className="flex gap-3 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-al-blue-500" />
             <span className="text-slate-600">Vos volumes</span>
@@ -97,16 +97,16 @@ export const PerformanceChart: React.FC = () => {
         </AreaChart>
       </ResponsiveContainer>
 
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="text-center">
           <p className="text-xs text-slate-600 mb-0.5">Volume total</p>
-          <p className="text-lg sm:text-xl font-bold text-slate-800">
+          <p className="text-base font-bold text-slate-800">
             {(periodVolume / 1000).toFixed(0)}K L
           </p>
         </div>
         <div className="text-center">
           <p className="text-xs text-slate-600 mb-0.5">Vs Objectif</p>
-          <p className="text-lg sm:text-xl font-bold text-success">
+          <p className="text-base font-bold text-success">
             {(() => {
               const objective = performanceData.reduce((acc, d) => acc + (d.objective || 0), 0);
               if (!objective) return '+0%';
@@ -117,7 +117,7 @@ export const PerformanceChart: React.FC = () => {
         </div>
         <div className="text-center">
           <p className="text-xs text-slate-600 mb-0.5">Vs Équipe</p>
-          <p className="text-lg sm:text-xl font-bold text-al-blue-500">
+          <p className="text-base font-bold text-al-blue-500">
             {(() => {
               const teamAvg = performanceData.reduce((acc, d) => acc + (d.teamAverage || 0), 0);
               if (!teamAvg) return '+0%';

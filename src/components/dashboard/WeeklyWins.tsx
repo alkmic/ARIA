@@ -24,10 +24,10 @@ export function WeeklyWins() {
   ];
 
   return (
-    <div className="glass-card p-4 sm:p-6">
-      <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4">Cette semaine</h3>
+    <div className="glass-card p-3 sm:p-4">
+      <h3 className="font-bold text-sm mb-2">Cette semaine</h3>
 
-      <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+      <div className="space-y-2 mb-3">
         {wins.map((win, i) => (
           <motion.div
             key={i}
@@ -47,10 +47,10 @@ export function WeeklyWins() {
         ))}
       </div>
 
-      <div className="pt-3 sm:pt-4 border-t border-slate-100 space-y-1.5 sm:space-y-2">
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
         {pending.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
-            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+          <div key={i} className="flex items-center gap-2 text-xs">
+            <Clock className="w-3 h-3 text-slate-400 flex-shrink-0" />
             <span className="flex-1 text-slate-500">{item.label}</span>
             <span className="font-medium text-slate-700">{item.value}</span>
           </div>
@@ -59,10 +59,10 @@ export function WeeklyWins() {
 
       <button
         onClick={() => navigate('/visits')}
-        className="mt-3 sm:mt-4 w-full text-xs sm:text-sm text-al-blue-500 hover:underline flex items-center justify-center gap-1"
+        className="mt-2 w-full text-xs text-al-blue-500 hover:underline flex items-center justify-center gap-1"
       >
         Voir l'historique complet
-        <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+        <ChevronRight className="w-3 h-3" />
       </button>
     </div>
   );

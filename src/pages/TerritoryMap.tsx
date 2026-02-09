@@ -122,11 +122,13 @@ export default function TerritoryMap() {
         const coords = CITY_COORDS[cityKey];
         if (!coords) return null;
 
-        // Ajouter un léger offset aléatoire pour éviter la superposition
-        const offset = () => (Math.random() - 0.5) * 0.02;
+        // Ajouter un offset déterministe basé sur l'ID pour éviter la superposition
+        const idHash = p.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const latOffset = ((idHash % 100) - 50) / 5000;
+        const lngOffset = (((idHash * 7) % 100) - 50) / 5000;
         return {
           ...p,
-          coords: [coords[0] + offset(), coords[1] + offset()] as [number, number],
+          coords: [coords[0] + latOffset, coords[1] + lngOffset] as [number, number],
         };
       })
       .filter(Boolean);

@@ -175,17 +175,18 @@ export function calculatePeriodMetrics(
   ).length;
 
   // Croissance simulée (réaliste et cohérente)
-  const baseVolumeGrowth = 15; // 15% annuel
+  // Croissance annuelle cible: ~8% volume, ~5% visites (réaliste pharma)
+  const baseVolumeGrowth = 8;
   const volumeGrowth =
     period === 'year' ? baseVolumeGrowth :
-    period === 'quarter' ? Math.round(baseVolumeGrowth / 4) :
-    Math.round(baseVolumeGrowth / 12);
+    period === 'quarter' ? Math.round(baseVolumeGrowth * 0.8) : // trimestre: légèrement inférieur car fenêtre plus courte
+    Math.round(baseVolumeGrowth * 0.6); // mois: variation mensuelle
 
-  const baseVisitGrowth = 12;
+  const baseVisitGrowth = 5;
   const visitGrowth =
     period === 'year' ? baseVisitGrowth :
-    period === 'quarter' ? Math.round(baseVisitGrowth / 4) :
-    Math.round(baseVisitGrowth / 12);
+    period === 'quarter' ? Math.round(baseVisitGrowth * 0.8) :
+    Math.round(baseVisitGrowth * 0.5);
 
   return {
     visitsCount,
@@ -240,17 +241,17 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
   };
 
   if (period === 'month') {
-    // Pour le mois, afficher les 4 dernières semaines
+    // Pour le mois: 4 semaines, volumes hebdomadaires (~10-15K L/semaine)
     return Array.from({ length: 4 }, (_, i) => ({
       month: `S${i + 1}`,
       actual: 12 + Math.floor(seededRandom(i) * 8),
       objective: 15,
       previousYear: 10 + Math.floor(seededRandom(i + 100) * 5),
-      yourVolume: 40000 + Math.floor(seededRandom(i + 200) * 20000),
-      teamAverage: 35000 + Math.floor(seededRandom(i + 300) * 15000),
+      yourVolume: 10000 + Math.floor(seededRandom(i + 200) * 5000),
+      teamAverage: 9000 + Math.floor(seededRandom(i + 300) * 4000),
     }));
   } else if (period === 'quarter') {
-    // Pour le trimestre, afficher les 3 mois
+    // Pour le trimestre: 3 mois, volumes mensuels (~40-60K L/mois)
     const quarterStart = Math.floor(currentMonth / 3) * 3;
     return Array.from({ length: 3 }, (_, i) => {
       const monthIndex = quarterStart + i;
@@ -259,19 +260,19 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
         actual: 45 + Math.floor(seededRandom(monthIndex) * 20),
         objective: 60,
         previousYear: 40 + Math.floor(seededRandom(monthIndex + 100) * 15),
-        yourVolume: 120000 + Math.floor(seededRandom(monthIndex + 200) * 50000),
-        teamAverage: 110000 + Math.floor(seededRandom(monthIndex + 300) * 40000),
+        yourVolume: 40000 + Math.floor(seededRandom(monthIndex + 200) * 20000),
+        teamAverage: 35000 + Math.floor(seededRandom(monthIndex + 300) * 18000),
       };
     });
   } else {
-    // Pour l'année, afficher tous les mois jusqu'au mois actuel
+    // Pour l'année: mois par mois, volumes mensuels (~40-60K L/mois)
     return Array.from({ length: currentMonth + 1 }, (_, i) => ({
       month: months[i],
       actual: 45 + Math.floor(seededRandom(i) * 20),
       objective: 60,
       previousYear: 40 + Math.floor(seededRandom(i + 100) * 15),
-      yourVolume: 120000 + Math.floor(seededRandom(i + 200) * 50000),
-      teamAverage: 110000 + Math.floor(seededRandom(i + 300) * 40000),
+      yourVolume: 40000 + Math.floor(seededRandom(i + 200) * 20000),
+      teamAverage: 35000 + Math.floor(seededRandom(i + 300) * 18000),
     }));
   }
 }

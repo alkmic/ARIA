@@ -24,8 +24,9 @@ import {
   type ChartHistory,
 } from './agenticChartEngine';
 import { universalSearch } from './universalSearch';
-import { calculatePeriodMetrics, getTopPractitioners } from './metricsCalculator';
+import { calculatePeriodMetrics, getTopPractitioners, getPerformanceDataForPeriod } from './metricsCalculator';
 import { retrieveKnowledge, shouldUseRAG } from './ragService';
+import { generateIntelligentActions } from './actionIntelligence';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
 
@@ -897,10 +898,60 @@ function buildTargetedContext(
     }
   }
 
+  // ── AI Actions Injection ────────────────────────────────────────────────
+  // Inject top AI-generated actions for strategic queries
+  const actionKeywords = ['action', 'priorité', 'priorite', 'recommandation', 'que faire', 'quoi faire', 'prochaine', 'prochain', 'urgent', 'planifier', 'stratégie', 'strategie', 'agenda', 'semaine', 'planning'];
+  const lowerQuestion = question.toLowerCase();
+  const isActionQuery = actionKeywords.some(kw => lowerQuestion.includes(kw)) || routing.intent === 'strategic_advice';
+
+  if (isActionQuery) {
+    try {
+      const actions = generateIntelligentActions({ maxActions: 8 });
+      if (actions.length > 0) {
+        const priorityLabels: Record<string, string> = { critical: 'CRITIQUE', high: 'Haute', medium: 'Moyenne', low: 'Faible' };
+        context += `\n## Actions IA Recommandées (${actions.length})\n`;
+        actions.forEach((a, i) => {
+          const practitioner = DataService.getPractitionerById(a.practitionerId);
+          const pName = practitioner ? `${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}` : a.practitionerId;
+          context += `${i + 1}. [${priorityLabels[a.priority] || a.priority}] ${a.title} — ${pName}\n`;
+          context += `   Raison: ${a.reason} | Score: ${a.scores.overall}/100 | Date suggérée: ${a.suggestedDate}\n`;
+        });
+      }
+    } catch { /* ignore action generation errors */ }
+  }
+
+  // ── Upcoming Visits Injection ──────────────────────────────────────────
+  const visitKeywords = ['visite', 'visites', 'rendez-vous', 'rdv', 'agenda', 'aujourd', 'demain', 'semaine', 'planning', 'tournée', 'tournee', 'jour'];
+  const isVisitQuery = visitKeywords.some(kw => lowerQuestion.includes(kw));
+
+  if (isVisitQuery && upcomingVisits.length > 0) {
+    context += `\n## Visites Planifiées (${upcomingVisits.length} prochaines)\n`;
+    upcomingVisits.slice(0, 10).forEach(v => {
+      context += `- ${v.date} ${v.time} — ${v.practitioner} (${v.specialty || ''}, ${v.city || ''})\n`;
+    });
+  }
+
+  // ── Performance Trends Injection ───────────────────────────────────────
+  const perfKeywords = ['performance', 'résultat', 'resultat', 'volume', 'tendance', 'trend', 'progression', 'évolution', 'evolution', 'objectif', 'atteinte', 'kpi'];
+  const isPerfQuery = perfKeywords.some(kw => lowerQuestion.includes(kw));
+
+  if (isPerfQuery) {
+    const perfData = getPerformanceDataForPeriod('month');
+    if (perfData.length > 0) {
+      const totalVol = perfData.reduce((s, d) => s + d.yourVolume, 0);
+      const totalObj = perfData.reduce((s, d) => s + (d.objective || 0), 0);
+      const totalTeam = perfData.reduce((s, d) => s + (d.teamAverage || 0), 0);
+      context += `\n## Performance Mensuelle\n`;
+      context += `- Volume total mois: ${(totalVol / 1000).toFixed(0)}K L\n`;
+      if (totalObj > 0) context += `- Vs Objectif: ${((totalVol / totalObj - 1) * 100).toFixed(1)}%\n`;
+      if (totalTeam > 0) context += `- Vs Moyenne équipe: ${((totalVol / totalTeam - 1) * 100).toFixed(1)}%\n`;
+      context += `- Détail: ${perfData.map(d => `${d.month}: ${(d.yourVolume / 1000).toFixed(0)}K`).join(', ')}\n`;
+    }
+  }
+
   // ── News/Publications Injection ─────────────────────────────────────────
   // For questions about publications, actualités, news across practitioners
   const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'award', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'publications des', 'a publié', 'a publie'];
-  const lowerQuestion = question.toLowerCase();
   const isNewsQuery = newsKeywords.some(kw => lowerQuestion.includes(kw));
 
   if (isNewsQuery) {
@@ -1161,9 +1212,34 @@ ${atRisk.slice(0, 8).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.ad
 ${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `- ${city}: ${count}`).join('\n')}
 ${searchContext}`;
 
+  // ── AI Actions Injection (fallback path) ────────────────────────────────
+  const actionKeywords = ['action', 'priorité', 'priorite', 'recommandation', 'que faire', 'quoi faire', 'prochaine', 'prochain', 'urgent', 'planifier', 'stratégie', 'strategie'];
+  const lowerQ = question.toLowerCase();
+  if (actionKeywords.some(kw => lowerQ.includes(kw))) {
+    try {
+      const actions = generateIntelligentActions({ maxActions: 5 });
+      if (actions.length > 0) {
+        context += `\n## Actions IA Recommandées (${actions.length})\n`;
+        actions.forEach((a, i) => {
+          const practitioner = DataService.getPractitionerById(a.practitionerId);
+          const pName = practitioner ? `${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}` : a.practitionerId;
+          context += `${i + 1}. [${a.priority}] ${a.title} — ${pName} | Score: ${a.scores.overall}/100\n`;
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── Upcoming Visits Injection (fallback path) ──────────────────────────
+  const visitKeywords = ['visite', 'visites', 'rendez-vous', 'rdv', 'agenda', 'aujourd', 'demain', 'semaine', 'planning', 'tournée', 'tournee'];
+  if (visitKeywords.some(kw => lowerQ.includes(kw)) && upcomingVisits.length > 0) {
+    context += `\n## Visites Planifiées (${upcomingVisits.length})\n`;
+    upcomingVisits.slice(0, 8).forEach(v => {
+      context += `- ${v.date} ${v.time} — ${v.practitioner}\n`;
+    });
+  }
+
   // ── News/Publications Injection (fallback path) ────────────────────────
   const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'a publié', 'a publie'];
-  const lowerQ = question.toLowerCase();
   if (newsKeywords.some(kw => lowerQ.includes(kw))) {
     context += DataService.getNewsDigestForLLM(40);
   }

@@ -106,25 +106,31 @@ export default function ManagerDashboard() {
     const periodMultiplier = timePeriod === 'month' ? 1 : timePeriod === 'quarter' ? 3 : 12;
     const volumeMultiplier = timePeriod === 'month' ? 1/12 : timePeriod === 'quarter' ? 1/4 : 1;
 
-    return teamMembers.map(member => {
+    // Seed-based pseudo-random for deterministic values per member
+    const memberSeed = (idx: number, offset: number) => {
+      const x = Math.sin((idx + 1) * 9999 + offset) * 10000;
+      return x - Math.floor(x);
+    };
+
+    return teamMembers.map((member, memberIdx) => {
       // Simulate assignment of practitioners to team members
       const memberPractitioners = practitioners.filter((_, idx) =>
-        idx % teamMembers.length === teamMembers.indexOf(member)
+        idx % teamMembers.length === memberIdx
       );
 
-      // Visites adaptées à la période
-      const baseVisits = Math.floor(Math.random() * 20) + 40;
+      // Visites adaptées à la période (déterministes)
+      const baseVisits = Math.floor(memberSeed(memberIdx, 1) * 20) + 40;
       const visits = Math.floor(baseVisits * periodMultiplier);
       const adjustedObjective = member.objective * periodMultiplier;
 
       // Volume adapté à la période
       const volume = memberPractitioners.reduce((sum, p) => sum + (p.volumeL * volumeMultiplier), 0);
 
-      // Nouveaux prescripteurs adaptés à la période
-      const baseNewPrescribers = Math.floor(Math.random() * 10) + 5;
+      // Nouveaux prescripteurs adaptés à la période (déterministes)
+      const baseNewPrescribers = Math.floor(memberSeed(memberIdx, 2) * 10) + 5;
       const newPrescribers = Math.floor(baseNewPrescribers * periodMultiplier);
 
-      const satisfaction = 7 + Math.random() * 2;
+      const satisfaction = 7 + memberSeed(memberIdx, 3) * 2;
       const kolCoverage = memberPractitioners.filter(p => p.isKOL).length;
 
       return {
@@ -286,7 +292,7 @@ export default function ManagerDashboard() {
               style={{ width: `${Math.min(avgProgress, 100)}%` }}
             />
           </div>
-          <p className="text-[10px] sm:text-xs text-slate-500 mt-1">
+          <p className="text-xs sm:text-xs text-slate-500 mt-1">
             {totalVisits}/{totalObjective} objectif
           </p>
         </motion.div>
@@ -357,7 +363,7 @@ export default function ManagerDashboard() {
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{metrics.kolCount}</p>
           <p className="text-slate-500 text-xs sm:text-sm">KOLs dans le réseau</p>
-          <p className="text-[10px] sm:text-xs text-amber-600 mt-1">
+          <p className="text-xs sm:text-xs text-amber-600 mt-1">
             {metrics.undervisitedKOLs} non visités {'>'}60j
           </p>
         </motion.div>
@@ -373,7 +379,7 @@ export default function ManagerDashboard() {
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{metrics.atRisk}</p>
           <p className="text-slate-500 text-xs sm:text-sm">Praticiens à risque</p>
-          <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Fidélité faible</p>
+          <p className="text-xs sm:text-xs text-slate-400 mt-1">Fidélité faible</p>
         </motion.div>
       </div>
 

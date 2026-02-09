@@ -52,11 +52,11 @@ export const VingtileDistribution: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.5 }}
-      className="glass-card p-6"
+      className="glass-card p-3 sm:p-4"
     >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
-          <Layers className="w-5 h-5 text-al-blue-500" />
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-bold text-slate-800 flex items-center space-x-2">
+          <Layers className="w-4 h-4 text-al-blue-500" />
           <span>Distribution par Vingtile</span>
         </h2>
 
@@ -96,7 +96,7 @@ export const VingtileDistribution: React.FC = () => {
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width="100%" height={200}>
         <BarChart data={vingtileData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
           <XAxis
@@ -142,38 +142,38 @@ export const VingtileDistribution: React.FC = () => {
       </ResponsiveContainer>
 
       {/* Key insights */}
-      <div className="mt-6 grid grid-cols-3 gap-4">
-        <div className="p-4 bg-gradient-to-br from-al-blue-50 to-al-sky/10 rounded-lg border border-al-blue-100">
-          <div className="flex items-center space-x-2 mb-2">
-            <TrendingDown className="w-4 h-4 text-al-blue-500" />
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="p-3 bg-gradient-to-br from-al-blue-50 to-al-sky/10 rounded-lg border border-al-blue-100">
+          <div className="flex items-center space-x-1.5 mb-1">
+            <TrendingDown className="w-3.5 h-3.5 text-al-blue-500" />
             <p className="text-xs text-slate-600 font-medium">Top 5 Vingtiles</p>
           </div>
-          <p className="text-2xl font-bold text-al-blue-600">{top5Percentage}%</p>
-          <p className="text-xs text-slate-500 mt-1">du volume total</p>
+          <p className="text-lg font-bold text-al-blue-600">{top5Percentage}%</p>
+          <p className="text-xs text-slate-500">du volume total</p>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-al-teal/10 to-al-sky/10 rounded-lg border border-al-teal/20">
-          <div className="flex items-center space-x-2 mb-2">
+        <div className="p-3 bg-gradient-to-br from-al-teal/10 to-al-sky/10 rounded-lg border border-al-teal/20">
+          <div className="flex items-center space-x-1.5 mb-1">
             <p className="text-xs text-slate-600 font-medium">Praticiens Top 3</p>
           </div>
-          <p className="text-2xl font-bold text-al-teal">
+          <p className="text-lg font-bold text-al-teal">
             {filteredPractitioners.filter(p => p.vingtile <= 3).length}
           </p>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500">
             {((filteredPractitioners.filter(p => p.vingtile <= 3).length / filteredPractitioners.length) * 100).toFixed(1)}% du territoire
           </p>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200">
-          <div className="flex items-center space-x-2 mb-2">
+        <div className="p-3 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200">
+          <div className="flex items-center space-x-1.5 mb-1">
             <p className="text-xs text-slate-600 font-medium">Volume moyen</p>
           </div>
-          <p className="text-2xl font-bold text-slate-700">
+          <p className="text-lg font-bold text-slate-700">
             {filteredPractitioners.length > 0
               ? (totalVolume / filteredPractitioners.length / 1000).toFixed(0)
               : '0'}K L
           </p>
-          <p className="text-xs text-slate-500 mt-1">par praticien</p>
+          <p className="text-xs text-slate-500">par praticien</p>
         </div>
       </div>
 

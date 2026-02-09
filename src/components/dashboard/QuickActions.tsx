@@ -67,26 +67,25 @@ export const QuickActions: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold text-slate-800">
+    <div className="space-y-2">
+      <h2 className="text-sm font-bold text-slate-800">
         Accès rapide
       </h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {actions.map((action, index) => (
           <motion.button
             key={action.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
+            transition={{ duration: 0.2, delay: index * 0.03 }}
             onClick={() => navigate(action.path)}
-            className="glass-card p-4 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:scale-[1.03]"
+            className="glass-card p-2.5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:scale-[1.03]"
           >
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform`}>
-              <action.icon className="w-5 h-5 text-white" />
+            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-1.5 mx-auto group-hover:scale-110 transition-transform`}>
+              <action.icon className="w-4 h-4 text-white" />
             </div>
-            <p className="font-semibold text-slate-800 text-sm text-center">{action.label}</p>
-            <p className="text-xs text-slate-500 text-center mt-1 hidden sm:block">{action.description}</p>
+            <p className="font-semibold text-slate-800 text-xs text-center">{action.label}</p>
           </motion.button>
         ))}
       </div>

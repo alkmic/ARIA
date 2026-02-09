@@ -32,21 +32,21 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
   };
 
   return (
-    <div className="glass-card p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <h3 className="font-bold text-base sm:text-lg">
+    <div className="glass-card p-3 sm:p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-sm">
           Ma journée
         </h3>
-        <span className="text-xs sm:text-sm text-slate-500">
+        <span className="text-xs text-slate-500">
           {visits.filter(v => v.status === 'completed').length}/{visits.length} terminées
         </span>
       </div>
 
       <div className="relative">
         {/* Ligne verticale de connexion */}
-        <div className="hidden sm:block absolute left-[22px] top-8 bottom-8 w-0.5 bg-slate-200" />
+        <div className="hidden sm:block absolute left-[18px] top-6 bottom-6 w-0.5 bg-slate-200" />
 
-        <div className="space-y-4">
+        <div className="space-y-2.5">
           {visits.map((visit, index) => (
             <motion.div
               key={visit.id}
@@ -54,7 +54,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
               onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
-              className={`relative flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl border-2 cursor-pointer
+              className={`relative flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border cursor-pointer
                          transition-all duration-200 hover:shadow-md
                          ${getStatusStyles(visit.status, visit.isNext || false)}`}
             >
@@ -72,7 +72,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
 
               {/* Avatar */}
               <div
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-lg flex-shrink-0"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0"
                 style={{ backgroundColor: getColorFromString(visit.practitioner.id) }}
               >
                 {getInitials(visit.practitioner.firstName, visit.practitioner.lastName)}
@@ -80,7 +80,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
 
               {/* Infos */}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm sm:text-base text-al-navy truncate">
+                <p className="font-semibold text-xs sm:text-sm text-al-navy truncate">
                   {visit.practitioner.title} {visit.practitioner.firstName} {visit.practitioner.lastName}
                 </p>
                 <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-slate-500">
@@ -118,7 +118,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
 
               {/* Badge "Prochaine" */}
               {visit.isNext && (
-                <div className="absolute -top-2 -right-2 px-1.5 sm:px-2 py-0.5 bg-al-blue-500 text-white text-[10px] sm:text-xs font-bold rounded-full">
+                <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 bg-al-blue-500 text-white text-xs font-bold rounded-full">
                   <span className="hidden sm:inline">PROCHAINE</span>
                   <span className="sm:hidden">→</span>
                 </div>
@@ -129,18 +129,18 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
       </div>
 
       {/* Actions */}
-      <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 sm:gap-3">
+      <div className="mt-3 pt-2 border-t border-slate-100 flex gap-2">
         <button
           onClick={() => navigate('/visits')}
-          className="flex-1 btn-secondary text-xs sm:text-sm py-2"
+          className="flex-1 btn-secondary text-xs py-1.5"
         >
-          Voir toutes les visites
+          Toutes les visites
         </button>
         <button
           onClick={() => navigate('/tour-optimization')}
-          className="flex-1 btn-primary text-xs sm:text-sm py-2"
+          className="flex-1 btn-primary text-xs py-1.5"
         >
-          Optimiser ma tournée
+          Optimiser tournée
         </button>
       </div>
     </div>

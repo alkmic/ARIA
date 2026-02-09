@@ -55,20 +55,20 @@ export const SpecialtyBreakdown: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className="glass-card p-4 sm:p-6"
+      className="glass-card p-3 sm:p-4"
     >
-      <h2 className="text-base sm:text-lg font-bold text-slate-800 mb-4 sm:mb-6 flex items-center space-x-2">
-        <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-al-blue-500" />
+      <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center space-x-2">
+        <Stethoscope className="w-4 h-4 text-al-blue-500" />
         <span>Répartition par Spécialité</span>
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Count Pie Chart */}
         <div>
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-600 text-center mb-3 sm:mb-4">
+          <h3 className="text-xs font-semibold text-slate-600 text-center mb-2">
             Nombre de Praticiens
           </h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={countData}
@@ -109,10 +109,10 @@ export const SpecialtyBreakdown: React.FC = () => {
 
         {/* Volume Pie Chart */}
         <div>
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-600 text-center mb-3 sm:mb-4">
+          <h3 className="text-xs font-semibold text-slate-600 text-center mb-2">
             Volume Total (Litres)
           </h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={volumeData}
@@ -154,7 +154,7 @@ export const SpecialtyBreakdown: React.FC = () => {
       </div>
 
       {/* Detailed Stats Table */}
-      <div className="mt-4 sm:mt-6 overflow-x-auto rounded-lg border border-slate-200">
+      <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200">
         <table className="w-full text-xs sm:text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -175,7 +175,7 @@ export const SpecialtyBreakdown: React.FC = () => {
               </td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-800">{pneumologues.length}</td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
-                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-100 text-amber-800">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                   {pneumoKOL}
                 </span>
               </td>
@@ -195,7 +195,7 @@ export const SpecialtyBreakdown: React.FC = () => {
               </td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-800">{generalistes.length}</td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
-                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-100 text-amber-800">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                   {genKOL}
                 </span>
               </td>
@@ -210,7 +210,7 @@ export const SpecialtyBreakdown: React.FC = () => {
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-800">Total</td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-800">{practitioners.length}</td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
-                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-200 text-amber-900">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-900">
                   {pneumoKOL + genKOL}
                 </span>
               </td>
@@ -228,12 +228,12 @@ export const SpecialtyBreakdown: React.FC = () => {
       </div>
 
       {/* Key insight */}
-      <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-gradient-to-r from-al-navy/5 to-al-blue-500/5 rounded-lg border border-al-blue-200">
-        <div className="flex items-start space-x-2 sm:space-x-3">
-          <Users2 className="w-4 h-4 sm:w-5 sm:h-5 text-al-blue-500 mt-0.5 flex-shrink-0" />
+      <div className="mt-3 p-2 bg-gradient-to-r from-al-navy/5 to-al-blue-500/5 rounded-lg border border-al-blue-200">
+        <div className="flex items-start space-x-2">
+          <Users2 className="w-4 h-4 text-al-blue-500 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-xs sm:text-sm font-semibold text-slate-800">Insight clé</p>
-            <p className="text-[10px] sm:text-xs text-slate-600 mt-1">
+            <p className="text-xs font-semibold text-slate-800">Insight clé</p>
+            <p className="text-xs text-slate-600 mt-0.5">
               Les pneumologues représentent {((pneumologues.length / practitioners.length) * 100).toFixed(1)}%
               des praticiens mais génèrent {((pneumoVolume / (pneumoVolume + genVolume)) * 100).toFixed(1)}%
               du volume total - un ratio de {(pneumoVolume / pneumologues.length / (genVolume / generalistes.length)).toFixed(1)}x
