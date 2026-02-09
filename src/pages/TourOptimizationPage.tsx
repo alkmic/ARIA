@@ -43,7 +43,8 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'SAINT-ÉTIENNE': [45.4397, 4.3872],
   'CHAMBÉRY': [45.5646, 5.9178],
   'ANNECY': [45.8992, 6.1294],
-  'BOURG-EN-BRESSE': [46.2051, 5.2259],
+  'ANNEMASSE': [46.1958, 6.2354],
+  'BOURG-EN-BRESSE': [46.2056, 5.2256],
   'VILLEURBANNE': [45.7667, 4.8800],
   'VÉNISSIEUX': [45.6975, 4.8867],
   'VIENNE': [45.5255, 4.8769],
@@ -241,7 +242,7 @@ export const TourOptimizationPage: React.FC = () => {
     setSelectedIds(prev => new Set([...prev, ...topIds]));
   };
 
-  // Calcul de distance
+  // Calcul de distance (haversine × facteur route pour approximer la distance réelle)
   const calculateDistance = (coords1: [number, number], coords2: [number, number]): number => {
     const R = 6371;
     const dLat = (coords2[0] - coords1[0]) * Math.PI / 180;
@@ -250,7 +251,10 @@ export const TourOptimizationPage: React.FC = () => {
       Math.cos(coords1[0] * Math.PI / 180) * Math.cos(coords2[0] * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    const haversine = R * c;
+    // Facteur route : les routes réelles sont ~30% plus longues que le vol d'oiseau
+    // (virages, relief, réseau routier — typique pour Rhône-Alpes)
+    return haversine * 1.3;
   };
 
   // Temps de trajet réaliste selon la distance (vitesse adaptative)
