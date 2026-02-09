@@ -29,6 +29,29 @@ import { retrieveKnowledge, shouldUseRAG } from './ragService';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
 
+// User CRM data from Zustand store (visit reports, notes) — injected by the UI
+export interface UserCRMData {
+  visitReports: Array<{
+    practitionerId: string;
+    practitionerName: string;
+    date: string;
+    extractedInfo: {
+      topics: string[];
+      sentiment: string;
+      keyPoints: string[];
+      nextActions: string[];
+      productsDiscussed: string[];
+      competitorsMentioned: string[];
+    };
+  }>;
+  userNotes: Array<{
+    practitionerId: string;
+    content: string;
+    type: string;
+    createdAt: string;
+  }>;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1144,13 +1167,65 @@ async function generateDirectResponse(
 // MAIN PIPELINE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER CRM DATA CONTEXT — Inject visit reports and notes from user's session
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function formatUserCRMContext(data: UserCRMData, question: string): string {
+  if (!data.visitReports.length && !data.userNotes.length) return '';
+
+  const lowerQ = question.toLowerCase();
+  let context = '\n\n## Données CRM Utilisateur (comptes-rendus de visite et notes)\n';
+
+  // Include recent visit reports (last 10)
+  if (data.visitReports.length > 0) {
+    context += `\n### Comptes-rendus de visite récents (${data.visitReports.length} total)\n`;
+    const relevantReports = data.visitReports
+      .filter(r => {
+        // If question mentions a specific practitioner name, prioritize their reports
+        const nameMatch = lowerQ.includes(r.practitionerName.toLowerCase().split(' ').pop() || '');
+        return nameMatch || data.visitReports.indexOf(r) < 5;
+      })
+      .slice(0, 8);
+
+    relevantReports.forEach(r => {
+      context += `- [${r.date}] ${r.practitionerName} (${r.extractedInfo.sentiment}) : `;
+      if (r.extractedInfo.keyPoints.length > 0) {
+        context += `Points clés: ${r.extractedInfo.keyPoints.join('; ')}. `;
+      }
+      if (r.extractedInfo.productsDiscussed.length > 0) {
+        context += `Produits: ${r.extractedInfo.productsDiscussed.join(', ')}. `;
+      }
+      if (r.extractedInfo.competitorsMentioned.length > 0) {
+        context += `Concurrents: ${r.extractedInfo.competitorsMentioned.join(', ')}. `;
+      }
+      if (r.extractedInfo.nextActions.length > 0) {
+        context += `Actions: ${r.extractedInfo.nextActions.join('; ')}. `;
+      }
+      context += '\n';
+    });
+  }
+
+  // Include user notes (last 10)
+  if (data.userNotes.length > 0) {
+    context += `\n### Notes utilisateur (${data.userNotes.length} total)\n`;
+    data.userNotes.slice(0, 10).forEach(n => {
+      const date = new Date(n.createdAt).toLocaleDateString('fr-FR');
+      context += `- [${date}] (${n.type}) ${n.content.substring(0, 200)}${n.content.length > 200 ? '...' : ''}\n`;
+    });
+  }
+
+  return context;
+}
+
 export async function processQuestion(
   question: string,
   conversationHistory: ConversationMessage[],
   periodLabel: string,
   practitioners: Practitioner[],
   upcomingVisits: UpcomingVisit[],
-  _userObjectives: { visitsMonthly: number; visitsCompleted: number }
+  _userObjectives: { visitsMonthly: number; visitsCompleted: number },
+  userCRMData?: UserCRMData
 ): Promise<AICoachResult> {
   const chartHistory = getChartHistory();
   const lastAssistant = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0]?.content;
@@ -1178,7 +1253,12 @@ export async function processQuestion(
     console.log('[AICoachEngine] Router:', routing.intent, routing.dataScope, routing.needsChart ? '📊' : '💬');
 
     // ─── Build Targeted Context ────────────────────────────────────────────
-    const dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
+    let dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
+
+    // ─── Inject User CRM Data (visit reports, notes) ─────────────────────
+    if (userCRMData) {
+      dataContext += formatUserCRMContext(userCRMData, question);
+    }
 
     // ─── Track RAG usage ───────────────────────────────────────────────────
     let ragSources: AICoachResult['ragSources'] = undefined;

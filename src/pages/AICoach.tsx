@@ -65,6 +65,7 @@ import {
 } from '../services/agenticChartEngine';
 import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
+import { useUserDataStore } from '../stores/useUserDataStore';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 
 // Types pour les graphiques agentiques
@@ -103,6 +104,7 @@ export default function AICoach() {
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [showKnowledgePanel, setShowKnowledgePanel] = useState(false);
   const { practitioners, currentUser, upcomingVisits } = useAppStore();
+  const { visitReports, userNotes } = useUserDataStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
   const llmConfigured = isLLMConfigured();
@@ -247,7 +249,8 @@ export default function AICoach() {
         periodLabel,
         practitioners,
         upcomingVisits,
-        currentUser.objectives
+        currentUser.objectives,
+        { visitReports, userNotes }
       );
 
       // Construire le message assistant

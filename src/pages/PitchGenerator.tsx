@@ -46,6 +46,7 @@ const SECTION_STYLES: Record<string, { gradient: string; bg: string; icon: strin
   cta: { gradient: 'from-green-500 to-emerald-500', bg: 'bg-green-50', icon: '4', borderColor: 'border-green-200' },
   objections: { gradient: 'from-red-500 to-rose-500', bg: 'bg-red-50', icon: '5', borderColor: 'border-red-200' },
   talking_points: { gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50', icon: '6', borderColor: 'border-indigo-200' },
+  follow_up: { gradient: 'from-teal-500 to-cyan-500', bg: 'bg-teal-50', icon: '7', borderColor: 'border-teal-200' },
 };
 
 // Produits Air Liquide disponibles
@@ -171,6 +172,7 @@ export function PitchGenerator() {
       CALL_TO_ACTION: { id: 'cta', title: 'Call to Action', icon: '4' },
       OBJECTIONS: { id: 'objections', title: 'Gestion des objections', icon: '5' },
       TALKING_POINTS: { id: 'talking_points', title: 'Points de discussion', icon: '6' },
+      FOLLOW_UP: { id: 'follow_up', title: 'Plan de suivi', icon: '7' },
     };
 
     while ((match = sectionRegex.exec(text)) !== null) {

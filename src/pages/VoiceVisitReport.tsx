@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
   MicOff,
-  Save,
   Check,
   AlertCircle,
   User,
@@ -608,7 +607,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
           </motion.div>
         )}
 
-        {/* Step 3: Review */}
+        {/* Step 3: Review & Validate AI Extraction */}
         {step === 'review' && selectedPractitioner && extractedInfo && (
           <motion.div
             key="review"
@@ -617,7 +616,21 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
-            {/* Practitioner + Date */}
+            {/* AI Validation Banner */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-amber-800">Analyse IA — Validation requise</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    ARIA a analysé votre compte-rendu et extrait les informations ci-dessous.
+                    Vérifiez, modifiez ou complétez avant de sauvegarder dans la fiche du praticien.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Practitioner + Date + Sentiment */}
             <div className="glass-card p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-al-blue-500 to-al-blue-600 flex items-center justify-center text-white font-bold">
                 {selectedPractitioner.firstName[0]}{selectedPractitioner.lastName[0]}
@@ -633,135 +646,103 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                   {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${
-                extractedInfo.sentiment === 'positive'
-                  ? 'bg-green-100 text-green-700'
-                  : extractedInfo.sentiment === 'negative'
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-slate-100 text-slate-700'
-              }`}>
-                {extractedInfo.sentiment === 'positive' ? <ThumbsUp className="w-3 h-3" /> :
-                 extractedInfo.sentiment === 'negative' ? <ThumbsDown className="w-3 h-3" /> :
-                 <MessageSquare className="w-3 h-3" />}
-                {extractedInfo.sentiment === 'positive' ? 'Positif' :
-                 extractedInfo.sentiment === 'negative' ? 'Négatif' : 'Neutre'}
+              {/* Editable Sentiment */}
+              <div className="flex gap-1">
+                {(['positive', 'neutral', 'negative'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setExtractedInfo({ ...extractedInfo, sentiment: s })}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-all ${
+                      extractedInfo.sentiment === s
+                        ? s === 'positive' ? 'bg-green-100 text-green-700 ring-2 ring-green-300'
+                          : s === 'negative' ? 'bg-red-100 text-red-700 ring-2 ring-red-300'
+                          : 'bg-slate-100 text-slate-700 ring-2 ring-slate-300'
+                        : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                    }`}
+                  >
+                    {s === 'positive' ? <ThumbsUp className="w-3 h-3" /> :
+                     s === 'negative' ? <ThumbsDown className="w-3 h-3" /> :
+                     <MessageSquare className="w-3 h-3" />}
+                    {s === 'positive' ? 'Positif' : s === 'negative' ? 'Négatif' : 'Neutre'}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Extracted Info Grid */}
+            {/* Editable Extracted Info Grid */}
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Topics */}
-              {extractedInfo.topics.length > 0 && (
-                <div className="glass-card p-4">
-                  <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-blue-500" />
-                    Sujets abordés
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {extractedInfo.topics.map((topic, i) => (
-                      <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Editable Tags Section */}
+              <EditableTagsSection
+                title="Sujets abordés"
+                items={extractedInfo.topics}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, topics: items })}
+                icon={<Tag className="w-4 h-4 text-blue-500" />}
+                color="blue"
+                placeholder="Ajouter un sujet..."
+              />
 
-              {/* Products */}
-              {extractedInfo.productsDiscussed.length > 0 && (
-                <div className="glass-card p-4">
-                  <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-500" />
-                    Produits discutés
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {extractedInfo.productsDiscussed.map((product, i) => (
-                      <span key={i} className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">
-                        {product}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <EditableTagsSection
+                title="Produits discutés"
+                items={extractedInfo.productsDiscussed}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, productsDiscussed: items })}
+                icon={<FileText className="w-4 h-4 text-emerald-500" />}
+                color="emerald"
+                placeholder="Ajouter un produit..."
+                suggestions={['VitalAire Confort+', 'Télésuivi O2', 'VNI DreamStation', 'FreeStyle Comfort', 'PPC ResMed', 'O2 liquide portable', 'Service 24/7', 'Formation patient']}
+              />
 
-              {/* Next Actions */}
-              {extractedInfo.nextActions.length > 0 && (
-                <div className="glass-card p-4">
-                  <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-purple-500" />
-                    Prochaines actions
-                  </h4>
-                  <ul className="space-y-2">
-                    {extractedInfo.nextActions.map((action, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                        <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
-                        {action}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <EditableListSection
+                title="Prochaines actions"
+                items={extractedInfo.nextActions}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, nextActions: items })}
+                icon={<Target className="w-4 h-4 text-purple-500" />}
+                color="purple"
+                placeholder="Ajouter une action..."
+              />
 
-              {/* Opportunities */}
-              {extractedInfo.opportunities.length > 0 && (
-                <div className="glass-card p-4">
-                  <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-amber-500" />
-                    Opportunités détectées
-                  </h4>
-                  <ul className="space-y-2">
-                    {extractedInfo.opportunities.map((opp, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                        <Sparkles className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                        {opp}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <EditableListSection
+                title="Opportunités détectées"
+                items={extractedInfo.opportunities}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, opportunities: items })}
+                icon={<TrendingUp className="w-4 h-4 text-amber-500" />}
+                color="amber"
+                placeholder="Ajouter une opportunité..."
+              />
 
-              {/* Objections */}
-              {extractedInfo.objections.length > 0 && (
-                <div className="glass-card p-4">
-                  <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-500" />
-                    Objections / Freins
-                  </h4>
-                  <ul className="space-y-2">
-                    {extractedInfo.objections.map((obj, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                        {obj}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <EditableListSection
+                title="Objections / Freins"
+                items={extractedInfo.objections}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, objections: items })}
+                icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
+                color="red"
+                placeholder="Ajouter une objection..."
+              />
 
-              {/* Key Points */}
-              {extractedInfo.keyPoints.length > 0 && (
-                <div className="glass-card p-4">
-                  <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-slate-500" />
-                    Points clés
-                  </h4>
-                  <ul className="space-y-2">
-                    {extractedInfo.keyPoints.map((point, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <EditableListSection
+                title="Points clés"
+                items={extractedInfo.keyPoints}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, keyPoints: items })}
+                icon={<Check className="w-4 h-4 text-green-500" />}
+                color="green"
+                placeholder="Ajouter un point clé..."
+              />
+
+              <EditableTagsSection
+                title="Concurrents mentionnés"
+                items={extractedInfo.competitorsMentioned}
+                onChange={(items) => setExtractedInfo({ ...extractedInfo, competitorsMentioned: items })}
+                icon={<AlertCircle className="w-4 h-4 text-orange-500" />}
+                color="orange"
+                placeholder="Ajouter un concurrent..."
+                suggestions={['Vivisol', 'Linde Healthcare', 'SOS Oxygène', 'Bastide Médical', 'France Oxygène']}
+              />
             </div>
 
             {/* Editable Notes */}
             <div className="glass-card p-4">
               <label className="block font-medium text-slate-700 mb-2 flex items-center gap-2">
                 <Edit3 className="w-4 h-4" />
-                Notes (modifiables)
+                Transcription (modifiable)
               </label>
               <textarea
                 value={editedNotes}
@@ -769,6 +750,22 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 rows={4}
                 className="input-field w-full resize-none"
               />
+            </div>
+
+            {/* Integration Preview */}
+            <div className="glass-card p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+              <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Ce qui sera intégré à la fiche de {selectedPractitioner.title} {selectedPractitioner.lastName}
+              </h4>
+              <ul className="text-sm text-emerald-700 space-y-1">
+                <li>• Compte-rendu de visite avec transcription complète</li>
+                {extractedInfo.keyPoints.length > 0 && <li>• {extractedInfo.keyPoints.length} point(s) clé(s) → Note d'observation</li>}
+                {extractedInfo.opportunities.length > 0 && <li>• {extractedInfo.opportunities.length} opportunité(s) → Note stratégique</li>}
+                {extractedInfo.competitorsMentioned.length > 0 && <li>• Intelligence concurrentielle ({extractedInfo.competitorsMentioned.join(', ')}) → Note concurrence</li>}
+                {extractedInfo.nextActions.length > 0 && <li>• {extractedInfo.nextActions.length} action(s) à suivre</li>}
+                <li>• Données accessibles par le Coach IA pour répondre à vos questions</li>
+              </ul>
             </div>
 
             {/* Actions */}
@@ -783,8 +780,8 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 onClick={saveReport}
                 className="btn-primary flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
               >
-                <Save className="w-4 h-4 mr-2" />
-                Sauvegarder
+                <Check className="w-4 h-4 mr-2" />
+                Valider et sauvegarder
               </button>
             </div>
           </motion.div>
@@ -837,6 +834,197 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Editable Tag Section (for topics, products, competitors)
+// ═══════════════════════════════════════════════════════════
+function EditableTagsSection({
+  title, items, onChange, icon, color, placeholder, suggestions = []
+}: {
+  title: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+  icon: React.ReactNode;
+  color: string;
+  placeholder: string;
+  suggestions?: string[];
+}) {
+  const [inputValue, setInputValue] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const addItem = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed && !items.includes(trimmed)) {
+      onChange([...items, trimmed]);
+    }
+    setInputValue('');
+    setShowSuggestions(false);
+  };
+
+  const removeItem = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const filteredSuggestions = suggestions.filter(
+    s => !items.includes(s) && s.toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className="glass-card p-4">
+      <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
+        {icon}
+        {title}
+        <span className="text-xs text-slate-400 ml-auto">{items.length}</span>
+      </h4>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {items.map((item, i) => (
+          <span key={i} className={`px-2 py-1 bg-${color}-100 text-${color}-700 rounded-full text-sm flex items-center gap-1 group`}>
+            {item}
+            <button
+              onClick={() => removeItem(i)}
+              className={`w-4 h-4 rounded-full bg-${color}-200 hover:bg-${color}-300 flex items-center justify-center text-${color}-600 opacity-60 hover:opacity-100 transition-opacity`}
+            >
+              <span className="text-xs leading-none">&times;</span>
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => { setInputValue(e.target.value); setShowSuggestions(true); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(inputValue); } }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          placeholder={placeholder}
+          className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        {showSuggestions && filteredSuggestions.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+            {filteredSuggestions.map((s, i) => (
+              <button
+                key={i}
+                onMouseDown={(e) => { e.preventDefault(); addItem(s); }}
+                className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Editable List Section (for actions, key points, etc.)
+// ═══════════════════════════════════════════════════════════
+function EditableListSection({
+  title, items, onChange, icon, color, placeholder
+}: {
+  title: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+  icon: React.ReactNode;
+  color: string;
+  placeholder: string;
+}) {
+  const [inputValue, setInputValue] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+
+  const addItem = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed) {
+      onChange([...items, trimmed]);
+      setInputValue('');
+    }
+  };
+
+  const removeItem = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const startEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditValue(items[index]);
+  };
+
+  const saveEdit = () => {
+    if (editingIndex !== null && editValue.trim()) {
+      const newItems = [...items];
+      newItems[editingIndex] = editValue.trim();
+      onChange(newItems);
+    }
+    setEditingIndex(null);
+    setEditValue('');
+  };
+
+  return (
+    <div className="glass-card p-4">
+      <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
+        {icon}
+        {title}
+        <span className="text-xs text-slate-400 ml-auto">{items.length}</span>
+      </h4>
+      <ul className="space-y-2 mb-2">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm text-slate-600 group">
+            {editingIndex === i ? (
+              <div className="flex-1 flex gap-1">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingIndex(null); }}
+                  className="flex-1 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  autoFocus
+                />
+                <button onClick={saveEdit} className="px-2 py-1 bg-emerald-500 text-white rounded text-xs">OK</button>
+              </div>
+            ) : (
+              <>
+                <ChevronRight className={`w-4 h-4 text-${color}-400 mt-0.5 flex-shrink-0`} />
+                <span
+                  className="flex-1 cursor-pointer hover:text-slate-800"
+                  onClick={() => startEdit(i)}
+                  title="Cliquer pour modifier"
+                >
+                  {item}
+                </span>
+                <button
+                  onClick={() => removeItem(i)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        <button
+          onClick={addItem}
+          disabled={!inputValue.trim()}
+          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 }
