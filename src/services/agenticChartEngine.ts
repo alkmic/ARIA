@@ -387,9 +387,28 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
 
   // Grouper les données si nécessaire
   if (query.groupBy) {
+    // Quand limit + groupBy sont combinés, appliquer le limit aux items INDIVIDUELS
+    // AVANT le groupement. Ex: "top 15 praticiens par ville" → prendre les 15 meilleurs,
+    // puis les grouper par ville (les comptes doivent sommer à 15).
+    let dataToGroup = filteredData;
+    if (query.limit && query.sortBy) {
+      // Déterminer le champ de tri à partir des métriques
+      const sortMetric = query.metrics.find(m => m.name === query.sortBy);
+      if (sortMetric) {
+        const sortField = sortMetric.field;
+        const order = query.sortOrder === 'asc' ? 1 : -1;
+        const sorted = [...filteredData].sort((a, b) => {
+          const aVal = (a as Record<string, unknown>)[sortField] as number || 0;
+          const bVal = (b as Record<string, unknown>)[sortField] as number || 0;
+          return (aVal - bVal) * order;
+        });
+        dataToGroup = sorted.slice(0, query.limit);
+      }
+    }
+
     const grouped = new Map<string, typeof filteredData>();
 
-    for (const item of filteredData) {
+    for (const item of dataToGroup) {
       let key: string;
 
       switch (query.groupBy) {
@@ -476,18 +495,13 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
       });
     }
 
-    // Limiter les résultats
-    if (query.limit) {
-      return results.slice(0, query.limit);
-    }
-
     return results;
   }
 
   // Sans groupBy, retourner les items individuels (top N)
   const results: ChartDataPoint[] = filteredData.map(item => {
     const point: ChartDataPoint = {
-      name: `${item.title} ${item.lastName}`
+      name: `${item.title} ${item.firstName} ${item.lastName}`.trim()
     };
 
     for (const metric of query.metrics) {

@@ -769,7 +769,7 @@ export default function AICoach() {
                               return (
                                 <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
                                   <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
                                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
                                   <Legend />
@@ -819,7 +819,7 @@ export default function AICoach() {
                               return (
                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
                                   <PolarGrid stroke="#e2e8f0" />
-                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v} />
                                   <PolarRadiusAxis tick={{ fontSize: 10 }} stroke="#94a3b8" />
                                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
                                   <Legend />

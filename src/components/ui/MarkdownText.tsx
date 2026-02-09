@@ -7,7 +7,7 @@ interface MarkdownTextProps {
 
 /**
  * Simple markdown renderer for coach responses
- * Supports: **bold**, *italic*, _italic_, `code`, lists, and line breaks
+ * Supports: # headers, **bold**, *italic*, _italic_, `code`, [links](url), lists, hr, and line breaks
  */
 export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className = '' }) => {
   const renderMarkdown = (text: string): React.ReactNode[] => {
@@ -15,6 +15,36 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
     const result: React.ReactNode[] = [];
 
     lines.forEach((line, lineIndex) => {
+      // Check for headers (### h3, ## h2, # h1)
+      const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+      if (headerMatch) {
+        const level = headerMatch[1].length;
+        const content = headerMatch[2];
+        const headerStyles: Record<number, string> = {
+          1: 'text-xl font-bold text-slate-900 mt-3 mb-1',
+          2: 'text-lg font-bold text-slate-800 mt-2.5 mb-1',
+          3: 'text-base font-semibold text-slate-800 mt-2 mb-0.5',
+          4: 'text-sm font-semibold text-slate-700 mt-1.5 mb-0.5',
+          5: 'text-sm font-medium text-slate-700 mt-1',
+          6: 'text-xs font-medium text-slate-600 mt-1',
+        };
+        const rendered = renderInlineMarkdown(content);
+        const cls = headerStyles[level];
+        if (level === 1) result.push(<h1 key={lineIndex} className={cls}>{rendered}</h1>);
+        else if (level === 2) result.push(<h2 key={lineIndex} className={cls}>{rendered}</h2>);
+        else if (level === 3) result.push(<h3 key={lineIndex} className={cls}>{rendered}</h3>);
+        else if (level === 4) result.push(<h4 key={lineIndex} className={cls}>{rendered}</h4>);
+        else if (level === 5) result.push(<h5 key={lineIndex} className={cls}>{rendered}</h5>);
+        else result.push(<h6 key={lineIndex} className={cls}>{rendered}</h6>);
+        return;
+      }
+
+      // Check for horizontal rules (--- or ***)
+      if (/^[-*_]{3,}\s*$/.test(line.trim())) {
+        result.push(<hr key={lineIndex} className="border-slate-200 my-2" />);
+        return;
+      }
+
       // Check for list items
       const bulletMatch = line.match(/^(\s*)[•\-\*]\s+(.*)$/);
       const numberedMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
@@ -67,8 +97,8 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
     let currentIndex = 0;
     let key = 0;
 
-    // Combined regex for all inline patterns
-    const inlineRegex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(_(.+?)_)|(`(.+?)`)/g;
+    // Combined regex for all inline patterns (order matters: bold before italic)
+    const inlineRegex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(_(.+?)_)|(`(.+?)`)|(\[([^\]]+)\]\(([^)]+)\))/g;
     let match;
 
     while ((match = inlineRegex.exec(text)) !== null) {
@@ -110,6 +140,19 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, className 
           >
             {match[8]}
           </code>
+        );
+      } else if (match[10] && match[11]) {
+        // [text](url)
+        parts.push(
+          <a
+            key={key++}
+            href={match[11]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-al-blue-600 hover:text-al-blue-800 underline underline-offset-2"
+          >
+            {match[10]}
+          </a>
         );
       }
 
