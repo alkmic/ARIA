@@ -146,10 +146,10 @@ export const Dashboard: React.FC = () => {
       {/* Header avec date */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-al-navy">
+          <h1 className="text-xl sm:text-2xl font-bold text-al-navy">
             Bonjour {firstName}
           </h1>
-          <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+          <p className="text-sm text-slate-500 flex flex-wrap items-center gap-2">
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>

@@ -78,7 +78,7 @@ export const Visits: React.FC = () => {
     >
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold gradient-text mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">
           Mes Visites
         </h1>
         <p className="text-slate-600">

@@ -6,7 +6,7 @@
 
 @layer base {
   html {
-    font-size: 14.5px;
+    font-size: 16px;
   }
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
@@ -49,12 +49,12 @@
   }
 
   .stat-card {
-    @apply glass-card p-4 hover:scale-[1.02] transition-transform duration-300 cursor-pointer;
+    @apply glass-card p-4 transition-shadow duration-300 cursor-pointer hover:shadow-xl;
   }
 
   /* Micro-interactions */
   .hover-lift {
-    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-xl;
+    @apply transition-shadow duration-300 hover:shadow-xl;
   }
 
   .hover-glow {

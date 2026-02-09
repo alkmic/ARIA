@@ -25,7 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       />
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       <main className="lg:ml-64 pt-12 lg:pt-14">
-        <div className="p-3 sm:p-4 lg:p-5">
+        <div className="p-4 sm:p-5 lg:p-6">
           {children}
         </div>
       </main>

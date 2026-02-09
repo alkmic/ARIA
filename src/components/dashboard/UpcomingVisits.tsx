@@ -34,7 +34,7 @@ export const UpcomingVisits: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
                 onClick={() => navigate(`/practitioner/${visit.practitioner.id}`)}
-                className="flex items-start space-x-3 p-3 hover:bg-slate-50 hover:scale-[1.01] rounded-lg transition-all duration-200 cursor-pointer"
+                className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors duration-200 cursor-pointer"
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                   visit.practitioner.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
@@ -114,7 +114,7 @@ export const UpcomingVisits: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
                 onClick={() => navigate(`/practitioner/${practitioner.id}`)}
-                className="flex items-start space-x-3 p-3 hover:bg-slate-50 hover:scale-[1.01] rounded-lg transition-all duration-200 cursor-pointer"
+                className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors duration-200 cursor-pointer"
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                   practitioner.isKOL ? 'bg-gradient-to-br from-amber-500 to-orange-500' :

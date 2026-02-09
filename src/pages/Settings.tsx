@@ -11,7 +11,7 @@ export function Settings() {
     >
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold gradient-text mb-2 flex items-center space-x-3">
+        <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2 flex items-center space-x-3">
           <SettingsIcon className="w-8 h-8 text-al-blue-500" />
           <span>Paramètres</span>
         </h1>

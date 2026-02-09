@@ -68,7 +68,7 @@ export const QuickActions: React.FC = () => {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm font-bold text-slate-800">
+      <h2 className="text-base font-bold text-slate-800">
         Accès rapide
       </h2>
 
@@ -80,12 +80,12 @@ export const QuickActions: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: index * 0.03 }}
             onClick={() => navigate(action.path)}
-            className="glass-card p-2.5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:scale-[1.03]"
+            className="glass-card p-3 hover:shadow-lg transition-shadow duration-300 cursor-pointer group"
           >
-            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-1.5 mx-auto group-hover:scale-110 transition-transform`}>
-              <action.icon className="w-4 h-4 text-white" />
+            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-2 mx-auto`}>
+              <action.icon className="w-4.5 h-4.5 text-white" />
             </div>
-            <p className="font-semibold text-slate-800 text-xs text-center">{action.label}</p>
+            <p className="font-semibold text-slate-800 text-sm text-center">{action.label}</p>
           </motion.button>
         ))}
       </div>

@@ -31,7 +31,7 @@ export function TerritoryMiniMap({ stats, points }: { stats: TerritoryStats; poi
   return (
     <div className="glass-card p-3 sm:p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-bold text-sm flex items-center gap-1.5">
+        <h3 className="font-bold text-base flex items-center gap-1.5">
           <Map className="w-3.5 h-3.5 text-al-blue-500" />
           Mon territoire
         </h3>

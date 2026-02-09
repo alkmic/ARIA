@@ -182,7 +182,7 @@ export const AIInsights: React.FC = () => {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
@@ -208,7 +208,7 @@ export const AIInsights: React.FC = () => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="min-w-[280px] glass-card overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
+              className="min-w-[280px] glass-card overflow-hidden hover:shadow-lg transition-shadow duration-300"
             >
               {/* Colored top bar */}
               <div className={`h-1 ${

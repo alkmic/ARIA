@@ -42,7 +42,7 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
             <Target className="w-4 h-4 text-al-blue-600" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-al-navy">Objectif {periodLabel}</h2>
+            <h2 className="text-base font-bold text-al-navy">Objectif {periodLabel}</h2>
             <p className="text-xs text-slate-500">{getSubtitle()}</p>
           </div>
         </div>

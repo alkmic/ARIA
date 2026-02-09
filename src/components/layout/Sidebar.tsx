@@ -65,7 +65,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <Icon className="w-5 h-5" />
         <span className="font-medium flex-1">{item.label}</span>
         {item.badge && (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
             isActive
               ? 'bg-al-teal/20 text-al-teal'
               : 'bg-al-teal/30 text-al-teal'

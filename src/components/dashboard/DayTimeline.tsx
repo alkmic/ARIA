@@ -34,7 +34,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
   return (
     <div className="glass-card p-3 sm:p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-sm">
+        <h3 className="font-bold text-base">
           Ma journée
         </h3>
         <span className="text-xs text-slate-500">

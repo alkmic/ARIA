@@ -38,7 +38,7 @@ export const NationalStats: React.FC = () => {
       transition={{ duration: 0.5, delay: 0.4 }}
       className="glass-card p-3 sm:p-4"
     >
-      <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center space-x-2">
+      <h2 className="text-base font-bold text-slate-800 mb-3 flex items-center space-x-2">
         <Users className="w-4 h-4 text-al-blue-500" />
         <span>Statistiques Nationales et Territoire</span>
       </h2>

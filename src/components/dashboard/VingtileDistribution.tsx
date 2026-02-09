@@ -55,7 +55,7 @@ export const VingtileDistribution: React.FC = () => {
       className="glass-card p-3 sm:p-4"
     >
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-slate-800 flex items-center space-x-2">
+        <h2 className="text-base font-bold text-slate-800 flex items-center space-x-2">
           <Layers className="w-4 h-4 text-al-blue-500" />
           <span>Distribution par Vingtile</span>
         </h2>
