@@ -142,11 +142,14 @@ async function testOpenAICompat(
   apiKey: string,
   providerType: string,
 ): Promise<{ ok: boolean; status: number; model: string; errorMsg?: string }> {
+  const openaiUrl = import.meta.env.DEV
+    ? '/llm-proxy/openai/v1/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions';
   const urlMap: Record<string, string> = {
     groq: 'https://api.groq.com/openai/v1/chat/completions',
-    openai: 'https://api.openai.com/v1/chat/completions',
+    openai: openaiUrl,
     openrouter: 'https://openrouter.ai/api/v1/chat/completions',
-    'openai-compat': 'https://api.openai.com/v1/chat/completions',
+    'openai-compat': openaiUrl,
   };
   const modelMap: Record<string, string> = {
     groq: 'llama-3.1-8b-instant',

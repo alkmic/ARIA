@@ -75,7 +75,7 @@ function getProviderConfig(apiKey: string): ProviderInfo {
   if (apiKey.startsWith('sk-ant-')) return {
     type: 'anthropic', name: 'Anthropic', url: 'https://api.anthropic.com/v1/messages',
     defaultModel: 'claude-sonnet-4-5-20250929',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
   };
   if (apiKey.startsWith('sk-or-')) return {
     type: 'openai-compat', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions',
@@ -83,7 +83,10 @@ function getProviderConfig(apiKey: string): ProviderInfo {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
   };
   return {
-    type: 'openai-compat', name: 'OpenAI', url: 'https://api.openai.com/v1/chat/completions',
+    type: 'openai-compat', name: 'OpenAI',
+    url: import.meta.env.DEV
+      ? '/llm-proxy/openai/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions',
     defaultModel: 'gpt-4o-mini',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
   };

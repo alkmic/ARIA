@@ -257,7 +257,9 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   openai: {
     name: 'OpenAI',
     provider: 'openai',
-    apiUrl: () => 'https://api.openai.com/v1/chat/completions',
+    apiUrl: () => import.meta.env.DEV
+      ? '/llm-proxy/openai/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions',
     mainModel: 'gpt-4o-mini',
     routerModel: 'gpt-4o-mini',
     headers: (apiKey) => ({
@@ -287,6 +289,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     }),
     buildBody: (messages, model, temperature, maxTokens, _jsonMode) => {
       // Anthropic: system prompt is top-level, not in messages array
