@@ -51,29 +51,116 @@ export interface WebLLMModelInfo {
   size: string;
   vramMB: number;
   description: string;
+  family: string;
+  org: string;
 }
 
 export const WEBLLM_MODELS: WebLLMModelInfo[] = [
-  {
-    id: 'Qwen3-1.7B-q4f16_1-MLC',
-    name: 'Qwen3 1.7B',
-    size: '~2 Go',
-    vramMB: 2037,
-    description: 'Bon compromis qualité/performance pour le navigateur',
-  },
+  // ── Qwen3 (Alibaba) ────────────────────────────────────────────────────
   {
     id: 'Qwen3-0.6B-q4f16_1-MLC',
     name: 'Qwen3 0.6B',
     size: '~1.4 Go',
     vramMB: 1403,
-    description: 'Ultra-léger, rapide, pour GPU limité',
+    description: 'Ultra-léger, rapide, idéal pour GPU limité',
+    family: 'Qwen3',
+    org: 'Alibaba',
+  },
+  {
+    id: 'Qwen3-1.7B-q4f16_1-MLC',
+    name: 'Qwen3 1.7B',
+    size: '~2 Go',
+    vramMB: 2037,
+    description: 'Bon compromis qualité/performance',
+    family: 'Qwen3',
+    org: 'Alibaba',
   },
   {
     id: 'Qwen3-4B-q4f16_1-MLC',
     name: 'Qwen3 4B',
     size: '~3.4 Go',
     vramMB: 3432,
-    description: 'Meilleure qualité, nécessite plus de VRAM',
+    description: 'Haute qualité, nécessite plus de VRAM',
+    family: 'Qwen3',
+    org: 'Alibaba',
+  },
+  // ── SmolLM2 (HuggingFace) ──────────────────────────────────────────────
+  {
+    id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
+    name: 'SmolLM2 360M',
+    size: '~0.5 Go',
+    vramMB: 500,
+    description: 'Nano-modèle, chargement quasi-instantané',
+    family: 'SmolLM2',
+    org: 'HuggingFace',
+  },
+  {
+    id: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC',
+    name: 'SmolLM2 1.7B',
+    size: '~2 Go',
+    vramMB: 2048,
+    description: 'Léger et polyvalent par HuggingFace',
+    family: 'SmolLM2',
+    org: 'HuggingFace',
+  },
+  // ── Llama 3.2 (Meta) ───────────────────────────────────────────────────
+  {
+    id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
+    name: 'Llama 3.2 1B',
+    size: '~1.5 Go',
+    vramMB: 1506,
+    description: 'Compact et efficace par Meta',
+    family: 'Llama 3.2',
+    org: 'Meta',
+  },
+  {
+    id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
+    name: 'Llama 3.2 3B',
+    size: '~2.8 Go',
+    vramMB: 2828,
+    description: 'Bonne qualité, architecture Meta',
+    family: 'Llama 3.2',
+    org: 'Meta',
+  },
+  // ── Phi 3.5 (Microsoft) ────────────────────────────────────────────────
+  {
+    id: 'Phi-3.5-mini-instruct-q4f16_1-MLC',
+    name: 'Phi 3.5 Mini',
+    size: '~3.6 Go',
+    vramMB: 3615,
+    description: 'Raisonnement avancé par Microsoft',
+    family: 'Phi 3.5',
+    org: 'Microsoft',
+  },
+  // ── Gemma 2 (Google) ───────────────────────────────────────────────────
+  {
+    id: 'gemma-2-2b-it-q4f16_1-MLC',
+    name: 'Gemma 2 2B',
+    size: '~2.2 Go',
+    vramMB: 2200,
+    description: 'Modèle ouvert Google, bonne qualité',
+    family: 'Gemma 2',
+    org: 'Google',
+  },
+  // ── DeepSeek R1 Distill ────────────────────────────────────────────────
+  {
+    id: 'DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC',
+    name: 'DeepSeek R1 7B',
+    size: '~5.5 Go',
+    vramMB: 5500,
+    description: 'Raisonnement profond, GPU puissant requis',
+    family: 'DeepSeek R1',
+    org: 'DeepSeek',
+  },
+  // ── Mistral (Mistral AI) ───────────────────────────────────────────────
+  {
+    id: 'Mistral-7B-Instruct-v0.3-q4f16_1-MLC',
+    name: 'Mistral 7B v0.3',
+    size: '~5.2 Go',
+    vramMB: 5200,
+    description: 'Performant en français, GPU puissant requis',
+    family: 'Mistral',
+    org: 'Mistral AI',
   },
 ];
 

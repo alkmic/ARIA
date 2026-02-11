@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
@@ -20,6 +20,8 @@ import {
   Save,
   X,
   RefreshCw,
+  Zap,
+  Shield,
 } from 'lucide-react';
 import { useWebLLM } from '../hooks/useWebLLM';
 import { WEBLLM_MODELS } from '../services/webLlmService';
@@ -29,7 +31,20 @@ import {
   saveApiKey,
   clearApiKey,
   detectProviderFromKey,
+  testApiKey,
+  type ApiKeyTestResult,
 } from '../services/apiKeyService';
+
+// ── Org color mapping ──
+const ORG_COLORS: Record<string, string> = {
+  Alibaba: 'bg-orange-100 text-orange-700',
+  HuggingFace: 'bg-yellow-100 text-yellow-700',
+  Meta: 'bg-blue-100 text-blue-700',
+  Microsoft: 'bg-cyan-100 text-cyan-700',
+  Google: 'bg-emerald-100 text-emerald-700',
+  DeepSeek: 'bg-violet-100 text-violet-700',
+  'Mistral AI': 'bg-rose-100 text-rose-700',
+};
 
 export function Settings() {
   const {
@@ -50,6 +65,10 @@ export function Settings() {
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [hasKey, setHasKey] = useState(false);
 
+  // ── API Key test state ──
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<ApiKeyTestResult | null>(null);
+
   useEffect(() => {
     const existing = getStoredApiKey();
     if (existing) {
@@ -64,6 +83,7 @@ export function Settings() {
     saveApiKey(trimmed);
     setHasKey(true);
     setApiKeySaved(true);
+    setTestResult(null);
     setTimeout(() => setApiKeySaved(false), 3000);
   };
 
@@ -72,7 +92,28 @@ export function Settings() {
     setApiKeyInput('');
     setHasKey(false);
     setApiKeySaved(false);
+    setTestResult(null);
   };
+
+  const handleTestApiKey = useCallback(async () => {
+    const trimmed = apiKeyInput.trim();
+    if (trimmed.length < 10) return;
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const result = await testApiKey(trimmed);
+      setTestResult(result);
+    } catch {
+      setTestResult({
+        success: false,
+        provider: 'Inconnu',
+        latencyMs: 0,
+        error: 'Erreur inattendue lors du test',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  }, [apiKeyInput]);
 
   const detectedProvider = apiKeyInput.trim().length >= 10
     ? detectProviderFromKey(apiKeyInput.trim())
@@ -104,7 +145,7 @@ export function Settings() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* SECTION 1 — Clé API LLM (nouveau, prioritaire) */}
+      {/* SECTION 1 — Clé API LLM */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -158,6 +199,7 @@ export function Settings() {
                   onChange={(e) => {
                     setApiKeyInput(e.target.value);
                     setApiKeySaved(false);
+                    setTestResult(null);
                   }}
                   onFocus={() => setShowApiKey(true)}
                   placeholder="Collez votre clé API ici (ex: gsk_..., sk-..., AIzaSy...)"
@@ -190,29 +232,79 @@ export function Settings() {
             </div>
           </div>
 
-          {/* Provider detection */}
+          {/* Provider detection + Test button */}
           {detectedProvider && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-500">Provider détecté :</span>
-              <span className="font-medium text-blue-700 px-2 py-0.5 bg-blue-50 rounded-full">
-                {detectedProvider.name}
-              </span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-500">Provider détecté :</span>
+                <span className="font-medium text-blue-700 px-2 py-0.5 bg-blue-50 rounded-full">
+                  {detectedProvider.name}
+                </span>
+              </div>
+              <button
+                onClick={handleTestApiKey}
+                disabled={isTesting || apiKeyInput.trim().length < 10}
+                className="text-sm px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              >
+                {isTesting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Test en cours...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5" />
+                    Tester la connexion
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Test result */}
+          {testResult && (
+            <div className={`flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg border ${
+              testResult.success
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              {testResult.success ? (
+                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                {testResult.success ? (
+                  <>
+                    <p className="font-medium">Connexion réussie !</p>
+                    <p className="text-xs mt-0.5 opacity-80">
+                      {testResult.provider} — modèle {testResult.model} — {testResult.latencyMs}ms
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">Échec de connexion</p>
+                    <p className="text-xs mt-0.5 opacity-80">
+                      {testResult.error}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
           {/* Save confirmation */}
-          {apiKeySaved && (
+          {apiKeySaved && !testResult && (
             <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
               <CheckCircle className="w-4 h-4" />
-              Clé API sauvegardée ! Le provider sera utilisé automatiquement.
+              Clé API sauvegardée ! Utilisez "Tester la connexion" pour vérifier.
             </div>
           )}
 
           {/* Help text */}
           <div className="text-[11px] text-slate-400 space-y-1">
-            <p>La clé est stockée localement dans votre navigateur (localStorage).</p>
+            <p>La clé est stockée localement dans votre navigateur (localStorage) — jamais envoyée à nos serveurs.</p>
             <p>Providers supportés : Groq (<code>gsk_</code>), OpenAI (<code>sk-</code>), Google Gemini (<code>AIzaSy</code>), Anthropic (<code>sk-ant-</code>), OpenRouter (<code>sk-or-</code>).</p>
-            <p>Avec une clé API, l'IA d'ARIA utilise le provider externe pour de meilleures réponses et évite le téléchargement de modèles lourds.</p>
           </div>
         </div>
       </motion.div>
@@ -269,10 +361,12 @@ export function Settings() {
           </div>
         ) : (
           <>
-            {/* Model Selection */}
+            {/* Model Selection — grouped by org */}
             <div className="space-y-3 mb-4">
-              <p className="text-sm font-medium text-slate-700">Choisir le modèle :</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <p className="text-sm font-medium text-slate-700">
+                Choisir le modèle <span className="text-slate-400 font-normal">(12 modèles de 6 éditeurs)</span> :
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {WEBLLM_MODELS.map((model) => (
                   <button
                     key={model.id}
@@ -288,7 +382,15 @@ export function Settings() {
                       <span className="font-semibold text-sm text-slate-800">{model.name}</span>
                       <span className="text-[11px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{model.size}</span>
                     </div>
-                    <p className="text-[11px] text-slate-500">{model.description}</p>
+                    <p className="text-[11px] text-slate-500 mb-1.5">{model.description}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ORG_COLORS[model.org] || 'bg-slate-100 text-slate-600'}`}>
+                        {model.org}
+                      </span>
+                      {model.vramMB >= 5000 && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-500 rounded-full">GPU puissant</span>
+                      )}
+                    </div>
                     {selectedModel === model.id && isReady && (
                       <div className="mt-2 flex items-center gap-1 text-[11px] text-green-600 font-medium">
                         <CheckCircle className="w-3 h-3" />
@@ -373,10 +475,15 @@ export function Settings() {
             </div>
 
             {/* Info */}
-            <div className="mt-4 text-[11px] text-slate-400 space-y-1">
-              <p>Le modèle est téléchargé depuis HuggingFace et mis en cache dans le stockage du navigateur.</p>
-              <p>Les données restent sur votre machine — aucune requête externe n'est envoyée pendant l'inférence.</p>
-              <p>Nécessite un GPU compatible WebGPU et une connexion internet pour le premier téléchargement.</p>
+            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] text-slate-400 space-y-1">
+                  <p>Les modèles sont compilés au format MLC et distribués via le CDN de HuggingFace. Le runtime WASM est hébergé sur GitHub (mlc-ai).</p>
+                  <p>Les poids sont téléchargés une seule fois puis mis en cache dans IndexedDB — les chargements suivants sont quasi-instantanés.</p>
+                  <p>Pendant l'inférence, aucune donnée n'est envoyée à l'extérieur : tout s'exécute localement sur votre GPU.</p>
+                </div>
+              </div>
             </div>
           </>
         )}
