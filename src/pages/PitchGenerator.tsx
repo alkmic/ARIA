@@ -128,8 +128,8 @@ export function PitchGenerator() {
     maxTokens: 4096,
   });
 
-  // LLM est toujours disponible (API externe ou Ollama local)
-  const hasValidApiKey = true; // useGroq gère le fallback Ollama automatiquement
+  // LLM est toujours disponible (API externe ou WebLLM navigateur)
+  const hasValidApiKey = true; // useGroq gère le fallback WebLLM automatiquement
   const { speak, pause, resume, stop, isSpeaking, isPaused, isSupported: speechSupported } = useSpeech();
 
   // Filtrage des praticiens

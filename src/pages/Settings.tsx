@@ -245,7 +245,7 @@ export function Settings() {
             {getLLMProviderName()}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            Chaîne de fallback : API externe &rarr; Ollama local &rarr; WebLLM navigateur
+            Chaîne de fallback : API externe &rarr; WebLLM navigateur
           </p>
         </div>
 
