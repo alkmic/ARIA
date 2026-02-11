@@ -14,7 +14,7 @@
  */
 
 import { webLlmService } from './webLlmService';
-import { getStoredApiKey, getStoredLLMConfig, resolveProvider, getProviderDef } from './apiKeyService';
+import { getStoredApiKey, getStoredLLMConfig, resolveProvider, getProviderDef, isReasoningModel } from './apiKeyService';
 import { DataService } from './dataService';
 import {
   DATA_SCHEMA,
@@ -404,9 +404,25 @@ function getProvider(): ProviderConfig {
             return `${bUrl}/models/${model}:generateContent?key=${key}`;
           }
         : () => resolved.url,
-      headers: resolved.apiFormat === 'gemini'
-        ? () => resolved.headers
-        : () => resolved.headers,
+      headers: () => resolved.headers,
+      buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+        // o-series reasoning models: no temperature, use max_completion_tokens
+        if (resolved.apiFormat === 'openai-compat' && isReasoningModel(model)) {
+          // Azure o-series: system role → developer role (required by Azure API for reasoning models)
+          const processedMessages = resolved.providerType === 'azure'
+            ? messages.map(m => m.role === 'system' ? { role: 'developer', content: m.content } : m)
+            : messages;
+          const body: Record<string, unknown> = {
+            messages: processedMessages, max_completion_tokens: maxTokens, stream: false,
+          };
+          // Azure: model is in the deployment URL, but safe to send for others
+          if (resolved.providerType !== 'azure') body.model = model;
+          // Don't send response_format for reasoning models — rely on prompt instructions
+          // (not reliably supported on all Azure API versions for o-series)
+          return body;
+        }
+        return base.buildBody(messages, model, temperature, maxTokens, jsonMode);
+      },
     };
     _cachedConfigHash = hash;
     console.log(`[AICoachEngine] Provider from config: ${resolved.providerName} (model: ${resolved.model})`);
@@ -694,8 +710,15 @@ async function callProvider(
       }
 
       const data = await response.json();
-      lastLLMError = null;
-      return provider.parseResponse(data as Record<string, unknown>);
+      const parsed = provider.parseResponse(data as Record<string, unknown>);
+      if (parsed) {
+        lastLLMError = null;
+        return parsed;
+      }
+      // 200 OK but empty/null content — treat as failure
+      lastLLMError = `[${provider.name}] Réponse vide (200 OK mais pas de contenu)`;
+      console.warn(`[AICoachEngine] ${provider.name} returned 200 but parseResponse got null`, JSON.stringify(data).substring(0, 500));
+      throw new Error('Empty response content');
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       lastLLMError = lastLLMError || `[${provider.name}] ${errMsg}`;
@@ -725,9 +748,15 @@ async function callLLM(
   const apiKey = getApiKey();
   const provider = getProvider();
 
+  // Reset error at the start of each callLLM invocation so stale errors don't carry over
+  lastLLMError = null;
+
   // 1. Essayer le provider principal (externe ou déjà Ollama si pas de clé)
   const result = await callProvider(provider, apiKey || '', messages, options, retries);
   if (result) return result;
+
+  // Capture the primary provider error before fallbacks overwrite it
+  const primaryError = lastLLMError;
 
   // 2. Si le provider était externe et a échoué, fallback vers Ollama local
   if (apiKey && provider.provider !== 'ollama') {
@@ -744,7 +773,6 @@ async function callLLM(
   }
 
   // 3. Dernier recours : WebLLM dans le navigateur
-  // Si WebGPU est supporté, on attend le chargement du modèle si nécessaire
   if (webLlmService.isWebGPUSupported()) {
     console.warn('[AICoachEngine] Falling back to WebLLM browser...');
     try {
@@ -762,8 +790,8 @@ async function callLLM(
     }
   }
 
-  // Tout a échoué
-  lastLLMError = 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
+  // Tout a échoué — restore the primary provider error (most relevant to the user)
+  lastLLMError = primaryError || lastLLMError || 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
 
   return null;
 }
@@ -784,18 +812,27 @@ export async function streamLLM(
     return;
   }
 
-  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama)
+  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama, Azure)
   try {
+    const streamModel = provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel;
+    const reasoning = isReasoningModel(streamModel);
+    // Azure o-series: system → developer role
+    const config = getStoredLLMConfig();
+    const isAzure = config?.provider === 'azure';
+    const streamMessages = (reasoning && isAzure)
+      ? messages.map(m => m.role === 'system' ? { role: 'developer' as const, content: m.content } : m)
+      : messages;
+    const streamBody: Record<string, unknown> = { model: streamModel, messages: streamMessages, stream: true };
+    if (reasoning) {
+      streamBody.max_completion_tokens = maxTokens;
+    } else {
+      streamBody.temperature = temperature;
+      streamBody.max_tokens = maxTokens;
+    }
     const response = await fetch(provider.apiUrl(provider.mainModel, apiKey || ''), {
       method: 'POST',
       headers: provider.headers(apiKey || ''),
-      body: JSON.stringify({
-        model: provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
+      body: JSON.stringify(streamBody),
     });
 
     if (!response.ok) {
@@ -1522,6 +1559,24 @@ export async function processQuestion(
   _userObjectives: { visitsMonthly: number; visitsCompleted: number },
   userCRMData?: UserCRMData
 ): Promise<AICoachResult> {
+  // ─── Early diagnostic: is any LLM configured? ─────────────────────────────
+  const savedConfig = getStoredLLMConfig();
+  const savedApiKey = getApiKey();
+  console.log('[AICoachEngine] processQuestion diagnostic:', {
+    configSaved: !!savedConfig,
+    configProvider: savedConfig?.provider,
+    configModel: savedConfig?.model,
+    apiKeyPresent: !!savedApiKey,
+    apiKeyLength: savedApiKey?.length,
+  });
+
+  if (!savedConfig && !savedApiKey) {
+    return {
+      textContent: `**Configuration LLM non trouvée.**\n\nLa connexion a peut-être été testée mais pas sauvegardée.\n\n**Solution :** Retournez dans **Paramètres** → section **LLM / IA** et cliquez sur **"Sauvegarder & Tester"** (le bouton bleu).\n\n_Le bouton vert "Tester la connexion" vérifie la connexion mais ne l'enregistre pas toujours._`,
+      source: 'llm',
+    };
+  }
+
   const chartHistory = getChartHistory();
   const lastAssistant = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0]?.content;
 
@@ -1532,8 +1587,6 @@ export async function processQuestion(
   // Si Phase 2 (réponse) échoue → on essaie le LLM direct sans routing
   // Si tout échoue → message d'erreur explicite (PAS de fallback local)
   // ═══════════════════════════════════════════════════════════════════════════
-
-  // Note: pas d'early exit si aucune clé API — on utilise Ollama ou WebLLM comme fallback
 
   // ─── Phase 1: LLM Routing ────────────────────────────────────────────────
   const routing = await routeQuestion(question, chartHistory, lastAssistant);
@@ -1649,9 +1702,10 @@ export async function processQuestion(
 
   // ─── ALL LLM CALLS FAILED: Explicit error with diagnostic ──────────────
   const errorDetail = lastLLMError || 'Aucune réponse du serveur';
-  console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
+  const providerName = savedConfig ? `${savedConfig.provider} / ${savedConfig.model}` : 'aucun';
+  console.error('[AICoachEngine] All LLM calls failed:', { errorDetail, provider: providerName, configSaved: !!savedConfig, apiKey: !!savedApiKey });
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Ollama n'est pas lancé en local\n- Le modèle \`${getOllamaModel()}\` n'est pas installé\n- Le modèle WebLLM n'est pas chargé dans le navigateur\n- Clé API externe invalide ou expirée\n\n**Actions :**\n1. Chargez le modèle WebLLM dans **Paramètres** (zéro installation)\n2. Ou installez Ollama : \`ollama run ${getOllamaModel()}\`\n3. Ou configurez une clé API externe dans \`VITE_LLM_API_KEY\``,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\n**Config :** ${providerName}\n\n**Actions :**\n1. Allez dans **Paramètres** → **"Sauvegarder & Tester"** (bouton bleu)\n2. Ou configurez Ollama local : \`ollama run ${getOllamaModel()}\``,
     source: 'llm',
   };
 }
