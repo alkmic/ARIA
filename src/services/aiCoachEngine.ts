@@ -14,7 +14,7 @@
  */
 
 import { webLlmService } from './webLlmService';
-import { getStoredApiKey } from './apiKeyService';
+import { getStoredApiKey, getStoredLLMConfig, resolveProvider, getProviderDef } from './apiKeyService';
 import { DataService } from './dataService';
 import {
   DATA_SCHEMA,
@@ -257,7 +257,9 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   openai: {
     name: 'OpenAI',
     provider: 'openai',
-    apiUrl: () => 'https://api.openai.com/v1/chat/completions',
+    apiUrl: () => import.meta.env.DEV
+      ? '/llm-proxy/openai/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions',
     mainModel: 'gpt-4o-mini',
     routerModel: 'gpt-4o-mini',
     headers: (apiKey) => ({
@@ -287,6 +289,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     }),
     buildBody: (messages, model, temperature, maxTokens, _jsonMode) => {
       // Anthropic: system prompt is top-level, not in messages array
@@ -373,24 +376,57 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   },
 };
 
-// Cached provider detection (cached per key to handle hot-reload)
+// Cached provider detection (cached per config hash to handle hot-reload)
 let _cachedProvider: ProviderConfig | null = null;
-let _cachedKeyPrefix: string | null = null;
+let _cachedConfigHash: string | null = null;
 function getProvider(): ProviderConfig {
+  // 1. Try explicit config from Settings UI
+  const config = getStoredLLMConfig();
+  if (config) {
+    const hash = `${config.provider}:${config.apiKey.substring(0, 8)}:${config.model}`;
+    if (_cachedProvider && _cachedConfigHash === hash) return _cachedProvider;
+
+    const resolved = resolveProvider(config);
+    // Pick base provider for buildBody / parseResponse / parseError methods
+    let base: ProviderConfig;
+    if (resolved.apiFormat === 'gemini') base = PROVIDERS.gemini;
+    else if (resolved.apiFormat === 'anthropic') base = PROVIDERS.anthropic;
+    else base = PROVIDERS.groq; // any openai-compat base works
+
+    _cachedProvider = {
+      ...base,
+      name: resolved.providerName,
+      mainModel: resolved.model,
+      routerModel: resolved.model,
+      apiUrl: resolved.apiFormat === 'gemini'
+        ? (model, key) => {
+            const bUrl = resolved.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+            return `${bUrl}/models/${model}:generateContent?key=${key}`;
+          }
+        : () => resolved.url,
+      headers: resolved.apiFormat === 'gemini'
+        ? () => resolved.headers
+        : () => resolved.headers,
+    };
+    _cachedConfigHash = hash;
+    console.log(`[AICoachEngine] Provider from config: ${resolved.providerName} (model: ${resolved.model})`);
+    return _cachedProvider;
+  }
+
+  // 2. Env var fallback (legacy key-prefix detection)
   const key = getApiKey();
   if (!key) {
-    // Pas de clé API externe → utiliser Ollama local
     if (!_cachedProvider || _cachedProvider.provider !== 'ollama') {
       _cachedProvider = { ...PROVIDERS.ollama, mainModel: getOllamaModel(), routerModel: getOllamaModel() };
-      _cachedKeyPrefix = '__ollama__';
+      _cachedConfigHash = '__ollama__';
       console.log(`[AICoachEngine] No API key — using local Ollama (model: ${getOllamaModel()})`);
     }
     return _cachedProvider;
   }
   const prefix = key.substring(0, 6);
-  if (_cachedProvider && _cachedKeyPrefix === prefix) return _cachedProvider;
+  if (_cachedProvider && _cachedConfigHash === prefix) return _cachedProvider;
   _cachedProvider = detectProvider(key);
-  _cachedKeyPrefix = prefix;
+  _cachedConfigHash = prefix;
   console.log(`[AICoachEngine] Provider detected: ${_cachedProvider.name} (model: ${_cachedProvider.mainModel})`);
   return _cachedProvider;
 }
@@ -1659,6 +1695,11 @@ export function hasExternalLLMKey(): boolean {
 }
 
 export function getLLMProviderName(): string {
+  const config = getStoredLLMConfig();
+  if (config) {
+    const def = getProviderDef(config.provider);
+    return `${def?.name || config.provider} (${config.model})`;
+  }
   const key = getApiKey();
   if (!key) {
     if (webLlmService.isReady()) {
