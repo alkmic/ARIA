@@ -54,6 +54,8 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import {
   processQuestion,
   isLLMConfigured,
+  hasExternalLLMKey,
+  getLLMProviderName,
   getRAGStats,
   getKnowledgeSources,
   type ConversationMessage
@@ -435,10 +437,10 @@ export default function AICoach() {
             </button>
           )}
 
-          {!llmConfigured && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs border border-amber-200">
+          {!hasExternalLLMKey() && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs border border-blue-200">
               <AlertCircle className="w-4 h-4" />
-              <span>Mode local (LLM non configuré)</span>
+              <span>{getLLMProviderName()}</span>
             </div>
           )}
 

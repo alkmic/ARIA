@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 // Multi-provider LLM Hook
 // Auto-detects provider from VITE_LLM_API_KEY format
 // Supports: Groq, Gemini, OpenAI, Anthropic, OpenRouter, custom endpoints
+// Fallback: Ollama local (Qwen3 8B) quand aucune clé API n'est configurée
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface LLMMessage {
@@ -25,6 +26,28 @@ interface ProviderInfo {
   url: string;
   defaultModel: string;
   headers: Record<string, string>;
+}
+
+// ── Ollama local config ─────────────────────────────────────────────────────
+const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
+const OLLAMA_DEFAULT_MODEL = 'qwen3:8b';
+
+function getOllamaBaseUrl(): string {
+  return (import.meta.env.VITE_OLLAMA_BASE_URL as string) || OLLAMA_DEFAULT_URL;
+}
+
+function getOllamaModel(): string {
+  return (import.meta.env.VITE_OLLAMA_MODEL as string) || OLLAMA_DEFAULT_MODEL;
+}
+
+function getOllamaProvider(): ProviderInfo {
+  return {
+    type: 'openai-compat',
+    name: `Ollama (${getOllamaModel()})`,
+    url: `${getOllamaBaseUrl()}/v1/chat/completions`,
+    defaultModel: getOllamaModel(),
+    headers: { 'Content-Type': 'application/json' },
+  };
 }
 
 function getProviderConfig(apiKey: string): ProviderInfo {
@@ -126,6 +149,51 @@ async function simulateStream(text: string, onChunk: (chunk: string) => void) {
   }
 }
 
+// ── OpenAI-compatible streaming ─────────────────────────────────────────────
+
+async function streamOpenAICompat(
+  url: string,
+  headers: Record<string, string>,
+  model: string,
+  messages: LLMMessage[],
+  temperature: number,
+  maxTokens: number,
+  onChunk: (chunk: string) => void,
+): Promise<void> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: true }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error: ${response.status}`);
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No reader available');
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ')) {
+        const d = trimmed.slice(6);
+        if (d === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(d);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) onChunk(content);
+        } catch { /* incomplete chunk */ }
+      }
+    }
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN HOOK
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -139,82 +207,62 @@ export function useGroq(options: UseGroqOptions = {}) {
   const apiKey = import.meta.env.VITE_LLM_API_KEY;
   const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
 
-  // Streaming completion
+  // Streaming completion — with automatic Ollama fallback
   const streamCompletion = useCallback(
     async (messages: LLMMessage[], onChunk: (chunk: string) => void, onComplete?: () => void) => {
       setIsLoading(true);
       setError(null);
 
-      if (!isApiKeyValid) {
-        setError('Clé API LLM non configurée. Consultez CONFIGURATION_IA.md.');
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const provider = getProviderConfig(apiKey);
-        const model = options.model || provider.defaultModel;
+        if (isApiKeyValid) {
+          // ── External provider ──
+          const provider = getProviderConfig(apiKey);
+          const model = options.model || provider.defaultModel;
 
-        if (provider.type === 'gemini') {
-          const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
-          const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Gemini error: ${response.status}`);
-          }
-          const data = await response.json();
-          const text = parseGeminiResponse(data) || '';
-          await simulateStream(text, onChunk);
-        } else if (provider.type === 'anthropic') {
-          const body = buildAnthropicRequest(messages, model, temperature, maxTokens);
-          const response = await fetch(provider.url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Anthropic error: ${response.status}`);
-          }
-          const data = await response.json();
-          const text = parseAnthropicResponse(data) || '';
-          await simulateStream(text, onChunk);
-        } else {
-          // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, custom)
-          const response = await fetch(provider.url, {
-            method: 'POST',
-            headers: provider.headers,
-            body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: true }),
-          });
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `API error: ${response.status}`);
-          }
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error('No reader available');
-          const decoder = new TextDecoder();
-          let buffer = '';
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed.startsWith('data: ')) {
-                const d = trimmed.slice(6);
-                if (d === '[DONE]') continue;
-                try {
-                  const parsed = JSON.parse(d);
-                  const content = parsed.choices?.[0]?.delta?.content;
-                  if (content) onChunk(content);
-                } catch { /* incomplete chunk */ }
+          try {
+            if (provider.type === 'gemini') {
+              const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+              const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+              if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error?.message || `Gemini error: ${response.status}`);
               }
+              const data = await response.json();
+              const text = parseGeminiResponse(data) || '';
+              await simulateStream(text, onChunk);
+            } else if (provider.type === 'anthropic') {
+              const body = buildAnthropicRequest(messages, model, temperature, maxTokens);
+              const response = await fetch(provider.url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+              if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error?.message || `Anthropic error: ${response.status}`);
+              }
+              const data = await response.json();
+              const text = parseAnthropicResponse(data) || '';
+              await simulateStream(text, onChunk);
+            } else {
+              await streamOpenAICompat(provider.url, provider.headers, model, messages, temperature, maxTokens, onChunk);
             }
+            onComplete?.();
+            return;
+          } catch (externalErr) {
+            // External API failed — fallback to Ollama
+            console.warn(`[useGroq] ${provider.name} failed, falling back to Ollama local:`, externalErr);
           }
         }
+
+        // ── Ollama local fallback (or primary if no API key) ──
+        const ollama = getOllamaProvider();
+        await streamOpenAICompat(ollama.url, ollama.headers, ollama.defaultModel, messages, temperature, maxTokens, onChunk);
         onComplete?.();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        setError(msg);
-        console.error('LLM API Error:', msg);
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED')) {
+          setError(`Ollama n'est pas accessible. Lancez : ollama run ${getOllamaModel()}`);
+        } else {
+          setError(msg);
+        }
+        console.error('LLM Error:', msg);
       } finally {
         setIsLoading(false);
       }
@@ -222,57 +270,77 @@ export function useGroq(options: UseGroqOptions = {}) {
     [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
   );
 
-  // Non-streaming completion
+  // Non-streaming completion — with automatic Ollama fallback
   const complete = useCallback(
     async (messages: LLMMessage[]): Promise<string | null> => {
       setIsLoading(true);
       setError(null);
 
-      if (!isApiKeyValid) {
-        setError('Clé API LLM non configurée. Consultez CONFIGURATION_IA.md.');
-        setIsLoading(false);
-        return null;
-      }
-
       try {
-        const provider = getProviderConfig(apiKey);
-        const model = options.model || provider.defaultModel;
+        if (isApiKeyValid) {
+          // ── External provider ──
+          const provider = getProviderConfig(apiKey);
+          const model = options.model || provider.defaultModel;
 
-        if (provider.type === 'gemini') {
-          const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
-          const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Gemini error: ${response.status}`);
+          try {
+            if (provider.type === 'gemini') {
+              const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+              const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+              if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error?.message || `Gemini error: ${response.status}`);
+              }
+              return parseGeminiResponse(await response.json());
+            }
+            if (provider.type === 'anthropic') {
+              const body = buildAnthropicRequest(messages, model, temperature, maxTokens);
+              const response = await fetch(provider.url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
+              if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error?.message || `Anthropic error: ${response.status}`);
+              }
+              return parseAnthropicResponse(await response.json());
+            }
+            // OpenAI-compatible
+            const response = await fetch(provider.url, {
+              method: 'POST',
+              headers: provider.headers,
+              body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
+            });
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({}));
+              throw new Error(err.error?.message || `API error: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.choices?.[0]?.message?.content || null;
+          } catch (externalErr) {
+            // External API failed — fallback to Ollama
+            console.warn(`[useGroq] External API failed, falling back to Ollama local:`, externalErr);
           }
-          return parseGeminiResponse(await response.json());
         }
 
-        if (provider.type === 'anthropic') {
-          const body = buildAnthropicRequest(messages, model, temperature, maxTokens);
-          const response = await fetch(provider.url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Anthropic error: ${response.status}`);
-          }
-          return parseAnthropicResponse(await response.json());
-        }
-
-        // OpenAI-compatible (Groq, OpenAI, OpenRouter, custom)
-        const response = await fetch(provider.url, {
+        // ── Ollama local fallback ──
+        const ollama = getOllamaProvider();
+        const response = await fetch(ollama.url, {
           method: 'POST',
-          headers: provider.headers,
-          body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
+          headers: ollama.headers,
+          body: JSON.stringify({
+            model: ollama.defaultModel, messages, temperature, max_tokens: maxTokens, stream: false,
+          }),
         });
         if (!response.ok) {
           const err = await response.json().catch(() => ({}));
-          throw new Error(err.error?.message || `API error: ${response.status}`);
+          throw new Error(err.error?.message || `Ollama error: ${response.status}`);
         }
         const data = await response.json();
         return data.choices?.[0]?.message?.content || null;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        setError(msg);
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED')) {
+          setError(`Ollama n'est pas accessible. Lancez : ollama run ${getOllamaModel()}`);
+        } else {
+          setError(msg);
+        }
         return null;
       } finally {
         setIsLoading(false);

@@ -9,7 +9,8 @@
  * - Le LLM route TOUTES les questions (zéro regex pour le routage)
  * - Le contexte de données est ciblé selon l'intention détectée
  * - Format de sortie unifié (texte + graphique optionnel)
- * - 100% LLM — pas de fallback local (erreur explicite si API indisponible)
+ * - LLM local par défaut (Ollama + Qwen3 8B) si aucune API externe configurée
+ * - Fallback automatique vers le LLM local si l'API externe échoue
  */
 
 import { DataService } from './dataService';
@@ -118,9 +119,22 @@ interface LLMCallOptions {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MULTI-PROVIDER LLM — Auto-détection depuis le format de clé API
+// + Ollama local (Qwen3 8B) comme défaut / fallback
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type LLMProvider = 'groq' | 'gemini' | 'openai' | 'anthropic' | 'openrouter';
+type LLMProvider = 'groq' | 'gemini' | 'openai' | 'anthropic' | 'openrouter' | 'ollama';
+
+// ── Ollama / Qwen3 8B Local ────────────────────────────────────────────────
+const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
+const OLLAMA_DEFAULT_MODEL = 'qwen3:8b';
+
+function getOllamaBaseUrl(): string {
+  return (import.meta.env.VITE_OLLAMA_BASE_URL as string) || OLLAMA_DEFAULT_URL;
+}
+
+function getOllamaModel(): string {
+  return (import.meta.env.VITE_OLLAMA_MODEL as string) || OLLAMA_DEFAULT_MODEL;
+}
 
 interface ProviderConfig {
   name: string;
@@ -333,19 +347,55 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     parseError: (data, status) =>
       (data as { error?: { message?: string } }).error?.message || `OpenRouter API error: ${status}`,
   },
+
+  ollama: {
+    name: `Ollama (${OLLAMA_DEFAULT_MODEL} local)`,
+    provider: 'ollama',
+    apiUrl: () => `${getOllamaBaseUrl()}/v1/chat/completions`,
+    mainModel: OLLAMA_DEFAULT_MODEL,
+    routerModel: OLLAMA_DEFAULT_MODEL,
+    headers: () => ({
+      'Content-Type': 'application/json',
+    }),
+    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+      const body: Record<string, unknown> = {
+        model: getOllamaModel(), messages, temperature, max_tokens: maxTokens, stream: false,
+      };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      return body;
+    },
+    parseResponse: (data) =>
+      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
+    parseError: (data, status) =>
+      (data as { error?: { message?: string } }).error?.message || `Ollama error: ${status}`,
+  },
 };
 
 // Cached provider detection (cached per key to handle hot-reload)
 let _cachedProvider: ProviderConfig | null = null;
 let _cachedKeyPrefix: string | null = null;
 function getProvider(): ProviderConfig {
-  const key = getApiKey() || '';
+  const key = getApiKey();
+  if (!key) {
+    // Pas de clé API externe → utiliser Ollama local
+    if (!_cachedProvider || _cachedProvider.provider !== 'ollama') {
+      _cachedProvider = { ...PROVIDERS.ollama, mainModel: getOllamaModel(), routerModel: getOllamaModel() };
+      _cachedKeyPrefix = '__ollama__';
+      console.log(`[AICoachEngine] No API key — using local Ollama (model: ${getOllamaModel()})`);
+    }
+    return _cachedProvider;
+  }
   const prefix = key.substring(0, 6);
   if (_cachedProvider && _cachedKeyPrefix === prefix) return _cachedProvider;
   _cachedProvider = detectProvider(key);
   _cachedKeyPrefix = prefix;
   console.log(`[AICoachEngine] Provider detected: ${_cachedProvider.name} (model: ${_cachedProvider.mainModel})`);
   return _cachedProvider;
+}
+
+/** Retourne le provider Ollama local (pour fallback) */
+function getOllamaProvider(): ProviderConfig {
+  return { ...PROVIDERS.ollama, mainModel: getOllamaModel(), routerModel: getOllamaModel() };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -558,15 +608,14 @@ function getApiKey(): string | null {
 // Last error captured for diagnostic display
 let lastLLMError: string | null = null;
 
-async function callLLM(
+/** Appelle un provider LLM spécifique (sans fallback) */
+async function callProvider(
+  provider: ProviderConfig,
+  apiKey: string,
   messages: LLMMessage[],
-  options: LLMCallOptions = {},
+  options: LLMCallOptions & { model?: string },
   retries = 1
 ): Promise<string | null> {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-
-  const provider = getProvider();
   const {
     temperature = 0.3,
     maxTokens = 2048,
@@ -628,14 +677,49 @@ async function callLLM(
   return null;
 }
 
+/**
+ * Appelle le LLM avec fallback automatique vers Ollama local.
+ * 1. Si une clé API externe est configurée → essaie le provider externe
+ * 2. Si l'appel externe échoue → fallback vers Ollama local (Qwen3 8B)
+ * 3. Si aucune clé API → utilise Ollama local directement
+ */
+async function callLLM(
+  messages: LLMMessage[],
+  options: LLMCallOptions = {},
+  retries = 1
+): Promise<string | null> {
+  const apiKey = getApiKey();
+  const provider = getProvider();
+
+  // 1. Essayer le provider principal (externe ou déjà Ollama si pas de clé)
+  const result = await callProvider(provider, apiKey || '', messages, options, retries);
+  if (result) return result;
+
+  // 2. Si le provider était externe et a échoué, fallback vers Ollama local
+  if (apiKey && provider.provider !== 'ollama') {
+    console.warn(`[AICoachEngine] ${provider.name} failed — falling back to local Ollama (${getOllamaModel()})`);
+    const ollamaProvider = getOllamaProvider();
+    const ollamaResult = await callProvider(ollamaProvider, '', messages, {
+      ...options,
+      model: options.useRouterModel ? ollamaProvider.routerModel : ollamaProvider.mainModel,
+    }, 0);
+    if (ollamaResult) {
+      lastLLMError = null;
+      return ollamaResult;
+    }
+    // Ollama also failed — provide helpful error
+    lastLLMError = `API externe (${provider.name}) et Ollama local indisponibles. Lancez Ollama avec: ollama run ${getOllamaModel()}`;
+  }
+
+  return null;
+}
+
 export async function streamLLM(
   messages: LLMMessage[],
   onChunk: (chunk: string) => void,
   options: LLMCallOptions = {}
 ): Promise<void> {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error('API key not configured');
-
   const provider = getProvider();
   const { temperature = 0.3, maxTokens = 2048 } = options;
 
@@ -646,12 +730,12 @@ export async function streamLLM(
     return;
   }
 
-  // OpenAI-compatible streaming (Groq, OpenAI)
-  const response = await fetch(provider.apiUrl(provider.mainModel, apiKey), {
+  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama)
+  const response = await fetch(provider.apiUrl(provider.mainModel, apiKey || ''), {
     method: 'POST',
-    headers: provider.headers(apiKey),
+    headers: provider.headers(apiKey || ''),
     body: JSON.stringify({
-      model: provider.mainModel,
+      model: provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel,
       messages,
       temperature,
       max_tokens: maxTokens,
@@ -1499,7 +1583,7 @@ export async function processQuestion(
   const errorDetail = lastLLMError || 'Aucune réponse du serveur';
   console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Clé API invalide ou expirée\n- Modèle indisponible\n- Quota API dépassé\n- Problème de connexion réseau\n\n**Actions :**\n1. Vérifiez votre clé API auprès de votre fournisseur\n2. Vérifiez que la variable \`VITE_LLM_API_KEY\` est correcte\n3. Réessayez dans quelques instants`,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Ollama n'est pas lancé en local\n- Le modèle \`${getOllamaModel()}\` n'est pas installé\n- Clé API externe invalide ou expirée\n- Problème de connexion réseau\n\n**Actions :**\n1. Installez et lancez Ollama : \`ollama run ${getOllamaModel()}\`\n2. Ou configurez une clé API externe dans \`VITE_LLM_API_KEY\`\n3. Réessayez dans quelques instants`,
     source: 'llm',
   };
 }
@@ -1534,12 +1618,17 @@ function findPractitionerCards(names: string[]): (Practitioner & { daysSinceVisi
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function isLLMConfigured(): boolean {
+  // Toujours true: soit API externe, soit Ollama local
+  return true;
+}
+
+export function hasExternalLLMKey(): boolean {
   return getApiKey() !== null;
 }
 
 export function getLLMProviderName(): string {
   const key = getApiKey();
-  if (!key) return 'Non configuré';
+  if (!key) return `Ollama local (${getOllamaModel()})`;
   return detectProvider(key).name;
 }
 

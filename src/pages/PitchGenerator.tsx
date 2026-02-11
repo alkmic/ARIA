@@ -128,9 +128,8 @@ export function PitchGenerator() {
     maxTokens: 4096,
   });
 
-  // Detect if LLM API key is configured
-  const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  const hasValidApiKey = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
+  // LLM est toujours disponible (API externe ou Ollama local)
+  const hasValidApiKey = true; // useGroq gère le fallback Ollama automatiquement
   const { speak, pause, resume, stop, isSpeaking, isPaused, isSupported: speechSupported } = useSpeech();
 
   // Filtrage des praticiens
