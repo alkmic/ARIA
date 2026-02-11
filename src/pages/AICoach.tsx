@@ -104,7 +104,7 @@ export default function AICoach() {
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [showKnowledgePanel, setShowKnowledgePanel] = useState(false);
   const { practitioners, currentUser, upcomingVisits } = useAppStore();
-  const { visitReports, userNotes } = useUserDataStore();
+  const { visitReports, userNotes, getActiveActions } = useUserDataStore();
   const { periodLabel } = useTimePeriod();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -256,7 +256,7 @@ export default function AICoach() {
         practitioners,
         upcomingVisits,
         currentUser.objectives,
-        { visitReports, userNotes }
+        { visitReports, userNotes, activeActions: getActiveActions() }
       );
 
       // Construire le message assistant

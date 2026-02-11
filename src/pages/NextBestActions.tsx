@@ -28,7 +28,8 @@ import {
   Newspaper,
   XCircle,
   Timer,
-  Brain
+  Brain,
+  UserPlus
 } from 'lucide-react';
 import { DataService } from '../services/dataService';
 import { generateIntelligentActions } from '../services/actionIntelligence';
@@ -100,6 +101,14 @@ const ACTION_CONFIG = {
     border: 'border-cyan-200',
     text: 'text-cyan-700',
     label: 'Publication'
+  },
+  new_practitioner: {
+    icon: UserPlus,
+    color: 'from-indigo-500 to-violet-500',
+    bg: 'bg-indigo-50',
+    border: 'border-indigo-200',
+    text: 'text-indigo-700',
+    label: 'Nouveau praticien'
   }
 };
 
@@ -573,6 +582,7 @@ export default function NextBestActions() {
         upsell: active.filter(a => a.type === 'upsell').length,
         competitor: active.filter(a => a.type === 'competitor').length,
         publication: active.filter(a => a.type === 'publication').length,
+        new_practitioner: active.filter(a => a.type === 'new_practitioner').length,
       }
     };
   }, [storedActions, getActiveActions]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -603,7 +613,7 @@ export default function NextBestActions() {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
         <div className="glass-card p-4 text-center">
           <div className="text-3xl font-bold text-slate-800">{stats.total}</div>
           <div className="text-sm text-slate-500">Actions</div>
@@ -611,6 +621,10 @@ export default function NextBestActions() {
         <div className="glass-card p-4 text-center bg-gradient-to-br from-red-50 to-orange-50 border-red-200">
           <div className="text-3xl font-bold text-red-600">{stats.critical}</div>
           <div className="text-sm text-red-600">Critiques</div>
+        </div>
+        <div className="glass-card p-4 text-center bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-200">
+          <div className="text-3xl font-bold text-indigo-600">{stats.byType.new_practitioner}</div>
+          <div className="text-sm text-indigo-600">Nouveaux</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
           <div className="text-3xl font-bold text-amber-600">{stats.byType.visit_kol}</div>

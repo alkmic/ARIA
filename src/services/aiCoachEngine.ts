@@ -30,7 +30,7 @@ import { generateIntelligentActions } from './actionIntelligence';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
 
-// User CRM data from Zustand store (visit reports, notes) — injected by the UI
+// User CRM data from Zustand store (visit reports, notes, actions) — injected by the UI
 export interface UserCRMData {
   visitReports: Array<{
     practitionerId: string;
@@ -43,6 +43,8 @@ export interface UserCRMData {
       nextActions: string[];
       productsDiscussed: string[];
       competitorsMentioned: string[];
+      objections?: string[];
+      opportunities?: string[];
     };
   }>;
   userNotes: Array<{
@@ -50,6 +52,15 @@ export interface UserCRMData {
     content: string;
     type: string;
     createdAt: string;
+  }>;
+  activeActions?: Array<{
+    practitionerId: string;
+    type: string;
+    title: string;
+    priority: string;
+    scores: { urgency: number; impact: number; overall: number };
+    aiJustification: { summary: string };
+    suggestedDate: string;
   }>;
 }
 
@@ -1291,13 +1302,17 @@ async function generateDirectResponse(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function formatUserCRMContext(data: UserCRMData, question: string): string {
-  if (!data.visitReports.length && !data.userNotes.length) return '';
+  const hasReports = data.visitReports.length > 0;
+  const hasNotes = data.userNotes.length > 0;
+  const hasActions = data.activeActions && data.activeActions.length > 0;
+
+  if (!hasReports && !hasNotes && !hasActions) return '';
 
   const lowerQ = question.toLowerCase();
-  let context = '\n\n## Données CRM Utilisateur (comptes-rendus de visite et notes)\n';
+  let context = '\n\n## Données CRM Utilisateur (comptes-rendus de visite, notes et actions en cours)\n';
 
   // Include recent visit reports (last 10)
-  if (data.visitReports.length > 0) {
+  if (hasReports) {
     context += `\n### Comptes-rendus de visite récents (${data.visitReports.length} total)\n`;
     const relevantReports = data.visitReports
       .filter(r => {
@@ -1322,17 +1337,38 @@ function formatUserCRMContext(data: UserCRMData, question: string): string {
       if (r.extractedInfo.nextActions.length > 0) {
         context += `Actions: ${r.extractedInfo.nextActions.join('; ')}. `;
       }
+      if (r.extractedInfo.objections && r.extractedInfo.objections.length > 0) {
+        context += `Objections: ${r.extractedInfo.objections.join('; ')}. `;
+      }
+      if (r.extractedInfo.opportunities && r.extractedInfo.opportunities.length > 0) {
+        context += `Opportunités: ${r.extractedInfo.opportunities.join('; ')}. `;
+      }
       context += '\n';
     });
   }
 
   // Include user notes (last 10)
-  if (data.userNotes.length > 0) {
+  if (hasNotes) {
     context += `\n### Notes utilisateur (${data.userNotes.length} total)\n`;
     data.userNotes.slice(0, 10).forEach(n => {
       const date = new Date(n.createdAt).toLocaleDateString('fr-FR');
       context += `- [${date}] (${n.type}) ${n.content.substring(0, 200)}${n.content.length > 200 ? '...' : ''}\n`;
     });
+  }
+
+  // Include active AI actions
+  if (hasActions && data.activeActions) {
+    const actionsToShow = lowerQ.includes('action') || lowerQ.includes('priorité') || lowerQ.includes('recommandation') || lowerQ.includes('faire')
+      ? data.activeActions.slice(0, 10)
+      : data.activeActions.slice(0, 5);
+
+    if (actionsToShow.length > 0) {
+      context += `\n### Actions IA en cours (${data.activeActions.length} actives)\n`;
+      actionsToShow.forEach(a => {
+        context += `- [${a.priority.toUpperCase()}] ${a.title} — ${a.aiJustification.summary.substring(0, 150)}`;
+        context += ` (urgence: ${a.scores.urgency}%, impact: ${a.scores.impact}%, date suggérée: ${a.suggestedDate})\n`;
+      });
+    }
   }
 
   return context;

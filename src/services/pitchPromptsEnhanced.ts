@@ -10,6 +10,7 @@ import { DataService } from './dataService';
 import { searchByCategory, searchByTag } from './ragService';
 import type { PractitionerProfile } from '../types/database';
 import type { KnowledgeCategory } from '../data/ragKnowledgeBase';
+import { useUserDataStore } from '../stores/useUserDataStore';
 
 const LENGTH_WORDS = {
   short: 200,
@@ -440,6 +441,49 @@ export function buildEnhancedUserPrompt(practitioner: Practitioner, config: Pitc
   const topProductsRaw = getProductFrequency(profile).slice(0, 3);
   const topProducts = topProductsRaw.map(([product, count]) => `${product} (${count}x)`);
 
+  // Retrieve user CRM data (visit reports, notes) from the store
+  const userStore = useUserDataStore.getState();
+  const userVisitReports = userStore.getVisitReportsForPractitioner(practitioner.id);
+  const userNotes = userStore.getNotesForPractitioner(practitioner.id);
+
+  let userCrmSection = '';
+  if (userVisitReports.length > 0 || userNotes.length > 0) {
+    userCrmSection = `\n═══════════════════════════════════════════════════════════════════════════
+DONNÉES CRM DE L'UTILISATEUR (comptes-rendus de visites et notes personnelles)
+═══════════════════════════════════════════════════════════════════════════\n`;
+    if (userVisitReports.length > 0) {
+      userCrmSection += `\n**COMPTES-RENDUS DE VISITE RÉCENTS:**\n`;
+      userVisitReports.slice(0, 3).forEach(report => {
+        userCrmSection += `- [${report.date}] Sentiment: ${report.extractedInfo.sentiment}\n`;
+        if (report.extractedInfo.keyPoints.length > 0) {
+          userCrmSection += `  Points clés: ${report.extractedInfo.keyPoints.join(' | ')}\n`;
+        }
+        if (report.extractedInfo.nextActions.length > 0) {
+          userCrmSection += `  Actions à suivre: ${report.extractedInfo.nextActions.join(' | ')}\n`;
+        }
+        if (report.extractedInfo.productsDiscussed.length > 0) {
+          userCrmSection += `  Produits: ${report.extractedInfo.productsDiscussed.join(', ')}\n`;
+        }
+        if (report.extractedInfo.objections.length > 0) {
+          userCrmSection += `  Objections soulevées: ${report.extractedInfo.objections.join(' | ')}\n`;
+        }
+        if (report.extractedInfo.competitorsMentioned.length > 0) {
+          userCrmSection += `  Concurrents mentionnés: ${report.extractedInfo.competitorsMentioned.join(', ')}\n`;
+        }
+        if (report.extractedInfo.opportunities.length > 0) {
+          userCrmSection += `  Opportunités identifiées: ${report.extractedInfo.opportunities.join(' | ')}\n`;
+        }
+      });
+      userCrmSection += `→ OBLIGATOIRE: Intégrer ces éléments dans le pitch pour montrer le suivi et la connaissance du praticien.\n`;
+    }
+    if (userNotes.length > 0) {
+      userCrmSection += `\n**NOTES PERSONNELLES DU COMMERCIAL:**\n`;
+      userNotes.slice(0, 5).forEach(note => {
+        userCrmSection += `- [${note.type.toUpperCase()}] ${note.content}\n`;
+      });
+    }
+  }
+
   return `Génère un pitch ULTRA-PERSONNALISÉ pour ce praticien. Chaque section doit mentionner des éléments SPÉCIFIQUES tirés des données ci-dessous. INTERDIT de rester générique.
 
 ═══════════════════════════════════════════════════════════════════════════
@@ -481,6 +525,7 @@ HISTORIQUE DES VISITES RÉCENTES
 ═══════════════════════════════════════════════════════════════════════════
 ${visitHistory}
 
+${userCrmSection}
 ═══════════════════════════════════════════════════════════════════════════
 CONFIGURATION DU PITCH
 ═══════════════════════════════════════════════════════════════════════════
@@ -662,7 +707,6 @@ export function generateLocalPitch(practitioner: Practitioner, config: PitchConf
   const conferences = profile?.news?.filter(n => n.type === 'conference') || [];
   const awards = profile?.news?.filter(n => n.type === 'award') || [];
   const notes = profile?.notes || [];
-  const visits = profile?.visitHistory || [];
   const topProducts = profile ? getProductFrequency(profile).slice(0, 3) : [];
 
   const daysSinceLastVisit = profile?.lastVisitDate
@@ -703,6 +747,13 @@ export function generateLocalPitch(practitioner: Practitioner, config: PitchConf
   } else if (daysSinceLastVisit !== null && daysSinceLastVisit > 90) {
     accroche = `${titre}, cela fait ${daysSinceLastVisit} jours que nous n'avons pas eu l'occasion d'échanger. `;
     accroche += `Beaucoup de choses ont évolué chez Air Liquide Santé depuis notre dernier contact, et je tenais à vous en faire part personnellement.`;
+  } else if (practitioner.id.startsWith('pract-new') && profile?.news && profile.news.some(n => n.type === 'event')) {
+    const event = profile.news.find(n => n.type === 'event')!;
+    accroche = `${titre}, j'ai appris votre récente actualité — ${event.content.substring(0, 120)}. `;
+    accroche += `En tant que partenaire de référence des ${isPneumo ? 'pneumologues' : 'médecins généralistes'} de la région ${city}, Air Liquide Santé souhaitait être parmi les premiers à vous accueillir et à vous présenter notre accompagnement.`;
+    if (isKOL) {
+      accroche += ` Votre expertise reconnue fait de vous un interlocuteur stratégique pour notre équipe.`;
+    }
   } else {
     accroche = `${titre}, en tant que ${isPneumo ? 'pneumologue' : 'médecin généraliste'} à ${city}, vous êtes un partenaire clé dans la prise en charge des patients sous oxygénothérapie de votre secteur. `;
     if (isKOL) {

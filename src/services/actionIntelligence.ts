@@ -392,48 +392,103 @@ export function generateIntelligentActions(
 
     // 0. NOUVEAU PRATICIEN DÉTECTÉ — Jamais visité → visite de découverte urgente
     if (context.daysSinceVisit === 999) {
-      const type: AIAction['type'] = 'visit_urgent';
+      const type: AIAction['type'] = 'new_practitioner';
       if (!processedForType.has('new_discovery')) processedForType.set('new_discovery', new Set());
       if (!processedForType.get('new_discovery')!.has(p.id)) {
         processedForType.get('new_discovery')!.add(p.id);
 
+        // Check for recent detection (id starts with pract-new = explicitly new)
+        const isRecentlyDetected = p.id.startsWith('pract-new');
+        const detectedDaysAgo = isRecentlyDetected
+          ? Math.floor((today.getTime() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+
+        // Recent news as accroche
+        const recentNews = p.news.length > 0 ? p.news[0] : null;
+
         const scores: ActionScore = {
-          urgency: p.metrics.vingtile <= 5 ? 95 : p.metrics.vingtile <= 10 ? 80 : 65,
-          impact: p.metrics.vingtile <= 5 ? 90 : p.metrics.vingtile <= 10 ? 70 : 50,
-          probability: 60,
+          urgency: p.metrics.isKOL ? 98 : p.metrics.vingtile <= 5 ? 95 : p.metrics.vingtile <= 10 ? 82 : 65,
+          impact: p.metrics.isKOL ? 95 : p.metrics.vingtile <= 5 ? 90 : p.metrics.vingtile <= 10 ? 70 : 50,
+          probability: isRecentlyDetected ? 75 : 60,
           overall: 0,
         };
         scores.overall = Math.round(scores.urgency * 0.35 + scores.impact * 0.40 + scores.probability * 0.25);
-        const priority = p.metrics.vingtile <= 5 ? 'critical' as const : p.metrics.vingtile <= 10 ? 'high' as const : 'medium' as const;
+        const priority = p.metrics.isKOL ? 'critical' as const : p.metrics.vingtile <= 5 ? 'critical' as const : p.metrics.vingtile <= 10 ? 'high' as const : 'medium' as const;
+
+        const metrics = [
+          `Volume estimé: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
+          `Vingtile ${p.metrics.vingtile}/20 (Top ${p.metrics.vingtile * 5}%)`,
+          `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`,
+          `Potentiel de croissance: +${p.metrics.potentialGrowth}%`,
+        ];
+        if (detectedDaysAgo !== null) {
+          metrics.push(`Détecté il y a ${detectedDaysAgo} jour(s) — aucun contact établi`);
+        } else {
+          metrics.push(`Aucune visite précédente enregistrée`);
+        }
+        if (recentNews) {
+          metrics.push(`Actualité récente: "${recentNews.title}"`);
+        }
+
+        const risks = [
+          `Risque d'être capté en premier par un concurrent (Vivisol, Linde, Bastide)`,
+          `Pas de relation établie — aucun levier de fidélisation en place`,
+          `Volume potentiel non capté: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
+        ];
+        if (isRecentlyDetected && detectedDaysAgo !== null && detectedDaysAgo > 7) {
+          risks.push(`Détection datant de ${detectedDaysAgo} jours sans action — chaque jour augmente le risque concurrent`);
+        }
+
+        const opportunities = [
+          `Être le premier prestataire à prendre contact — avantage compétitif décisif`,
+          `Présenter la gamme complète Air Liquide Santé dès la première visite`,
+          p.metrics.isKOL ? `KOL identifié — fort potentiel d'influence sur les prescripteurs du territoire` : `Développer un nouveau prescripteur fidèle sur le territoire`,
+        ];
+        if (recentNews) {
+          opportunities.push(`Accroche possible via son actualité : "${recentNews.title}"`);
+        }
+        if (p.specialty === 'Pneumologue') {
+          opportunities.push(`Pneumologue spécialisé — profil à fort potentiel pour O2, VNI et télésuivi`);
+        }
+
+        let suggestedApproach = '';
+        if (recentNews) {
+          suggestedApproach = `Préparez une visite de découverte en vous appuyant sur son actualité récente : "${recentNews.title}". `;
+        } else {
+          suggestedApproach = `Préparez une visite de découverte complète. `;
+        }
+        suggestedApproach += `Présentez Air Liquide Santé avec la gamme adaptée à la spécialité (${p.specialty}${p.subSpecialty ? ` — ${p.subSpecialty}` : ''}). `;
+        if (p.specialty === 'Pneumologue') {
+          suggestedApproach += `Mettez en avant le télésuivi O2 Connect, le FreeStyle Comfort et la VNI DreamStation. Apportez le kit de démonstration.`;
+        } else {
+          suggestedApproach += `Présentez le concentrateur VitalAire Confort+, le service 24/7 et le kit d'éducation thérapeutique patient. Simplifiez la mise en place pour le convaincre.`;
+        }
+        if (p.metrics.isKOL) {
+          suggestedApproach += ` En tant que KOL, proposez une collaboration : participation à un événement Air Liquide, retour d'expérience, advisory board.`;
+        }
 
         actions.push({
           type,
           priority,
           practitionerId: p.id,
-          title: `🆕 Nouveau praticien — Visite de découverte`,
-          reason: `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`,
+          title: p.metrics.isKOL
+            ? `Nouveau KOL détecté — Visite prioritaire`
+            : isRecentlyDetected
+              ? `Nouveau praticien détecté — Premier contact urgent`
+              : `Praticien non visité — Visite de découverte`,
+          reason: isRecentlyDetected && detectedDaysAgo !== null
+            ? `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}) détecté(e) il y a ${detectedDaysAgo}j`
+            : `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) jamais visité(e)`,
           aiJustification: {
-            summary: `${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté sur le territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). Aucune visite enregistrée — une première prise de contact est essentielle pour établir la relation.`,
-            metrics: [
-              `Volume estimé: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
-              `Vingtile ${p.metrics.vingtile}/20 (Top ${p.metrics.vingtile * 5}%)`,
-              `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`,
-              `Potentiel de croissance: +${p.metrics.potentialGrowth}%`,
-              `Aucune visite précédente enregistrée`,
-            ],
-            risks: [
-              `Risque d'être capté en premier par un concurrent (Vivisol, Linde)`,
-              `Pas de relation établie — aucun levier de fidélisation en place`,
-              `Volume potentiel non capté: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
-            ],
-            opportunities: [
-              `Être le premier prestataire à prendre contact — avantage compétitif`,
-              `Présenter la gamme complète Air Liquide Santé dès la première visite`,
-              p.metrics.isKOL ? `KOL identifié — fort potentiel d'influence réseau` : `Développer un nouveau prescripteur sur le territoire`,
-              `Proposer un kit de bienvenue avec documentation et démonstration produits`,
-            ],
-            suggestedApproach: `Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`,
-            competitorAlert: `⚠️ Nouveau praticien non affilié — les concurrents pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`,
+            summary: isRecentlyDetected
+              ? `${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien récemment détecté sur le territoire de ${p.address.city} (${p.specialty}${p.subSpecialty ? `, ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). ${p.metrics.isKOL ? 'KOL identifié — contact prioritaire absolu.' : 'Premier contact à établir rapidement pour fidéliser avant la concurrence.'}`
+              : `${p.title} ${p.firstName} ${p.lastName} est un praticien du territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an) qui n'a jamais été visité(e). Une première prise de contact est essentielle.`,
+            metrics,
+            risks,
+            opportunities,
+            suggestedApproach,
+            competitorAlert: `⚠️ Nouveau praticien non affilié — les concurrents (Vivisol, Linde, Bastide) pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`,
+            contextualNews: recentNews ? `📰 Actualité récente : "${recentNews.title}" — ${recentNews.content.substring(0, 120)}...` : undefined,
           },
           scores,
           suggestedDate: priority === 'critical' ? 'Cette semaine' : 'Sous 2 semaines',

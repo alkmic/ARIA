@@ -22,7 +22,13 @@ import {
   ThumbsUp,
   ThumbsDown,
   Loader2,
-  FileText
+  FileText,
+  Shield,
+  Heart,
+  ToggleLeft,
+  ToggleRight,
+  Brain,
+  Eye
 } from 'lucide-react';
 import { useGroq } from '../hooks/useGroq';
 import { quickSearch } from '../services/universalSearch';
@@ -47,6 +53,15 @@ interface ExtractedInfo {
   opportunities: string[];
 }
 
+interface ProfileUpdateProposal {
+  id: string;
+  category: 'observation' | 'strategy' | 'competitive' | 'reminder' | 'relationship';
+  title: string;
+  content: string;
+  icon: 'eye' | 'target' | 'shield' | 'calendar' | 'heart';
+  enabled: boolean;
+}
+
 export default function VoiceVisitReport() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -63,6 +78,7 @@ export default function VoiceVisitReport() {
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
   const [editedNotes, setEditedNotes] = useState('');
   const [_isSaved, setIsSaved] = useState(false);
+  const [profileUpdates, setProfileUpdates] = useState<ProfileUpdateProposal[]>([]);
 
   const recognitionRef = useRef<any>(null);
   const interimTranscriptRef = useRef('');
@@ -197,7 +213,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
           const jsonMatch = response.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
-            setExtractedInfo({
+            const info: ExtractedInfo = {
               practitioner: {
                 id: selectedPractitioner.id,
                 name: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
@@ -211,14 +227,16 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
               competitorsMentioned: parsed.competitorsMentioned || [],
               objections: parsed.objections || [],
               opportunities: parsed.opportunities || []
-            });
+            };
+            setExtractedInfo(info);
             setEditedNotes(transcript);
+            generateProfileUpdateProposals(info, selectedPractitioner);
             setStep('review');
           }
         } catch (parseError) {
           console.error('JSON parse error:', parseError);
           // Fallback: create basic extraction
-          setExtractedInfo({
+          const fallbackInfo: ExtractedInfo = {
             practitioner: {
               id: selectedPractitioner.id,
               name: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
@@ -232,15 +250,17 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
             competitorsMentioned: [],
             objections: [],
             opportunities: []
-          });
+          };
+          setExtractedInfo(fallbackInfo);
           setEditedNotes(transcript);
+          generateProfileUpdateProposals(fallbackInfo, selectedPractitioner);
           setStep('review');
         }
       }
     } catch (error) {
       console.error('Processing error:', error);
       // Fallback without AI
-      setExtractedInfo({
+      const errorFallbackInfo: ExtractedInfo = {
         practitioner: {
           id: selectedPractitioner.id,
           name: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
@@ -254,18 +274,127 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
         competitorsMentioned: [],
         objections: [],
         opportunities: []
-      });
+      };
+      setExtractedInfo(errorFallbackInfo);
       setEditedNotes(transcript);
+      generateProfileUpdateProposals(errorFallbackInfo, selectedPractitioner);
       setStep('review');
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // Generate AI profile update proposals based on extracted info
+  const generateProfileUpdateProposals = (info: ExtractedInfo, pract: PractitionerProfile) => {
+    const proposals: ProfileUpdateProposal[] = [];
+    let idCounter = 0;
+
+    // Key points → Observation note
+    if (info.keyPoints.length > 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'observation',
+        title: 'Points clés de la visite',
+        content: `Points clés de la visite du ${new Date().toLocaleDateString('fr-FR')}:\n${info.keyPoints.map(p => `• ${p}`).join('\n')}`,
+        icon: 'eye',
+        enabled: true,
+      });
+    }
+
+    // Opportunities → Strategy note
+    if (info.opportunities.length > 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'strategy',
+        title: 'Opportunités identifiées par l\'IA',
+        content: `Opportunités détectées le ${new Date().toLocaleDateString('fr-FR')}:\n${info.opportunities.map(o => `• ${o}`).join('\n')}`,
+        icon: 'target',
+        enabled: true,
+      });
+    }
+
+    // Competitors → Competitive intelligence note
+    if (info.competitorsMentioned.length > 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'competitive',
+        title: 'Veille concurrentielle',
+        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\nConcurrents mentionnés: ${info.competitorsMentioned.join(', ')}${info.objections.length > 0 ? `\nObjections liées: ${info.objections.join(' | ')}` : ''}`,
+        icon: 'shield',
+        enabled: true,
+      });
+    }
+
+    // Next actions → Reminder note
+    if (info.nextActions.length > 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'reminder',
+        title: 'Actions à planifier',
+        content: `Actions suite à la visite du ${new Date().toLocaleDateString('fr-FR')}:\n${info.nextActions.map(a => `• ${a}`).join('\n')}`,
+        icon: 'calendar',
+        enabled: true,
+      });
+    }
+
+    // Sentiment-based relationship update
+    if (info.sentiment === 'positive' && info.keyPoints.length > 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'relationship',
+        title: 'Relation positive confirmée',
+        content: `Visite positive le ${new Date().toLocaleDateString('fr-FR')} — ${pract.title} ${pract.lastName} réceptif(ve) et engagé(e). ${info.productsDiscussed.length > 0 ? `Intérêt confirmé pour: ${info.productsDiscussed.join(', ')}.` : ''} Relation à consolider.`,
+        icon: 'heart',
+        enabled: true,
+      });
+    } else if (info.sentiment === 'negative') {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'relationship',
+        title: 'Alerte relation — Points de vigilance',
+        content: `Visite du ${new Date().toLocaleDateString('fr-FR')} avec sentiment négatif détecté. ${info.objections.length > 0 ? `Freins identifiés: ${info.objections.join(' | ')}.` : ''} Attention requise pour les prochains contacts.`,
+        icon: 'heart',
+        enabled: true,
+      });
+    }
+
+    // Products discussed → update product preferences
+    if (info.productsDiscussed.length > 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'observation',
+        title: 'Produits abordés — Mise à jour des préférences',
+        content: `Produits discutés le ${new Date().toLocaleDateString('fr-FR')}: ${info.productsDiscussed.join(', ')}. ${info.sentiment === 'positive' ? 'Réception favorable.' : info.sentiment === 'negative' ? 'Réserves exprimées.' : 'Réaction neutre.'}`,
+        icon: 'eye',
+        enabled: true,
+      });
+    }
+
+    // Objections without competitors → standalone objection note
+    if (info.objections.length > 0 && info.competitorsMentioned.length === 0) {
+      proposals.push({
+        id: `proposal-${idCounter++}`,
+        category: 'strategy',
+        title: 'Objections à adresser',
+        content: `Objections relevées le ${new Date().toLocaleDateString('fr-FR')}:\n${info.objections.map(o => `• ${o}`).join('\n')}\n→ À intégrer dans la préparation du prochain pitch.`,
+        icon: 'target',
+        enabled: true,
+      });
+    }
+
+    setProfileUpdates(proposals);
+  };
+
+  const toggleProposal = (id: string) => {
+    setProfileUpdates(prev =>
+      prev.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p)
+    );
+  };
+
   // Get store methods
   const { addVisitReport, addUserNote } = useUserDataStore();
 
-  // Save report - persist to store
+  // Save report - persist to store with user-validated profile updates
   const saveReport = () => {
     if (!selectedPractitioner || !extractedInfo) return;
 
@@ -288,34 +417,22 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       }
     });
 
-    // If there are key points, save them as strategic notes
-    if (extractedInfo.keyPoints.length > 0) {
+    // Save only user-approved profile update proposals as notes
+    const enabledProposals = profileUpdates.filter(p => p.enabled);
+    for (const proposal of enabledProposals) {
+      const noteType = proposal.category === 'competitive' ? 'competitive' as const
+        : proposal.category === 'strategy' ? 'strategy' as const
+        : proposal.category === 'reminder' ? 'reminder' as const
+        : 'observation' as const;
+
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Points clés de la visite du ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.keyPoints.map(p => `• ${p}`).join('\n')}`,
-        type: 'observation'
+        content: proposal.content,
+        type: noteType,
       });
     }
 
-    // If there are opportunities, save them as strategy notes
-    if (extractedInfo.opportunities.length > 0) {
-      addUserNote({
-        practitionerId: selectedPractitioner.id,
-        content: `Opportunités détectées le ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.opportunities.map(o => `• ${o}`).join('\n')}`,
-        type: 'strategy'
-      });
-    }
-
-    // If competitors were mentioned, save as competitive intelligence
-    if (extractedInfo.competitorsMentioned.length > 0) {
-      addUserNote({
-        practitionerId: selectedPractitioner.id,
-        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\nConcurrents mentionnés: ${extractedInfo.competitorsMentioned.join(', ')}`,
-        type: 'competitive'
-      });
-    }
-
-    console.log('Saved report to store:', savedReport.id);
+    console.log(`Saved report ${savedReport.id} with ${enabledProposals.length}/${profileUpdates.length} profile updates`);
     setIsSaved(true);
     setStep('saved');
   };
@@ -341,7 +458,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {['Sélectionner', 'Enregistrer', 'Vérifier', 'Terminé'].map((label, i) => {
+          {['Praticien', 'Dictée', 'Validation IA', 'Enregistré'].map((label, i) => {
             const stepIndex = ['select', 'record', 'review', 'saved'].indexOf(step);
             const isActive = i === stepIndex;
             const isCompleted = i < stepIndex;
@@ -752,21 +869,95 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
             </div>
 
-            {/* Integration Preview */}
-            <div className="glass-card p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
-              <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Ce qui sera intégré à la fiche de {selectedPractitioner.title} {selectedPractitioner.lastName}
-              </h4>
-              <ul className="text-sm text-emerald-700 space-y-1">
-                <li>• Compte-rendu de visite avec transcription complète</li>
-                {extractedInfo.keyPoints.length > 0 && <li>• {extractedInfo.keyPoints.length} point(s) clé(s) → Note d'observation</li>}
-                {extractedInfo.opportunities.length > 0 && <li>• {extractedInfo.opportunities.length} opportunité(s) → Note stratégique</li>}
-                {extractedInfo.competitorsMentioned.length > 0 && <li>• Intelligence concurrentielle ({extractedInfo.competitorsMentioned.join(', ')}) → Note concurrence</li>}
-                {extractedInfo.nextActions.length > 0 && <li>• {extractedInfo.nextActions.length} action(s) à suivre</li>}
-                <li>• Données accessibles par le Coach IA pour répondre à vos questions</li>
-              </ul>
-            </div>
+            {/* AI Profile Update Proposals */}
+            {profileUpdates.length > 0 && (
+              <div className="glass-card p-5 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/50 to-violet-50/50">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-indigo-800 flex items-center gap-2">
+                    <Brain className="w-5 h-5" />
+                    Mises à jour de la fiche proposées par l'IA
+                  </h4>
+                  <span className="text-xs text-indigo-500 bg-indigo-100 px-2 py-1 rounded-full">
+                    {profileUpdates.filter(p => p.enabled).length}/{profileUpdates.length} activées
+                  </span>
+                </div>
+                <p className="text-sm text-indigo-600 mb-4">
+                  ARIA a déduit les informations suivantes de votre compte-rendu. Activez ou désactivez chaque élément avant de sauvegarder.
+                </p>
+
+                <div className="space-y-3">
+                  {profileUpdates.map(proposal => {
+                    const iconMap = {
+                      eye: <Eye className="w-4 h-4" />,
+                      target: <Target className="w-4 h-4" />,
+                      shield: <Shield className="w-4 h-4" />,
+                      calendar: <Calendar className="w-4 h-4" />,
+                      heart: <Heart className="w-4 h-4" />,
+                    };
+                    const categoryColors = {
+                      observation: 'text-blue-600 bg-blue-50 border-blue-200',
+                      strategy: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+                      competitive: 'text-orange-600 bg-orange-50 border-orange-200',
+                      reminder: 'text-purple-600 bg-purple-50 border-purple-200',
+                      relationship: 'text-pink-600 bg-pink-50 border-pink-200',
+                    };
+                    const categoryLabels = {
+                      observation: 'Observation',
+                      strategy: 'Stratégie',
+                      competitive: 'Concurrence',
+                      reminder: 'Rappel',
+                      relationship: 'Relation',
+                    };
+
+                    return (
+                      <motion.div
+                        key={proposal.id}
+                        layout
+                        className={`p-3 rounded-xl border transition-all ${
+                          proposal.enabled
+                            ? categoryColors[proposal.category]
+                            : 'bg-slate-50 border-slate-200 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <button
+                            onClick={() => toggleProposal(proposal.id)}
+                            className="mt-0.5 flex-shrink-0 transition-colors"
+                          >
+                            {proposal.enabled ? (
+                              <ToggleRight className="w-7 h-7 text-emerald-500" />
+                            ) : (
+                              <ToggleLeft className="w-7 h-7 text-slate-300" />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                proposal.enabled ? categoryColors[proposal.category] : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                {iconMap[proposal.icon]}
+                                {categoryLabels[proposal.category]}
+                              </span>
+                              <span className={`text-sm font-medium ${proposal.enabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                                {proposal.title}
+                              </span>
+                            </div>
+                            <p className={`text-xs whitespace-pre-line ${proposal.enabled ? 'text-slate-600' : 'text-slate-400'}`}>
+                              {proposal.content}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-indigo-200 flex items-center gap-2 text-xs text-indigo-500">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Ces données seront exploitées par le Coach IA, le Pitch Generator et les Next Best Actions.</span>
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3">
@@ -807,9 +998,33 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             <h2 className="text-2xl font-bold text-slate-800 mb-2">
               Compte-rendu enregistré !
             </h2>
-            <p className="text-slate-600 mb-8">
+            <p className="text-slate-600 mb-4">
               Le profil de {selectedPractitioner.title} {selectedPractitioner.lastName} a été enrichi
             </p>
+
+            {/* Summary of what was saved */}
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 mb-8 text-left max-w-md mx-auto">
+              <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2 text-sm">
+                <Brain className="w-4 h-4" />
+                Intégré à la fiche du praticien :
+              </h4>
+              <ul className="text-sm text-emerald-700 space-y-1">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  Compte-rendu de visite complet
+                </li>
+                {profileUpdates.filter(p => p.enabled).map(p => (
+                  <li key={p.id} className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    {p.title}
+                  </li>
+                ))}
+                <li className="flex items-center gap-2 text-indigo-600 mt-2 pt-2 border-t border-emerald-200">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                  Données disponibles pour le Coach IA
+                </li>
+              </ul>
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button

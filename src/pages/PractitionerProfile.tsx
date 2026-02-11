@@ -78,6 +78,12 @@ export default function PractitionerProfile() {
           <PeriodSelector size="sm" />
         </div>
         <div className="flex items-center gap-3">
+          {practitioner.id.startsWith('pract-new') && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-bold rounded-full shadow-lg shadow-indigo-500/30 animate-pulse">
+              <span className="w-1.5 h-1.5 bg-white rounded-full" />
+              NOUVEAU
+            </span>
+          )}
           <Badge variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'success'}>
             Risque {practitioner.riskLevel}
           </Badge>

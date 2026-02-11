@@ -132,6 +132,11 @@ export const HCPProfile: React.FC = () => {
                     {topPractitionerIds.has(practitioner.id) && (
                       <Badge variant="success" size="sm">Top {periodLabel}</Badge>
                     )}
+                    {practitioner.id.startsWith('pract-new') && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-[10px] font-bold rounded-full">
+                        NOUVEAU
+                      </span>
+                    )}
                     {practitioner.isKOL && (
                       <Badge variant="warning" size="sm">KOL</Badge>
                     )}

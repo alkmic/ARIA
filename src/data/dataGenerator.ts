@@ -654,7 +654,7 @@ function generateNotes(
     date.setDate(date.getDate() - daysAgo);
 
     notes.push({
-      id: `note-${i + 1}`,
+      id: `note-${firstName.toLowerCase()}-${lastName.toLowerCase()}-${i + 1}`,
       date: date.toISOString().split('T')[0],
       content,
       author: randomChoice(NOTE_AUTHORS, rng),
@@ -692,7 +692,7 @@ function generateVisitHistory(
       .replace(/{count}/g, String(randomInt(2, 8, rng)));
 
     visits.push({
-      id: `visit-${i + 1}`,
+      id: `visit-${firstName.toLowerCase()}-${lastName.toLowerCase()}-${i + 1}`,
       date: date.toISOString().split('T')[0],
       type: 'completed',
       duration: randomInt(15, 45, rng),
@@ -787,11 +787,209 @@ export function generatePractitioner(index: number): PractitionerProfile {
     news: generateNews(firstName, lastName, specialty, isKOL, rng),
     visitHistory: neverVisited ? [] : generateVisitHistory(firstName, lastName, practTitle, specialty, rng),
 
-    createdAt: new Date('2024-01-15').toISOString(),
+    createdAt: new Date(2024, 0, randomInt(1, 28, rng), randomInt(0, 23, rng), randomInt(0, 59, rng)).toISOString(),
     lastVisitDate,
     nextScheduledVisit: !neverVisited && rng() > 0.6
       ? new Date(Date.now() + randomInt(7, 60, rng) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       : undefined,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// NOUVEAUX PRATICIENS DÉTECTÉS RÉCEMMENT
+// (identifiés par la veille IA mais jamais encore visités)
+// ═══════════════════════════════════════════════════════════
+
+const NEW_PRACTITIONERS_DATA: Array<{
+  firstName: string;
+  lastName: string;
+  isMale: boolean;
+  specialty: 'Pneumologue' | 'Médecin généraliste';
+  subSpecialty?: string;
+  city: typeof CITIES_RHONE_ALPES[number];
+  vingtile: number;
+  isKOL: boolean;
+  volumeEstimate: number;
+  detectedDaysAgo: number;
+  reason: string;
+  news: Array<{ title: string; content: string; type: PractitionerNews['type']; daysAgo: number }>;
+}> = [
+  {
+    firstName: 'Raphaël',
+    lastName: 'Castellano',
+    isMale: true,
+    specialty: 'Pneumologue',
+    subSpecialty: 'Sommeil et ventilation',
+    city: CITIES_RHONE_ALPES[0], // LYON
+    vingtile: 3,
+    isKOL: true,
+    volumeEstimate: 185000,
+    detectedDaysAgo: 5,
+    reason: 'Nouveau pneumologue KOL installé récemment à Lyon, transféré du CHU de Montpellier. Fort prescripteur O2/VNI.',
+    news: [
+      { title: "Publication dans Respiratory Research", content: "Premier auteur d'une étude randomisée sur la VNI à domicile chez les patients BPCO hypercapniques stables — résultats en faveur d'une initiation précoce.", type: 'publication', daysAgo: 30 },
+      { title: "Intervention au congrès ERS 2025", content: "Communication orale sur l'impact du télésuivi sur la réduction des exacerbations BPCO sévères. Données multicentriques prometteuses.", type: 'conference', daysAgo: 60 },
+      { title: "Nomination au CHU Lyon Sud", content: "Nommé Praticien Hospitalier dans le service de pneumologie et pathologies du sommeil du CHU Lyon Sud. Ancien chef de clinique au CHU de Montpellier.", type: 'event', daysAgo: 12 },
+    ],
+  },
+  {
+    firstName: 'Amira',
+    lastName: 'Benali',
+    isMale: false,
+    specialty: 'Pneumologue',
+    subSpecialty: 'Réhabilitation respiratoire',
+    city: CITIES_RHONE_ALPES[2], // GRENOBLE
+    vingtile: 4,
+    isKOL: false,
+    volumeEstimate: 142000,
+    detectedDaysAgo: 8,
+    reason: 'Installation libérale récente à Grenoble. Ancienne chef de clinique au CHU Grenoble-Alpes, patientèle BPCO en constitution rapide.',
+    news: [
+      { title: "Ouverture du cabinet Pneumo-Alpes", content: "Installation en libéral à Grenoble, consultation spécialisée pneumologie et réhabilitation respiratoire. Adressage par les pneumologues du CHU et les généralistes du bassin grenoblois.", type: 'event', daysAgo: 15 },
+      { title: "Article dans Revue des Maladies Respiratoires", content: "Co-auteure d'une méta-analyse sur les programmes de réhabilitation pulmonaire à domicile pour les patients BPCO stade III-IV.", type: 'publication', daysAgo: 45 },
+    ],
+  },
+  {
+    firstName: 'Thomas',
+    lastName: 'Vernet',
+    isMale: true,
+    specialty: 'Médecin généraliste',
+    city: CITIES_RHONE_ALPES[4], // ANNECY
+    vingtile: 6,
+    isKOL: false,
+    volumeEstimate: 38000,
+    detectedDaysAgo: 3,
+    reason: 'Médecin généraliste nouvellement installé à Annecy, ancien remplaçant avec patientèle âgée. Prescripteur potentiel O2/BPCO élevé.',
+    news: [
+      { title: "Installation en maison de santé", content: "Rejoint la maison de santé pluriprofessionnelle du Parmelan à Annecy. Patientèle à forte proportion gériatrique avec pathologies respiratoires fréquentes.", type: 'event', daysAgo: 10 },
+      { title: "DU en tabacologie", content: "Obtention d'un Diplôme Universitaire en tabacologie à l'Université de Grenoble. Orientation forte vers la prévention et le sevrage tabagique.", type: 'certification', daysAgo: 90 },
+    ],
+  },
+  {
+    firstName: 'Clara',
+    lastName: 'Jourdain',
+    isMale: false,
+    specialty: 'Pneumologue',
+    city: CITIES_RHONE_ALPES[3], // SAINT-ÉTIENNE
+    vingtile: 5,
+    isKOL: false,
+    volumeEstimate: 128000,
+    detectedDaysAgo: 11,
+    reason: 'Remplacement de Dr. Moulin (départ retraite) au sein du groupe pneumo de Saint-Étienne. Récupère l\'ensemble de sa patientèle O2.',
+    news: [
+      { title: "Reprise du cabinet Pneumo Saint-Étienne", content: "Reprise de l'activité de Dr. Moulin, pneumologue historique de la ville. Patientèle de 45 patients sous OLD et 12 sous VNI transférée.", type: 'event', daysAgo: 18 },
+      { title: "Participation aux Journées CPLF", content: "Poster scientifique sur la place des dispositifs connectés dans le suivi de l'observance de l'oxygénothérapie à domicile.", type: 'conference', daysAgo: 55 },
+    ],
+  },
+  {
+    firstName: 'Karim',
+    lastName: 'El Mansouri',
+    isMale: true,
+    specialty: 'Médecin généraliste',
+    city: CITIES_RHONE_ALPES[1], // VILLEURBANNE
+    vingtile: 8,
+    isKOL: false,
+    volumeEstimate: 22000,
+    detectedDaysAgo: 6,
+    reason: 'Nouveau médecin généraliste identifié à Villeurbanne. Zone à forte densité de patients BPCO/IRC. Sensibilisé au numérique médical.',
+    news: [
+      { title: "Intégration au réseau de soins RespirAvenir", content: "Rejoint le réseau de coordination ville-hôpital pour le suivi des patients insuffisants respiratoires chroniques dans la métropole de Lyon.", type: 'event', daysAgo: 20 },
+    ],
+  },
+  {
+    firstName: 'Élise',
+    lastName: 'Chabert',
+    isMale: false,
+    specialty: 'Pneumologue',
+    subSpecialty: 'Allergologie respiratoire',
+    city: CITIES_RHONE_ALPES[5], // CHAMBÉRY
+    vingtile: 7,
+    isKOL: false,
+    volumeEstimate: 78000,
+    detectedDaysAgo: 14,
+    reason: 'Installation en libéral à Chambéry après 5 ans d\'assistanat au CHU. Spécialisée asthme sévère/BPCO, patientèle en croissance rapide.',
+    news: [
+      { title: "Ouverture de consultation pneumo-allergologie", content: "Nouvelle consultation spécialisée en pneumologie et allergologie respiratoire à Chambéry. Créneau dédié BPCO et asthme sévère.", type: 'event', daysAgo: 21 },
+      { title: "Formation DPC télésuivi respiratoire", content: "Participation au DPC national sur les solutions de télésurveillance en pneumologie ambulatoire. Intérêt marqué pour les outils connectés.", type: 'certification', daysAgo: 40 },
+    ],
+  },
+];
+
+function generateNewPractitioner(data: typeof NEW_PRACTITIONERS_DATA[number], index: number): PractitionerProfile {
+  const rng = seededRandom((200 + index) * 7919 + 42);
+  const streetNumber = randomInt(1, 150, rng);
+  const streetName = randomChoice(STREET_NAMES, rng);
+  const emailDomain = randomChoice(['gmail.com', 'outlook.fr', 'medecin.fr'], rng);
+  const cleanFirst = data.firstName.toLowerCase().replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a').replace(/[ùû]/g, 'u').replace(/ç/g, 'c').replace(/[ïî]/g, 'i');
+  const cleanLast = data.lastName.toLowerCase().replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a');
+  const email = `${cleanFirst}.${cleanLast}@${emailDomain}`;
+  const phone = `04 ${randomInt(70, 79, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)}`;
+
+  const createdAt = new Date();
+  createdAt.setDate(createdAt.getDate() - data.detectedDaysAgo);
+
+  const volumeMonthly = Math.round(data.volumeEstimate / 12);
+  const loyaltyScore = 5; // neutral since never visited
+
+  const news: PractitionerNews[] = data.news.map((n, ni) => {
+    const newsDate = new Date();
+    newsDate.setDate(newsDate.getDate() - n.daysAgo);
+    return {
+      id: `news-new-${index}-${ni}`,
+      date: newsDate.toISOString().split('T')[0],
+      title: n.title,
+      content: n.content,
+      type: n.type,
+      relevance: data.isKOL
+        ? `KOL identifié — opportunité stratégique majeure pour le territoire`
+        : `Nouveau praticien — premier contact à établir rapidement`,
+      source: n.type === 'publication' ? 'PubMed' : undefined,
+    };
+  });
+
+  return {
+    id: `pract-new-${String(index + 1).padStart(2, '0')}`,
+    title: data.isKOL ? 'Pr' : 'Dr',
+    firstName: data.firstName,
+    lastName: data.lastName,
+    specialty: data.specialty,
+    subSpecialty: data.subSpecialty,
+    avatarUrl: `https://i.pravatar.cc/150?img=${200 + index}`,
+
+    address: {
+      street: `${streetNumber} ${streetName}`,
+      city: data.city.name,
+      postalCode: data.city.postalCode,
+      country: 'France',
+      coords: {
+        lat: data.city.coords.lat + (rng() - 0.5) * 0.02,
+        lng: data.city.coords.lng + (rng() - 0.5) * 0.02,
+      },
+    },
+
+    contact: {
+      email,
+      phone,
+      mobile: `06 ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)}`,
+    },
+
+    metrics: {
+      volumeL: data.volumeEstimate,
+      volumeMonthly,
+      loyaltyScore,
+      vingtile: data.vingtile,
+      isKOL: data.isKOL,
+      potentialGrowth: data.vingtile <= 5 ? randomInt(20, 40, rng) : randomInt(15, 30, rng),
+      churnRisk: 'medium' as const, // unknown, default medium
+    },
+
+    notes: [], // Never visited — no notes
+    news,
+    visitHistory: [], // Never visited
+
+    createdAt: createdAt.toISOString(),
+    lastVisitDate: undefined, // Never visited
+    nextScheduledVisit: undefined,
   };
 }
 
@@ -801,6 +999,11 @@ export function generateDatabase(count: number = 120): PractitionerProfile[] {
   for (let i = 0; i < count; i++) {
     practitioners.push(generatePractitioner(i));
   }
+
+  // Add explicitly new/recently detected practitioners
+  NEW_PRACTITIONERS_DATA.forEach((data, i) => {
+    practitioners.push(generateNewPractitioner(data, i));
+  });
 
   return practitioners.sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
 }
