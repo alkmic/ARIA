@@ -27,6 +27,7 @@ import { universalSearch } from './universalSearch';
 import { calculatePeriodMetrics, getTopPractitioners, getPerformanceDataForPeriod } from './metricsCalculator';
 import { retrieveKnowledge, shouldUseRAG } from './ragService';
 import { generateIntelligentActions } from './actionIntelligence';
+import { getCompletePractitionerContextWithReports, getAllRecentReportsForLLM } from './practitionerDataBridge';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
 
@@ -767,6 +768,7 @@ function buildTargetedContext(
   // Base context always included: territory overview
   let context = `## Territoire (${periodLabel})
 - ${stats.totalPractitioners} praticiens (${stats.pneumologues} pneumo, ${stats.generalistes} MG)
+- Répartition par exercice : ${stats.praticienVille} ville, ${stats.praticienHospitalier} hospitaliers, ${stats.praticienMixte} mixtes
 - ${stats.totalKOLs} KOLs | Volume total: ${(stats.totalVolume / 1000).toFixed(0)}K L/an | Fidélité moy: ${stats.averageLoyalty.toFixed(1)}/10
 - Visites ${periodLabel}: ${periodMetrics.visitsCount}/${periodMetrics.visitsObjective} (${((periodMetrics.visitsCount / periodMetrics.visitsObjective) * 100).toFixed(0)}%)
 - Croissance volume: +${periodMetrics.volumeGrowth.toFixed(1)}% | Nouveaux prescripteurs: ${periodMetrics.newPrescribers}\n`;
@@ -775,7 +777,7 @@ function buildTargetedContext(
 
   switch (routing.dataScope) {
     case 'specific': {
-      // Fetch full profiles for specific practitioners
+      // Fetch full profiles for specific practitioners (enriched with visit reports)
       if (routing.searchTerms.names.length > 0) {
         const matches = allPractitioners.filter(p => {
           const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
@@ -789,7 +791,8 @@ function buildTargetedContext(
         if (matches.length > 0) {
           context += `\n## Praticiens Trouvés (${matches.length})\n`;
           for (const p of matches.slice(0, 10)) {
-            context += DataService.getCompletePractitionerContext(p.id);
+            // Use enriched context with visit reports and user notes
+            context += getCompletePractitionerContextWithReports(p.id);
           }
         } else {
           // Fuzzy search fallback
@@ -798,7 +801,7 @@ function buildTargetedContext(
             if (fuzzy.length > 0) {
               context += `\n## Résultats pour "${name}" (${fuzzy.length})\n`;
               for (const p of fuzzy.slice(0, 5)) {
-                context += DataService.getCompletePractitionerContext(p.id);
+                context += getCompletePractitionerContextWithReports(p.id);
               }
             }
           }
@@ -979,6 +982,14 @@ function buildTargetedContext(
         }
       }
     }
+  }
+
+  // ── Recent Visit Reports Injection (cross-practitioner) ─────────────────
+  // Inject recent visit reports for strategic/action/global queries
+  const reportKeywords = ['compte-rendu', 'compte rendu', 'rapport', 'crv', 'dernière visite', 'derniere visite', 'retour visite', 'bilan visite'];
+  const isReportQuery = reportKeywords.some(kw => lowerQuestion.includes(kw));
+  if (isReportQuery || isActionQuery || isPerfQuery) {
+    context += getAllRecentReportsForLLM(90);
   }
 
   // ── RAG Knowledge Injection ──────────────────────────────────────────────
@@ -1244,6 +1255,12 @@ ${searchContext}`;
   const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'a publié', 'a publie'];
   if (newsKeywords.some(kw => lowerQ.includes(kw))) {
     context += DataService.getNewsDigestForLLM(40);
+  }
+
+  // ── Recent Visit Reports Injection (fallback path) ──────────────────────
+  const reportKeywords2 = ['compte-rendu', 'compte rendu', 'rapport', 'crv', 'dernière visite', 'derniere visite', 'bilan'];
+  if (reportKeywords2.some(kw => lowerQ.includes(kw)) || actionKeywords.some(kw => lowerQ.includes(kw))) {
+    context += getAllRecentReportsForLLM(90);
   }
 
   // ── RAG Knowledge Injection (fallback path) ────────────────────────────

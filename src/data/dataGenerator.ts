@@ -1,4 +1,4 @@
-import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitRecord } from '../types/database';
+import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitRecord, PracticeType } from '../types/database';
 
 /**
  * Générateur de données réalistes et cohérentes pour les praticiens
@@ -745,6 +745,24 @@ export function generatePractitioner(index: number): PractitionerProfile {
 
   const practTitle = isKOL && rng() < 0.3 ? 'Pr' : 'Dr';
 
+  // Déterminer le type d'exercice de manière réaliste :
+  // - Pneumologues : 50% hospitalier, 20% mixte, 30% ville
+  // - MG : 80% ville, 10% mixte, 10% hospitalier
+  // - KOLs : plus souvent hospitaliers ou mixtes
+  let practiceType: PracticeType;
+  if (specialty === 'Pneumologue') {
+    if (isKOL) {
+      practiceType = rng() < 0.55 ? 'hospitalier' : rng() < 0.75 ? 'mixte' : 'ville';
+    } else {
+      const r = rng();
+      practiceType = r < 0.50 ? 'hospitalier' : r < 0.70 ? 'mixte' : 'ville';
+    }
+  } else {
+    // Médecin généraliste
+    const r = rng();
+    practiceType = r < 0.80 ? 'ville' : r < 0.90 ? 'mixte' : 'hospitalier';
+  }
+
   const subSpecialtyOptions = ['Allergologie respiratoire', 'Oncologie thoracique', 'Réhabilitation respiratoire', 'Sommeil et ventilation', 'Pneumologie interventionnelle'];
 
   return {
@@ -753,6 +771,7 @@ export function generatePractitioner(index: number): PractitionerProfile {
     firstName,
     lastName,
     specialty,
+    practiceType,
     subSpecialty: specialty === 'Pneumologue' ? randomChoice([...subSpecialtyOptions, undefined, undefined], rng) as string | undefined : undefined,
     avatarUrl: `https://i.pravatar.cc/150?img=${index + 1}`,
 

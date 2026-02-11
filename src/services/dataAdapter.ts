@@ -12,10 +12,15 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     profile.metrics.potentialGrowth > 15 ? 'up' :
     profile.metrics.potentialGrowth < 5 ? 'down' : 'stable';
 
+  // Label lisible du type d'exercice
+  const practiceTypeLabel = profile.practiceType === 'ville' ? 'libéral'
+    : profile.practiceType === 'hospitalier' ? 'hospitalier'
+    : 'mixte (ville + hôpital)';
+
   // Générer un résumé IA basé sur les données
   const aiSummary = profile.metrics.isKOL
-    ? `KOL reconnu en ${profile.specialty}. Volume annuel: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L. Fidélité ${profile.metrics.loyaltyScore}/10. ${profile.news.length > 0 ? 'Activité académique récente.' : ''}`
-    : `Praticien ${profile.specialty}. Vingtile ${profile.metrics.vingtile}. Volume: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L/an. Potentiel de croissance: +${profile.metrics.potentialGrowth}%.`;
+    ? `KOL reconnu en ${profile.specialty} (exercice ${practiceTypeLabel}). Volume annuel: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L. Fidélité ${profile.metrics.loyaltyScore}/10. ${profile.news.length > 0 ? 'Activité académique récente.' : ''}`
+    : `Praticien ${profile.specialty} (${practiceTypeLabel}). Vingtile ${profile.metrics.vingtile}. Volume: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L/an. Potentiel de croissance: +${profile.metrics.potentialGrowth}%.`;
 
   // Next best action basé sur les notes
   const nextBestAction = profile.notes.length > 0 && profile.notes[0].nextAction
@@ -39,6 +44,7 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     firstName: profile.firstName,
     lastName: profile.lastName,
     specialty: profile.specialty as 'Médecin généraliste' | 'Pneumologue',
+    practiceType: profile.practiceType,
     city: profile.address.city,
     volumeL: profile.metrics.volumeL,
     loyaltyScore: profile.metrics.loyaltyScore,
@@ -56,7 +62,9 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     department: profile.address.postalCode.substring(0, 2),
     patientCount: Math.round(profile.metrics.volumeL / 50000), // Estimation: ~50L/patient/an
     conventionSector: profile.metrics.vingtile <= 5 ? 2 : 1, // Top praticiens en secteur 2
-    activityType: 'Libéral intégral' as const,
+    activityType: profile.practiceType === 'ville' ? 'Libéral intégral' as const
+      : profile.practiceType === 'mixte' ? 'Mixte' as const
+      : 'Libéral temps partiel' as const,
     preferredChannel: 'Face-to-face' as const,
     visitCount: profile.visitHistory.length,
     trend,

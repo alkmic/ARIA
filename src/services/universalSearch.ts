@@ -54,6 +54,7 @@ export interface QueryAnalysis {
     maxVolume?: number;
     vingtileRange?: [number, number];
     riskLevel?: string[];
+    practiceType?: 'ville' | 'hospitalier' | 'mixte';
     dateRange?: { from?: string; to?: string };
   };
   sorting: {
@@ -182,6 +183,15 @@ export function analyzeQuery(question: string): QueryAnalysis {
   }
   if (/généraliste|generaliste|médecin généraliste/i.test(q)) {
     analysis.entities.specialties.push('Médecin généraliste');
+  }
+
+  // Détecter le type d'exercice
+  if (/praticien de ville|libéral|liberal|cabinet|ville/i.test(q) && !/hospitalier|hôpital|hopital|mixte/i.test(q)) {
+    analysis.filters.practiceType = 'ville';
+  } else if (/hospitalier|hôpital|hopital|chu|clinique/i.test(q) && !/ville|mixte/i.test(q)) {
+    analysis.filters.practiceType = 'hospitalier';
+  } else if (/mixte|ville.*hôpital|hôpital.*ville|ville.*hospitalier|hospitalier.*ville/i.test(q)) {
+    analysis.filters.practiceType = 'mixte';
   }
 
   // Extraire les produits
@@ -389,6 +399,13 @@ function searchPractitioners(analysis: QueryAnalysis): PractitionerProfile[] {
     );
   }
 
+  // Filtrer par type d'exercice
+  if (analysis.filters.practiceType) {
+    practitioners = practitioners.filter(p =>
+      p.practiceType === analysis.filters.practiceType
+    );
+  }
+
   // Trier
   if (analysis.sorting.field) {
     practitioners = [...practitioners].sort((a, b) => {
@@ -451,7 +468,7 @@ export function universalSearch(question: string): UniversalSearchResult {
     type: 'practitioner' as const,
     relevance: 80,
     practitioner: p,
-    summary: `${p.title} ${p.firstName} ${p.lastName} - ${p.specialty} à ${p.address.city}`
+    summary: `${p.title} ${p.firstName} ${p.lastName} - ${p.specialty} (${p.practiceType === 'ville' ? 'ville' : p.practiceType === 'hospitalier' ? 'hosp.' : 'mixte'}) à ${p.address.city}`
   }));
 
   // Combiner et trier tous les résultats

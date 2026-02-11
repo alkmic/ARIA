@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Phone, Mail, MapPin, TrendingUp, Sparkles, Target,
   CheckCircle, Lightbulb, Swords, Calendar, Wand2, Newspaper, FileEdit,
-  MessageCircle, Mic
+  MessageCircle, Mic, Building2, Home, Building
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
+import { useUserDataStore } from '../stores/useUserDataStore';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -15,6 +16,7 @@ import { NewsTab } from '../components/practitioner/NewsTab';
 import { NotesTab } from '../components/practitioner/NotesTab';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
+import { getPractitionerReportSummary } from '../services/practitionerDataBridge';
 
 type TabType = 'synthesis' | 'history' | 'metrics' | 'news' | 'notes';
 
@@ -103,7 +105,24 @@ export default function PractitionerProfile() {
             <h1 className="text-2xl font-bold text-slate-800 mb-1">
               {practitioner.title} {practitioner.firstName} {practitioner.lastName}
             </h1>
-            <p className="text-slate-600 mb-4">{practitioner.specialty}</p>
+            <p className="text-slate-600 mb-2">{practitioner.specialty}</p>
+            <div className="flex items-center justify-center gap-1.5 mb-4">
+              {practitioner.practiceType === 'ville' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                  <Home className="w-3 h-3" /> Ville
+                </span>
+              )}
+              {practitioner.practiceType === 'hospitalier' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                  <Building2 className="w-3 h-3" /> Hospitalier
+                </span>
+              )}
+              {practitioner.practiceType === 'mixte' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                  <Building className="w-3 h-3" /> Mixte
+                </span>
+              )}
+            </div>
 
             {/* Contact Info */}
             <div className="space-y-3 text-left">
@@ -233,7 +252,7 @@ export default function PractitionerProfile() {
               <SynthesisTab practitioner={practitioner} keyPoints={keyPoints} />
             )}
             {activeTab === 'history' && (
-              <HistoryTab conversations={practitioner.conversations} timePeriod={timePeriod} periodLabel={periodLabel} />
+              <HistoryTab conversations={practitioner.conversations} timePeriod={timePeriod} periodLabel={periodLabel} practitionerId={practitioner.id} />
             )}
             {activeTab === 'metrics' && (
               <MetricsTab volumeHistory={volumeHistory} practitioner={practitioner} periodLabel={periodLabel} periodLabelShort={periodLabelShort} />
@@ -254,12 +273,73 @@ export default function PractitionerProfile() {
 // Tab Synthesis
 function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoints: string[] }) {
   const navigate = useNavigate();
+
+  // Récupérer le résumé dynamique des comptes-rendus de visite
+  const reportSummary = useMemo(() => getPractitionerReportSummary(practitioner.id), [practitioner.id]);
+  const visitReports = useUserDataStore(state => state.getVisitReportsForPractitioner(practitioner.id));
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
+      {/* Visit Report Summary (dynamic data from CRM) */}
+      {reportSummary.totalReports > 0 && (
+        <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
+          <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
+            <Mic className="w-5 h-5 text-indigo-600" />
+            Comptes-rendus de visite ({reportSummary.totalReports})
+          </h3>
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <p className="text-xs text-slate-500">Dernier CR</p>
+              <p className="text-sm font-medium text-slate-700">
+                {reportSummary.lastReportDate ? new Date(reportSummary.lastReportDate).toLocaleDateString('fr-FR') : '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Dernier sentiment</p>
+              <p className={`text-sm font-medium ${
+                reportSummary.lastSentiment === 'positive' ? 'text-green-600' :
+                reportSummary.lastSentiment === 'negative' ? 'text-red-600' : 'text-slate-600'
+              }`}>
+                {reportSummary.lastSentiment === 'positive' ? 'Positif' :
+                 reportSummary.lastSentiment === 'negative' ? 'Négatif' : 'Neutre'}
+              </p>
+            </div>
+          </div>
+          {reportSummary.topProducts.length > 0 && (
+            <div className="mb-2">
+              <p className="text-xs text-slate-500 mb-1">Produits discutés</p>
+              <div className="flex flex-wrap gap-1">
+                {reportSummary.topProducts.map((p, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-white/70 text-xs rounded-full text-slate-600">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {reportSummary.pendingActions.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-indigo-100">
+              <p className="text-xs text-slate-500 mb-1">Actions en attente</p>
+              {reportSummary.pendingActions.slice(0, 3).map((action, i) => (
+                <p key={i} className="text-sm text-slate-700 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+                  {action}
+                </p>
+              ))}
+            </div>
+          )}
+          {/* Show latest report details */}
+          {visitReports.length > 0 && (
+            <div className="mt-3 pt-2 border-t border-indigo-100">
+              <p className="text-xs text-slate-500 mb-1">Dernier compte-rendu</p>
+              <p className="text-sm text-slate-600">{visitReports[0].extractedInfo.keyPoints.slice(0, 3).join('. ')}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* AI Summary */}
       <div className="glass-card p-6">
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
@@ -349,11 +429,28 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
   );
 }
 
-// Tab History
-function HistoryTab({ conversations, timePeriod, periodLabel }: { conversations: any[]; timePeriod: string; periodLabel: string }) {
+// Tab History - fusionne conversations statiques + comptes-rendus dynamiques
+function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: { conversations: any[]; timePeriod: string; periodLabel: string; practitionerId: string }) {
+  const visitReports = useUserDataStore(state => state.getVisitReportsForPractitioner(practitionerId));
+
+  // Convertir les comptes-rendus en format conversation
+  const reportConversations = visitReports.map(report => ({
+    date: report.date,
+    summary: report.extractedInfo.keyPoints.join('. ') || 'Compte-rendu enregistré',
+    sentiment: report.extractedInfo.sentiment,
+    actions: report.extractedInfo.nextActions,
+    type: 'Compte-rendu vocal',
+    duration: `${report.time}`,
+    isFromReport: true,
+  }));
+
+  // Fusionner et trier par date décroissante
+  const allConversations = [...reportConversations, ...conversations.map(c => ({ ...c, isFromReport: false }))]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   // Filtrer les conversations selon la période
   const now = new Date();
-  const filteredConversations = conversations.filter(conv => {
+  const filteredConversations = allConversations.filter(conv => {
     const convDate = new Date(conv.date);
     if (timePeriod === 'month') {
       const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
@@ -408,7 +505,14 @@ function HistoryTab({ conversations, timePeriod, periodLabel }: { conversations:
                  conv.sentiment === 'negative' ? '-' : '='}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-slate-800">{formatDate(conv.date)}</p>
+                <p className="font-medium text-slate-800">
+                  {formatDate(conv.date)}
+                  {conv.isFromReport && (
+                    <span className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-600">
+                      <Mic className="w-2.5 h-2.5" /> CRV
+                    </span>
+                  )}
+                </p>
                 <p className="text-sm text-slate-500">
                   {conv.type || 'Visite'} • {conv.duration || '25 min'}
                 </p>

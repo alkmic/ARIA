@@ -155,20 +155,21 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
   return visits;
 }
 
-// Mock performance data
+// Mock performance data (toutes les valeurs en litres L — cohérence avec les graphiques)
+// Volume mensuel réaliste pour un territoire Rhône-Alpes: ~40-60K L/mois
 const mockPerformanceData: PerformanceData[] = [
-  { month: 'Jan', yourVolume: 420000, objective: 500000, teamAverage: 450000 },
-  { month: 'Fév', yourVolume: 480000, objective: 500000, teamAverage: 460000 },
-  { month: 'Mar', yourVolume: 520000, objective: 500000, teamAverage: 470000 },
-  { month: 'Avr', yourVolume: 510000, objective: 500000, teamAverage: 480000 },
-  { month: 'Mai', yourVolume: 550000, objective: 500000, teamAverage: 490000 },
-  { month: 'Jun', yourVolume: 580000, objective: 500000, teamAverage: 500000 },
-  { month: 'Jul', yourVolume: 620000, objective: 600000, teamAverage: 520000 },
-  { month: 'Aoû', yourVolume: 640000, objective: 600000, teamAverage: 530000 },
-  { month: 'Sep', yourVolume: 680000, objective: 600000, teamAverage: 550000 },
-  { month: 'Oct', yourVolume: 720000, objective: 650000, teamAverage: 580000 },
-  { month: 'Nov', yourVolume: 750000, objective: 650000, teamAverage: 600000 },
-  { month: 'Déc', yourVolume: 780000, objective: 700000, teamAverage: 620000 },
+  { month: 'Jan', yourVolume: 42000, objective: 45000, teamAverage: 40000 },
+  { month: 'Fév', yourVolume: 44000, objective: 45000, teamAverage: 41000 },
+  { month: 'Mar', yourVolume: 47000, objective: 46000, teamAverage: 42000 },
+  { month: 'Avr', yourVolume: 46000, objective: 46000, teamAverage: 43000 },
+  { month: 'Mai', yourVolume: 49000, objective: 47000, teamAverage: 44000 },
+  { month: 'Jun', yourVolume: 51000, objective: 48000, teamAverage: 45000 },
+  { month: 'Jul', yourVolume: 48000, objective: 48000, teamAverage: 44000 },
+  { month: 'Aoû', yourVolume: 43000, objective: 48000, teamAverage: 41000 },
+  { month: 'Sep', yourVolume: 52000, objective: 49000, teamAverage: 46000 },
+  { month: 'Oct', yourVolume: 54000, objective: 50000, teamAverage: 47000 },
+  { month: 'Nov', yourVolume: 56000, objective: 50000, teamAverage: 48000 },
+  { month: 'Déc', yourVolume: 53000, objective: 50000, teamAverage: 47000 },
 ];
 
 // Charger les praticiens depuis le nouveau service de données
@@ -225,6 +226,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (filters.department) {
         filtered = filtered.filter((p) => p.department === filters.department);
+      }
+      if (filters.practiceType && filters.practiceType.length > 0) {
+        filtered = filtered.filter((p) => filters.practiceType!.includes(p.practiceType));
       }
       if (filters.isKOL !== undefined) {
         filtered = filtered.filter((p) => p.isKOL === filters.isKOL);

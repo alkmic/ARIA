@@ -189,7 +189,7 @@ export const Dashboard: React.FC = () => {
           label="Nouveaux prescripteurs"
           value={periodMetrics.newPrescribers}
           prefix="+"
-          trend={12}
+          trend={timePeriod === 'month' ? 2 : timePeriod === 'quarter' ? 5 : 8}
           trendLabel="vs période préc."
           delay={0.1}
           linkTo="/practitioners"

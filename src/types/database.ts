@@ -49,6 +49,8 @@ export interface ContactInfo {
   fax?: string;
 }
 
+export type PracticeType = 'ville' | 'hospitalier' | 'mixte';
+
 export interface BusinessMetrics {
   volumeL: number; // Volume annuel en litres
   volumeMonthly: number; // Volume mensuel moyen
@@ -66,6 +68,7 @@ export interface PractitionerProfile {
   lastName: string;
   specialty: string;
   subSpecialty?: string;
+  practiceType: PracticeType; // ville, hospitalier ou mixte
   avatarUrl?: string;
 
   // Coordonnées
