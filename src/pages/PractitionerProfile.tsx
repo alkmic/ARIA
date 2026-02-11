@@ -276,7 +276,13 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
 
   // Récupérer le résumé dynamique des comptes-rendus de visite
   const reportSummary = useMemo(() => getPractitionerReportSummary(practitioner.id), [practitioner.id]);
-  const visitReports = useUserDataStore(state => state.getVisitReportsForPractitioner(practitioner.id));
+  const allVisitReports = useUserDataStore(state => state.visitReports);
+  const visitReports = useMemo(
+    () => allVisitReports
+      .filter(r => r.practitionerId === practitioner.id)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [allVisitReports, practitioner.id]
+  );
 
   return (
     <motion.div
@@ -431,7 +437,13 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
 
 // Tab History - fusionne conversations statiques + comptes-rendus dynamiques
 function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: { conversations: any[]; timePeriod: string; periodLabel: string; practitionerId: string }) {
-  const visitReports = useUserDataStore(state => state.getVisitReportsForPractitioner(practitionerId));
+  const allVisitReports = useUserDataStore(state => state.visitReports);
+  const visitReports = useMemo(
+    () => allVisitReports
+      .filter(r => r.practitionerId === practitionerId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [allVisitReports, practitionerId]
+  );
 
   // Convertir les comptes-rendus en format conversation
   const reportConversations = visitReports.map(report => ({
