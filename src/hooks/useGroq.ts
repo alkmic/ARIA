@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { webLlmService } from '../services/webLlmService';
-import { getStoredApiKey, getStoredLLMConfig, resolveProvider } from '../services/apiKeyService';
+import { getStoredApiKey, getStoredLLMConfig, resolveProvider, isReasoningModel } from '../services/apiKeyService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Multi-provider LLM Hook
@@ -182,10 +182,18 @@ async function streamOpenAICompat(
   maxTokens: number,
   onChunk: (chunk: string) => void,
 ): Promise<void> {
+  const reasoning = isReasoningModel(model);
+  const body: Record<string, unknown> = { model, messages, stream: true };
+  if (reasoning) {
+    body.max_completion_tokens = maxTokens;
+  } else {
+    body.temperature = temperature;
+    body.max_tokens = maxTokens;
+  }
   const response = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: true }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -343,10 +351,18 @@ export function useGroq(options: UseGroqOptions = {}) {
               return parseAnthropicResponse(await response.json());
             }
             // OpenAI-compatible
+            const reasoning = isReasoningModel(model);
+            const reqBody: Record<string, unknown> = { model, messages, stream: false };
+            if (reasoning) {
+              reqBody.max_completion_tokens = maxTokens;
+            } else {
+              reqBody.temperature = temperature;
+              reqBody.max_tokens = maxTokens;
+            }
             const response = await fetch(provider.url, {
               method: 'POST',
               headers: provider.headers,
-              body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
+              body: JSON.stringify(reqBody),
             });
             if (!response.ok) {
               const err = await response.json().catch(() => ({}));

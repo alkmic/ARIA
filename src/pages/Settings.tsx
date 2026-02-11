@@ -70,6 +70,8 @@ export function Settings() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [modelInput, setModelInput] = useState('');
   const [baseUrlInput, setBaseUrlInput] = useState('');
+  const [deploymentInput, setDeploymentInput] = useState('');
+  const [apiVersionInput, setApiVersionInput] = useState('2024-12-01-preview');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isCustomModel, setIsCustomModel] = useState(false);
@@ -90,6 +92,8 @@ export function Settings() {
         setBaseUrlInput(config.baseUrl);
         setShowAdvanced(true);
       }
+      if (config.deployment) setDeploymentInput(config.deployment);
+      if (config.apiVersion) setApiVersionInput(config.apiVersion);
       // Check if the model is in the provider's suggestion list
       const providerDef = getProviderDef(config.provider);
       if (providerDef && providerDef.models.length > 0) {
@@ -117,6 +121,11 @@ export function Settings() {
       setShowAdvanced(def.needsBaseUrl);
       setIsCustomModel(false);
     }
+    // Azure defaults
+    if (providerId === 'azure') {
+      setDeploymentInput('');
+      setApiVersionInput('2024-12-01-preview');
+    }
     setTestResult(null);
   };
 
@@ -128,8 +137,10 @@ export function Settings() {
       apiKey: apiKeyInput.trim(),
       model: modelInput.trim() || def?.defaultModel || '',
       ...(baseUrl && baseUrl !== def?.defaultBaseUrl ? { baseUrl } : {}),
+      ...(selectedProvider === 'azure' && deploymentInput.trim() ? { deployment: deploymentInput.trim() } : {}),
+      ...(selectedProvider === 'azure' && apiVersionInput.trim() ? { apiVersion: apiVersionInput.trim() } : {}),
     };
-  }, [selectedProvider, apiKeyInput, modelInput, baseUrlInput]);
+  }, [selectedProvider, apiKeyInput, modelInput, baseUrlInput, deploymentInput, apiVersionInput]);
 
   const runTest = useCallback(async () => {
     const config = buildConfig();
@@ -164,6 +175,8 @@ export function Settings() {
     setApiKeyInput('');
     setModelInput(getProviderDef(selectedProvider)?.defaultModel || '');
     setBaseUrlInput('');
+    setDeploymentInput('');
+    setApiVersionInput('2024-12-01-preview');
     setHasKey(false);
     setTestResult(null);
   };
@@ -353,7 +366,7 @@ export function Settings() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 <Globe className="w-3.5 h-3.5 inline mr-1" />
-                URL de l'API {!currentProviderDef?.needsBaseUrl && '(optionnel)'}
+                {selectedProvider === 'azure' ? 'Endpoint Azure' : `URL de l'API`} {!currentProviderDef?.needsBaseUrl && '(optionnel)'}
               </label>
               <input
                 type="text"
@@ -362,13 +375,18 @@ export function Settings() {
                   setBaseUrlInput(e.target.value);
                   setTestResult(null);
                 }}
-                placeholder={currentProviderDef?.defaultBaseUrl || 'https://your-endpoint.com/v1'}
+                placeholder={selectedProvider === 'azure'
+                  ? 'https://your-resource.cognitiveservices.azure.com'
+                  : (currentProviderDef?.defaultBaseUrl || 'https://your-endpoint.com/v1')
+                }
                 className="input-field font-mono text-sm w-full"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                {currentProviderDef?.needsBaseUrl
-                  ? 'Obligatoire — renseignez l\'URL complète de votre endpoint.'
-                  : `Par défaut : ${currentProviderDef?.defaultBaseUrl || '—'}`
+                {selectedProvider === 'azure'
+                  ? 'Obligatoire — l\'endpoint de votre ressource Azure AI Foundry (ex: https://xxx.cognitiveservices.azure.com).'
+                  : currentProviderDef?.needsBaseUrl
+                    ? 'Obligatoire — renseignez l\'URL complète de votre endpoint.'
+                    : `Par défaut : ${currentProviderDef?.defaultBaseUrl || '—'}`
                 }
               </p>
             </div>
@@ -383,6 +401,52 @@ export function Settings() {
             >
               Options avancées (URL personnalisée)...
             </button>
+          )}
+
+          {/* 5. Azure-specific: Deployment name + API version */}
+          {selectedProvider === 'azure' && (
+            <div className="space-y-4 p-4 bg-blue-50/50 rounded-xl border border-blue-200">
+              <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5" />
+                Configuration Azure OpenAI
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Nom du déploiement (deployment)
+                </label>
+                <input
+                  type="text"
+                  value={deploymentInput}
+                  onChange={(e) => {
+                    setDeploymentInput(e.target.value);
+                    setTestResult(null);
+                  }}
+                  placeholder="ex: o4-mini, gpt-4o-mini"
+                  className="input-field font-mono text-sm w-full"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Le nom de votre déploiement dans Azure AI Foundry (peut différer du nom du modèle).
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Version d'API
+                </label>
+                <input
+                  type="text"
+                  value={apiVersionInput}
+                  onChange={(e) => {
+                    setApiVersionInput(e.target.value);
+                    setTestResult(null);
+                  }}
+                  placeholder="2024-12-01-preview"
+                  className="input-field font-mono text-sm w-full"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Version de l'API Azure OpenAI (ex: 2024-12-01-preview).
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Action buttons */}

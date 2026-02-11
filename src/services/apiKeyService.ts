@@ -22,6 +22,10 @@ export interface LLMConfig {
   apiKey: string;
   model: string;
   baseUrl?: string;
+  /** Azure OpenAI: nom du déploiement (ex: "o4-mini") */
+  deployment?: string;
+  /** Azure OpenAI: version d'API (ex: "2024-12-01-preview") */
+  apiVersion?: string;
 }
 
 export interface ProviderDefinition {
@@ -164,18 +168,19 @@ export const LLM_PROVIDERS: ProviderDefinition[] = [
   {
     id: 'azure',
     name: 'Azure OpenAI',
-    description: 'OpenAI via Azure (endpoint entreprise)',
+    description: 'OpenAI via Azure AI Foundry (endpoint + déploiement + version)',
     apiFormat: 'openai-compat',
     defaultBaseUrl: '',
-    defaultModel: 'gpt-4o-mini',
+    defaultModel: 'o4-mini',
     models: [
+      { id: 'o4-mini', name: 'o4 Mini' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
       { id: 'gpt-4o', name: 'GPT-4o' },
       { id: 'gpt-4', name: 'GPT-4' },
     ],
-    apiKeyPlaceholder: 'Votre clé Azure',
+    apiKeyPlaceholder: 'Votre subscription_key Azure',
     needsBaseUrl: true,
-    docUrl: 'https://portal.azure.com',
+    docUrl: 'https://ai.azure.com',
   },
   {
     id: 'together',
@@ -366,14 +371,17 @@ export function resolveProvider(config: LLMConfig): ResolvedProvider {
       break;
     default: {
       // OpenAI-compatible
-      if (config.provider === 'openai' && import.meta.env.DEV && !config.baseUrl) {
+      if (config.provider === 'azure') {
+        // Azure OpenAI: {endpoint}/openai/deployments/{deployment}/chat/completions?api-version={version}
+        const deployment = config.deployment || config.model;
+        const apiVersion = config.apiVersion || '2024-12-01-preview';
+        url = `${baseUrl}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+        headers['api-key'] = config.apiKey;
+      } else if (config.provider === 'openai' && import.meta.env.DEV && !config.baseUrl) {
         url = '/llm-proxy/openai/v1/chat/completions';
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
       } else {
         url = `${baseUrl}/chat/completions`;
-      }
-      if (config.provider === 'azure') {
-        headers['api-key'] = config.apiKey;
-      } else {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
       break;
@@ -392,7 +400,16 @@ export function resolveProvider(config: LLMConfig): ResolvedProvider {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST — Valide la connexion avec une requête minimale (max_tokens=1)
+// O-SERIES (reasoning) MODEL DETECTION
+// o1, o3, o4-mini etc. don't support temperature/max_tokens, need max_completion_tokens
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function isReasoningModel(model: string): boolean {
+  return /^o\d/.test(model);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST — Valide la connexion avec une requête minimale
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function testLLMConfig(config: LLMConfig): Promise<ApiKeyTestResult> {
@@ -422,15 +439,24 @@ export async function testLLMConfig(config: LLMConfig): Promise<ApiKeyTestResult
         }),
       });
     } else {
+      // OpenAI-compatible (incl. Azure)
+      const reasoning = isReasoningModel(config.model) || isReasoningModel(config.deployment || '');
+      const body: Record<string, unknown> = {
+        messages: [{ role: 'user', content: 'Hi' }],
+      };
+      // Azure: model is determined by deployment URL, but sending it is harmless for most versions
+      if (config.provider !== 'azure') body.model = config.model;
+      if (reasoning) {
+        // o-series models: no temperature, use max_completion_tokens
+        body.max_completion_tokens = 50;
+      } else {
+        body.max_tokens = 1;
+        body.temperature = 0;
+      }
       response = await fetch(resolved.url, {
         method: 'POST',
         headers: resolved.headers,
-        body: JSON.stringify({
-          model: config.model,
-          messages: [{ role: 'user', content: 'Hi' }],
-          max_tokens: 1,
-          temperature: 0,
-        }),
+        body: JSON.stringify(body),
       });
     }
 
