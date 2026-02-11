@@ -408,12 +408,17 @@ function getProvider(): ProviderConfig {
       buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
         // o-series reasoning models: no temperature, use max_completion_tokens
         if (resolved.apiFormat === 'openai-compat' && isReasoningModel(model)) {
+          // Azure o-series: system role → developer role (required by Azure API for reasoning models)
+          const processedMessages = resolved.providerType === 'azure'
+            ? messages.map(m => m.role === 'system' ? { role: 'developer', content: m.content } : m)
+            : messages;
           const body: Record<string, unknown> = {
-            messages, max_completion_tokens: maxTokens, stream: false,
+            messages: processedMessages, max_completion_tokens: maxTokens, stream: false,
           };
           // Azure: model is in the deployment URL, but safe to send for others
           if (resolved.providerType !== 'azure') body.model = model;
-          if (jsonMode) body.response_format = { type: 'json_object' };
+          // Don't send response_format for reasoning models — rely on prompt instructions
+          // (not reliably supported on all Azure API versions for o-series)
           return body;
         }
         return base.buildBody(messages, model, temperature, maxTokens, jsonMode);
@@ -773,8 +778,10 @@ async function callLLM(
     }
   }
 
-  // Tout a échoué
-  lastLLMError = 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
+  // Tout a échoué — preserve the real error from callProvider if available
+  if (!lastLLMError) {
+    lastLLMError = 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
+  }
 
   return null;
 }
@@ -799,7 +806,13 @@ export async function streamLLM(
   try {
     const streamModel = provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel;
     const reasoning = isReasoningModel(streamModel);
-    const streamBody: Record<string, unknown> = { model: streamModel, messages, stream: true };
+    // Azure o-series: system → developer role
+    const config = getStoredLLMConfig();
+    const isAzure = config?.provider === 'azure';
+    const streamMessages = (reasoning && isAzure)
+      ? messages.map(m => m.role === 'system' ? { role: 'developer' as const, content: m.content } : m)
+      : messages;
+    const streamBody: Record<string, unknown> = { model: streamModel, messages: streamMessages, stream: true };
     if (reasoning) {
       streamBody.max_completion_tokens = maxTokens;
     } else {

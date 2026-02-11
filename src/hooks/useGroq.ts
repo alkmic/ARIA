@@ -183,7 +183,12 @@ async function streamOpenAICompat(
   onChunk: (chunk: string) => void,
 ): Promise<void> {
   const reasoning = isReasoningModel(model);
-  const body: Record<string, unknown> = { model, messages, stream: true };
+  // Azure o-series: system role → developer role (required by Azure API)
+  const config = getStoredLLMConfig();
+  const processedMessages = (reasoning && config?.provider === 'azure')
+    ? messages.map(m => m.role === 'system' ? { role: 'developer' as const, content: m.content } : m)
+    : messages;
+  const body: Record<string, unknown> = { model, messages: processedMessages, stream: true };
   if (reasoning) {
     body.max_completion_tokens = maxTokens;
   } else {
@@ -352,7 +357,12 @@ export function useGroq(options: UseGroqOptions = {}) {
             }
             // OpenAI-compatible
             const reasoning = isReasoningModel(model);
-            const reqBody: Record<string, unknown> = { model, messages, stream: false };
+            // Azure o-series: system role → developer role
+            const llmCfg = getStoredLLMConfig();
+            const completeMessages = (reasoning && llmCfg?.provider === 'azure')
+              ? messages.map(m => m.role === 'system' ? { role: 'developer' as const, content: m.content } : m)
+              : messages;
+            const reqBody: Record<string, unknown> = { model, messages: completeMessages, stream: false };
             if (reasoning) {
               reqBody.max_completion_tokens = maxTokens;
             } else {
