@@ -22,6 +22,10 @@ export interface LLMConfig {
   apiKey: string;
   model: string;
   baseUrl?: string;
+  /** Azure OpenAI: nom du déploiement (ex: "o4-mini") */
+  deployment?: string;
+  /** Azure OpenAI: version d'API (ex: "2024-12-01-preview") */
+  apiVersion?: string;
 }
 
 export interface ProviderDefinition {
@@ -164,18 +168,19 @@ export const LLM_PROVIDERS: ProviderDefinition[] = [
   {
     id: 'azure',
     name: 'Azure OpenAI',
-    description: 'OpenAI via Azure (endpoint entreprise)',
+    description: 'OpenAI via Azure AI Foundry (endpoint + déploiement + version)',
     apiFormat: 'openai-compat',
     defaultBaseUrl: '',
-    defaultModel: 'gpt-4o-mini',
+    defaultModel: '',
     models: [
+      { id: 'o4-mini', name: 'o4 Mini' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
       { id: 'gpt-4o', name: 'GPT-4o' },
       { id: 'gpt-4', name: 'GPT-4' },
     ],
-    apiKeyPlaceholder: 'Votre clé Azure',
+    apiKeyPlaceholder: 'Votre subscription_key Azure',
     needsBaseUrl: true,
-    docUrl: 'https://portal.azure.com',
+    docUrl: 'https://ai.azure.com',
   },
   {
     id: 'together',
@@ -366,14 +371,17 @@ export function resolveProvider(config: LLMConfig): ResolvedProvider {
       break;
     default: {
       // OpenAI-compatible
-      if (config.provider === 'openai' && import.meta.env.DEV && !config.baseUrl) {
+      if (config.provider === 'azure') {
+        // Azure OpenAI: {endpoint}/openai/deployments/{deployment}/chat/completions?api-version={version}
+        const deployment = config.deployment || config.model;
+        const apiVersion = config.apiVersion || '2024-12-01-preview';
+        url = `${baseUrl}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+        headers['api-key'] = config.apiKey;
+      } else if (config.provider === 'openai' && import.meta.env.DEV && !config.baseUrl) {
         url = '/llm-proxy/openai/v1/chat/completions';
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
       } else {
         url = `${baseUrl}/chat/completions`;
-      }
-      if (config.provider === 'azure') {
-        headers['api-key'] = config.apiKey;
-      } else {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
       break;
