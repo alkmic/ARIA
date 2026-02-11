@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAppStore } from '../../stores/useAppStore';
-import { Stethoscope, Users2 } from 'lucide-react';
+import { Stethoscope, Users2, Home, Building2, Building } from 'lucide-react';
 
 export const SpecialtyBreakdown: React.FC = () => {
   const { practitioners } = useAppStore();
@@ -10,6 +10,11 @@ export const SpecialtyBreakdown: React.FC = () => {
   // Calculate specialty breakdown
   const pneumologues = practitioners.filter(p => p.specialty === 'Pneumologue');
   const generalistes = practitioners.filter(p => p.specialty === 'Médecin généraliste');
+
+  // Calculate practice type breakdown
+  const praticienVille = practitioners.filter(p => p.practiceType === 'ville');
+  const praticienHospitalier = practitioners.filter(p => p.practiceType === 'hospitalier');
+  const praticienMixte = practitioners.filter(p => p.practiceType === 'mixte');
 
   const pneumoVolume = pneumologues.reduce((sum, p) => sum + p.volumeL, 0);
   const genVolume = generalistes.reduce((sum, p) => sum + p.volumeL, 0);
@@ -225,6 +230,25 @@ export const SpecialtyBreakdown: React.FC = () => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* Practice Type Breakdown */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100 text-center">
+          <Home className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+          <p className="text-lg font-bold text-emerald-700">{praticienVille.length}</p>
+          <p className="text-[10px] text-emerald-600 font-medium">Ville</p>
+        </div>
+        <div className="p-2 rounded-lg bg-blue-50 border border-blue-100 text-center">
+          <Building2 className="w-4 h-4 text-blue-600 mx-auto mb-1" />
+          <p className="text-lg font-bold text-blue-700">{praticienHospitalier.length}</p>
+          <p className="text-[10px] text-blue-600 font-medium">Hospitalier</p>
+        </div>
+        <div className="p-2 rounded-lg bg-purple-50 border border-purple-100 text-center">
+          <Building className="w-4 h-4 text-purple-600 mx-auto mb-1" />
+          <p className="text-lg font-bold text-purple-700">{praticienMixte.length}</p>
+          <p className="text-[10px] text-purple-600 font-medium">Mixte</p>
+        </div>
       </div>
 
       {/* Key insight */}

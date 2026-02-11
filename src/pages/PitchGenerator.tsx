@@ -123,14 +123,13 @@ export function PitchGenerator() {
   const [, setPractitionerSummary] = useState<string>('');
 
   // Hooks IA et Speech
-  const { streamCompletion, complete, isLoading: groqLoading, error: llmError } = useGroq({
+  const { streamCompletion, complete, isLoading: groqLoading, error: _llmError } = useGroq({
     temperature: 0.8,
     maxTokens: 4096,
   });
 
-  // Detect if LLM API key is configured
-  const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  const hasValidApiKey = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
+  // LLM est toujours disponible (API externe ou Ollama local)
+  const hasValidApiKey = true; // useGroq gère le fallback Ollama automatiquement
   const { speak, pause, resume, stop, isSpeaking, isPaused, isSupported: speechSupported } = useSpeech();
 
   // Filtrage des praticiens

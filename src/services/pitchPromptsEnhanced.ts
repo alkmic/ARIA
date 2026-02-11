@@ -8,6 +8,7 @@ import type { Practitioner } from '../types';
 import type { PitchConfig } from '../types/pitch';
 import { DataService } from './dataService';
 import { searchByCategory, searchByTag } from './ragService';
+import { getEnrichedPractitionerContext } from './practitionerDataBridge';
 import type { PractitionerProfile } from '../types/database';
 import type { KnowledgeCategory } from '../data/ragKnowledgeBase';
 
@@ -428,13 +429,18 @@ export function buildEnhancedUserPrompt(practitioner: Practitioner, config: Pitc
     return buildBasicUserPrompt(practitioner, config);
   }
 
+  // Récupérer le contexte enrichi (incluant les comptes-rendus de visite utilisateur)
+  const enrichedContext = getEnrichedPractitionerContext(practitioner.id);
+
   const visitPatterns = analyzeVisitPatterns(profile);
   const noteInsights = extractNoteInsights(profile);
   const publicationsFormatted = formatPublicationsForPitch(profile);
   const visitHistory = formatVisitHistory(profile);
 
-  const daysSinceLastVisit = profile.lastVisitDate
-    ? Math.floor((Date.now() - new Date(profile.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
+  // Utiliser la date de dernière visite effective (incluant les comptes-rendus)
+  const effectiveLastVisitDate = enrichedContext?.effectiveLastVisitDate || profile.lastVisitDate;
+  const daysSinceLastVisit = effectiveLastVisitDate
+    ? Math.floor((Date.now() - new Date(effectiveLastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
   const topProductsRaw = getProductFrequency(profile).slice(0, 3);
@@ -449,6 +455,7 @@ PROFIL COMPLET DU PRATICIEN
 **IDENTITÉ:**
 - Nom: ${profile.title} ${profile.firstName} ${profile.lastName}
 - Spécialité: ${profile.specialty}${profile.subSpecialty ? ` — ${profile.subSpecialty}` : ''}
+- Type d'exercice: ${profile.practiceType === 'ville' ? 'Praticien de ville (libéral)' : profile.practiceType === 'hospitalier' ? 'Praticien hospitalier' : 'Praticien mixte (ville + hôpital)'}
 - Ville: ${profile.address.city} (${profile.address.postalCode})
 
 **MÉTRIQUES BUSINESS:**
@@ -481,7 +488,23 @@ HISTORIQUE DES VISITES RÉCENTES
 ═══════════════════════════════════════════════════════════════════════════
 ${visitHistory}
 
+${enrichedContext && enrichedContext.userVisitReports.length > 0 ? `═══════════════════════════════════════════════════════════════════════════
+COMPTES-RENDUS DE VISITE RÉCENTS (données CRM dynamiques)
 ═══════════════════════════════════════════════════════════════════════════
+${enrichedContext.userVisitReports.slice(0, 3).map((report, idx) => {
+  const date = new Date(report.date).toLocaleDateString('fr-FR');
+  let text = `${idx + 1}. [${date}] Visite — Sentiment: ${report.extractedInfo.sentiment}`;
+  if (report.extractedInfo.keyPoints.length > 0) text += `\n   Points clés: ${report.extractedInfo.keyPoints.join('; ')}`;
+  if (report.extractedInfo.productsDiscussed.length > 0) text += `\n   Produits discutés: ${report.extractedInfo.productsDiscussed.join(', ')}`;
+  if (report.extractedInfo.competitorsMentioned.length > 0) text += `\n   Concurrents mentionnés: ${report.extractedInfo.competitorsMentioned.join(', ')}`;
+  if (report.extractedInfo.objections.length > 0) text += `\n   Objections: ${report.extractedInfo.objections.join('; ')}`;
+  if (report.extractedInfo.opportunities.length > 0) text += `\n   Opportunités: ${report.extractedInfo.opportunities.join('; ')}`;
+  if (report.extractedInfo.nextActions.length > 0) text += `\n   → Actions: ${report.extractedInfo.nextActions.join('; ')}`;
+  return text;
+}).join('\n')}
+→ UTILISER ces comptes-rendus récents pour personnaliser le pitch (mentionner les discussions passées, adresser les objections, capitaliser sur les opportunités)
+
+` : ''}═══════════════════════════════════════════════════════════════════════════
 CONFIGURATION DU PITCH
 ═══════════════════════════════════════════════════════════════════════════
 - Longueur: ${config.length} (~${LENGTH_WORDS[config.length]} mots)
@@ -662,7 +685,6 @@ export function generateLocalPitch(practitioner: Practitioner, config: PitchConf
   const conferences = profile?.news?.filter(n => n.type === 'conference') || [];
   const awards = profile?.news?.filter(n => n.type === 'award') || [];
   const notes = profile?.notes || [];
-  const visits = profile?.visitHistory || [];
   const topProducts = profile ? getProductFrequency(profile).slice(0, 3) : [];
 
   const daysSinceLastVisit = profile?.lastVisitDate

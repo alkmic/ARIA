@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Filter } from 'lucide-react';
-import type { FilterOptions } from '../../types';
+import type { FilterOptions, PracticeType } from '../../types';
 
 interface FilterPanelProps {
   isOpen: boolean;
@@ -17,6 +17,15 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
       : [...currentSpecialties, specialty];
 
     onFilterChange({ ...filters, specialty: newSpecialties });
+  };
+
+  const handlePracticeTypeChange = (type: PracticeType) => {
+    const current = filters.practiceType || [];
+    const updated = current.includes(type)
+      ? current.filter((t) => t !== type)
+      : [...current, type];
+
+    onFilterChange({ ...filters, practiceType: updated });
   };
 
   const handleVingtileChange = (vingtile: number) => {
@@ -47,6 +56,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
 
   const activeFilterCount =
     (filters.specialty?.length || 0) +
+    (filters.practiceType?.length || 0) +
     (filters.vingtile?.length || 0) +
     (filters.riskLevel?.length || 0) +
     (filters.isKOL !== undefined ? 1 : 0);
@@ -113,6 +123,31 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                         className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
                       <span className="text-sm text-gray-700">{specialty}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Type d'exercice */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Type d'exercice</h3>
+                <div className="space-y-2">
+                  {([
+                    { value: 'ville' as PracticeType, label: 'Praticien de ville' },
+                    { value: 'hospitalier' as PracticeType, label: 'Praticien hospitalier' },
+                    { value: 'mixte' as PracticeType, label: 'Praticien mixte' },
+                  ]).map(({ value, label }) => (
+                    <label
+                      key={value}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filters.practiceType?.includes(value) || false}
+                        onChange={() => handlePracticeTypeChange(value)}
+                        className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{label}</span>
                     </label>
                   ))}
                 </div>

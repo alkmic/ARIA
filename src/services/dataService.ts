@@ -80,6 +80,7 @@ export class DataService {
 INFORMATIONS PERSONNELLES :
 - Identité complète : ${p.title} ${p.firstName} ${p.lastName}
 - Spécialité : ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}
+- Type d'exercice : ${p.practiceType === 'ville' ? 'Praticien de ville (libéral)' : p.practiceType === 'hospitalier' ? 'Praticien hospitalier' : 'Praticien mixte (ville + hôpital)'}
 - Statut : ${p.metrics.isKOL ? 'KEY OPINION LEADER (KOL)' : 'Praticien standard'}
 
 ADRESSE & CONTACT :
@@ -302,6 +303,9 @@ HISTORIQUE DE RELATION :
       averageLoyalty: practitioners.reduce((sum, p) => sum + p.metrics.loyaltyScore, 0) / practitioners.length,
       pneumologues: practitioners.filter(p => p.specialty === 'Pneumologue').length,
       generalistes: practitioners.filter(p => p.specialty === 'Médecin généraliste').length,
+      praticienVille: practitioners.filter(p => p.practiceType === 'ville').length,
+      praticienHospitalier: practitioners.filter(p => p.practiceType === 'hospitalier').length,
+      praticienMixte: practitioners.filter(p => p.practiceType === 'mixte').length,
     };
   }
 }

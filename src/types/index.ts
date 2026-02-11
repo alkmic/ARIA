@@ -1,9 +1,14 @@
+import type { PracticeType } from './database';
+
+export type { PracticeType } from './database';
+
 export interface Practitioner {
   id: string;
   firstName: string;
   lastName: string;
   title: string; // "Dr." ou "Pr."
   specialty: 'Médecin généraliste' | 'Pneumologue';
+  practiceType: PracticeType; // ville, hospitalier ou mixte
   isKOL: boolean;
   vingtile: number; // 1-20 (1 = top prescripteur)
 
@@ -82,6 +87,7 @@ export interface AIInsight {
 
 export interface FilterOptions {
   specialty?: ('Médecin généraliste' | 'Pneumologue')[];
+  practiceType?: PracticeType[];
   vingtile?: number[];
   vingtileMin?: number;
   vingtileMax?: number;

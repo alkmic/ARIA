@@ -227,6 +227,7 @@ export function getTopPractitioners(
 
 /**
  * Calcule les données de performance par mois pour les graphiques
+ * TOUTES les valeurs sont en litres (L) pour garantir la cohérence des comparaisons
  */
 export function getPerformanceDataForPeriod(period: TimePeriod) {
   const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -241,38 +242,40 @@ export function getPerformanceDataForPeriod(period: TimePeriod) {
   };
 
   if (period === 'month') {
-    // Pour le mois: 4 semaines, volumes hebdomadaires (~10-15K L/semaine)
+    // Pour le mois: 4 semaines
+    // Volume hebdomadaire réaliste: ~10-15K L/semaine (territoire Rhône-Alpes)
+    // Objectif hebdomadaire: ~12K L/semaine → ~48K L/mois
     return Array.from({ length: 4 }, (_, i) => ({
       month: `S${i + 1}`,
-      actual: 12 + Math.floor(seededRandom(i) * 8),
-      objective: 15,
-      previousYear: 10 + Math.floor(seededRandom(i + 100) * 5),
       yourVolume: 10000 + Math.floor(seededRandom(i + 200) * 5000),
+      objective: 11000 + Math.floor(seededRandom(i + 400) * 2000),
       teamAverage: 9000 + Math.floor(seededRandom(i + 300) * 4000),
     }));
   } else if (period === 'quarter') {
-    // Pour le trimestre: 3 mois, volumes mensuels (~40-60K L/mois)
+    // Pour le trimestre: 3 mois
+    // Volume mensuel réaliste: ~40-60K L/mois
+    // Objectif mensuel: ~48K L/mois
     const quarterStart = Math.floor(currentMonth / 3) * 3;
     return Array.from({ length: 3 }, (_, i) => {
       const monthIndex = quarterStart + i;
       return {
         month: months[monthIndex],
-        actual: 45 + Math.floor(seededRandom(monthIndex) * 20),
-        objective: 60,
-        previousYear: 40 + Math.floor(seededRandom(monthIndex + 100) * 15),
         yourVolume: 40000 + Math.floor(seededRandom(monthIndex + 200) * 20000),
+        objective: 44000 + Math.floor(seededRandom(monthIndex + 400) * 8000),
         teamAverage: 35000 + Math.floor(seededRandom(monthIndex + 300) * 18000),
       };
     });
   } else {
-    // Pour l'année: mois par mois, volumes mensuels (~40-60K L/mois)
-    return Array.from({ length: currentMonth + 1 }, (_, i) => ({
-      month: months[i],
-      actual: 45 + Math.floor(seededRandom(i) * 20),
-      objective: 60,
-      previousYear: 40 + Math.floor(seededRandom(i + 100) * 15),
-      yourVolume: 40000 + Math.floor(seededRandom(i + 200) * 20000),
-      teamAverage: 35000 + Math.floor(seededRandom(i + 300) * 18000),
-    }));
+    // Pour l'année: mois par mois
+    // Volume mensuel avec progression légère sur l'année (+0.5-1% par mois)
+    return Array.from({ length: currentMonth + 1 }, (_, i) => {
+      const growthFactor = 1 + (i * 0.008); // ~1% par mois de progression
+      return {
+        month: months[i],
+        yourVolume: Math.round((40000 + Math.floor(seededRandom(i + 200) * 20000)) * growthFactor),
+        objective: Math.round((44000 + Math.floor(seededRandom(i + 400) * 8000)) * growthFactor),
+        teamAverage: Math.round((35000 + Math.floor(seededRandom(i + 300) * 18000)) * growthFactor),
+      };
+    });
   }
 }
