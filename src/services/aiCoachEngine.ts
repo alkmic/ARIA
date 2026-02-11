@@ -9,7 +9,7 @@
  * - Le LLM route TOUTES les questions (zéro regex pour le routage)
  * - Le contexte de données est ciblé selon l'intention détectée
  * - Format de sortie unifié (texte + graphique optionnel)
- * - LLM local par défaut (Ollama + Qwen3 8B) si aucune API externe configurée
+ * - WebLLM dans le navigateur si aucune API externe configurée
  * - Fallback automatique vers le LLM local si l'API externe échoue
  */
 
@@ -121,22 +121,10 @@ interface LLMCallOptions {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MULTI-PROVIDER LLM — Auto-détection depuis le format de clé API
-// + Ollama local (Qwen3 8B) comme défaut / fallback
+// + WebLLM navigateur comme fallback
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type LLMProvider = 'groq' | 'gemini' | 'openai' | 'anthropic' | 'openrouter' | 'ollama';
-
-// ── Ollama / Qwen3 8B Local ────────────────────────────────────────────────
-const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
-const OLLAMA_DEFAULT_MODEL = 'qwen3:8b';
-
-function getOllamaBaseUrl(): string {
-  return (import.meta.env.VITE_OLLAMA_BASE_URL as string) || OLLAMA_DEFAULT_URL;
-}
-
-function getOllamaModel(): string {
-  return (import.meta.env.VITE_OLLAMA_MODEL as string) || OLLAMA_DEFAULT_MODEL;
-}
+type LLMProvider = 'groq' | 'gemini' | 'openai' | 'anthropic' | 'openrouter';
 
 interface ProviderConfig {
   name: string;
@@ -353,27 +341,6 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       (data as { error?: { message?: string } }).error?.message || `OpenRouter API error: ${status}`,
   },
 
-  ollama: {
-    name: `Ollama (${OLLAMA_DEFAULT_MODEL} local)`,
-    provider: 'ollama',
-    apiUrl: () => `${getOllamaBaseUrl()}/v1/chat/completions`,
-    mainModel: OLLAMA_DEFAULT_MODEL,
-    routerModel: OLLAMA_DEFAULT_MODEL,
-    headers: () => ({
-      'Content-Type': 'application/json',
-    }),
-    buildBody: (messages, _model, temperature, maxTokens, jsonMode) => {
-      const body: Record<string, unknown> = {
-        model: getOllamaModel(), messages, temperature, max_tokens: maxTokens, stream: false,
-      };
-      if (jsonMode) body.response_format = { type: 'json_object' };
-      return body;
-    },
-    parseResponse: (data) =>
-      (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || null,
-    parseError: (data, status) =>
-      (data as { error?: { message?: string } }).error?.message || `Ollama error: ${status}`,
-  },
 };
 
 // Cached provider detection (cached per config hash to handle hot-reload)
@@ -412,13 +379,15 @@ function getProvider(): ProviderConfig {
           const processedMessages = resolved.providerType === 'azure'
             ? messages.map(m => m.role === 'system' ? { role: 'developer', content: m.content } : m)
             : messages;
+          // max_completion_tokens includes BOTH reasoning tokens AND output tokens.
+          // Reasoning models can use 2000+ tokens internally, so we need a generous budget
+          // to avoid empty responses when the model exhausts its budget on reasoning.
+          const reasoningBudget = Math.max(maxTokens * 4, 8192);
           const body: Record<string, unknown> = {
-            messages: processedMessages, max_completion_tokens: maxTokens, stream: false,
+            messages: processedMessages, max_completion_tokens: reasoningBudget, stream: false,
           };
           // Azure: model is in the deployment URL, but safe to send for others
           if (resolved.providerType !== 'azure') body.model = model;
-          // Don't send response_format for reasoning models — rely on prompt instructions
-          // (not reliably supported on all Azure API versions for o-series)
           return body;
         }
         return base.buildBody(messages, model, temperature, maxTokens, jsonMode);
@@ -432,12 +401,8 @@ function getProvider(): ProviderConfig {
   // 2. Env var fallback (legacy key-prefix detection)
   const key = getApiKey();
   if (!key) {
-    if (!_cachedProvider || _cachedProvider.provider !== 'ollama') {
-      _cachedProvider = { ...PROVIDERS.ollama, mainModel: getOllamaModel(), routerModel: getOllamaModel() };
-      _cachedConfigHash = '__ollama__';
-      console.log(`[AICoachEngine] No API key — using local Ollama (model: ${getOllamaModel()})`);
-    }
-    return _cachedProvider;
+    // No API key and no config — callLLM will fall through to WebLLM
+    return null as unknown as ProviderConfig;
   }
   const prefix = key.substring(0, 6);
   if (_cachedProvider && _cachedConfigHash === prefix) return _cachedProvider;
@@ -447,16 +412,11 @@ function getProvider(): ProviderConfig {
   return _cachedProvider;
 }
 
-/** Retourne le provider Ollama local (pour fallback) */
-function getOllamaProvider(): ProviderConfig {
-  return { ...PROVIDERS.ollama, mainModel: getOllamaModel(), routerModel: getOllamaModel() };
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROMPTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON.
+const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON brut (premier caractère = {, dernier = }).
 
 Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle sur données CRM des praticiens/visites/territoire), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), knowledge_query (question métier: produits, services, catalogue, BPCO, oxygénothérapie, Air Liquide, Orkyn', réglementation, concurrence, GOLD, HAS, LPPR, épidémiologie, dispositifs médicaux), follow_up (suite de la conversation), general (salutations/hors sujet).
 
@@ -619,7 +579,7 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
 | "Fidélité vs volume top 15" | composed | null | [sum(volumeL)/k, avg(loyaltyScore)] | [] | limit:15 |
 | "Segments par vingtile" | bar | vingtileBucket | [count, sum(volumeL)/k] | [] |
 
-Réponds UNIQUEMENT avec le JSON, sans aucun texte avant ou après.`;
+Réponds UNIQUEMENT avec le JSON brut (pas de texte, pas de markdown, pas de \`\`\`). Le premier caractère doit être { et le dernier }.`;
 
 const CHART_MODIFY_PROMPT = `Tu es un expert en modification de visualisations de données CRM.
 
@@ -645,11 +605,67 @@ Règles :
 
 ${DATA_SCHEMA}
 
-Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même format que l'original).`;
+Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même format que l'original). Le premier caractère doit être { et le dernier }.`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LLM API CLIENT
 // ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Extrait un objet JSON d'une réponse LLM brute.
+ * Les modèles de raisonnement (o-series) peuvent préfixer/suffixer le JSON avec
+ * du texte de réflexion. Cette fonction gère tous les cas :
+ *   1. ```json ... ```  (markdown code block)
+ *   2. ``` ... ```      (generic code block)
+ *   3. JSON brut avec du texte autour
+ * Retourne l'objet parsé ou null.
+ */
+function extractJSONFromResponse(response: string): Record<string, unknown> | null {
+  // Pattern 1: ```json ... ```
+  const jsonBlockMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+  if (jsonBlockMatch) {
+    try { return JSON.parse(jsonBlockMatch[1].trim()); } catch { /* continue */ }
+  }
+
+  // Pattern 2: ``` ... ```
+  const codeBlockMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1].trim()); } catch { /* continue */ }
+  }
+
+  // Pattern 3: direct JSON.parse on full response
+  try { return JSON.parse(response.trim()); } catch { /* continue */ }
+
+  // Pattern 4: find the first balanced { ... } using bracket counting
+  // This handles reasoning models that prefix "Let me think... " before the JSON
+  const firstBrace = response.indexOf('{');
+  if (firstBrace === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = firstBrace; i < response.length; i++) {
+    const ch = response[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(response.substring(firstBrace, i + 1));
+        } catch {
+          // Malformed JSON — try to continue looking for another object
+          break;
+        }
+      }
+    }
+  }
+
+  return null;
+}
 
 function getApiKey(): string | null {
   return getStoredApiKey();
@@ -735,10 +751,9 @@ async function callProvider(
 }
 
 /**
- * Appelle le LLM avec fallback automatique vers Ollama local.
+ * Appelle le LLM avec fallback automatique vers WebLLM navigateur.
  * 1. Si une clé API externe est configurée → essaie le provider externe
- * 2. Si l'appel externe échoue → fallback vers Ollama local (Qwen3 8B)
- * 3. Si aucune clé API → utilise Ollama local directement
+ * 2. Si l'appel externe échoue ou pas de clé → fallback vers WebLLM navigateur
  */
 async function callLLM(
   messages: LLMMessage[],
@@ -751,28 +766,16 @@ async function callLLM(
   // Reset error at the start of each callLLM invocation so stale errors don't carry over
   lastLLMError = null;
 
-  // 1. Essayer le provider principal (externe ou déjà Ollama si pas de clé)
-  const result = await callProvider(provider, apiKey || '', messages, options, retries);
-  if (result) return result;
-
-  // Capture the primary provider error before fallbacks overwrite it
-  const primaryError = lastLLMError;
-
-  // 2. Si le provider était externe et a échoué, fallback vers Ollama local
-  if (apiKey && provider.provider !== 'ollama') {
-    console.warn(`[AICoachEngine] ${provider.name} failed — falling back to local Ollama (${getOllamaModel()})`);
-    const ollamaProvider = getOllamaProvider();
-    const ollamaResult = await callProvider(ollamaProvider, '', messages, {
-      ...options,
-      model: options.useRouterModel ? ollamaProvider.routerModel : ollamaProvider.mainModel,
-    }, 0);
-    if (ollamaResult) {
-      lastLLMError = null;
-      return ollamaResult;
-    }
+  // 1. Essayer le provider API configuré (si disponible)
+  if (provider && apiKey) {
+    const result = await callProvider(provider, apiKey, messages, options, retries);
+    if (result) return result;
   }
 
-  // 3. Dernier recours : WebLLM dans le navigateur
+  // Capture the API provider error before WebLLM fallback overwrites it
+  const apiError = lastLLMError;
+
+  // 2. Fallback : WebLLM dans le navigateur
   if (webLlmService.isWebGPUSupported()) {
     console.warn('[AICoachEngine] Falling back to WebLLM browser...');
     try {
@@ -790,8 +793,8 @@ async function callLLM(
     }
   }
 
-  // Tout a échoué — restore the primary provider error (most relevant to the user)
-  lastLLMError = primaryError || lastLLMError || 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
+  // Tout a échoué — restore the API error (most relevant to the user)
+  lastLLMError = apiError || lastLLMError || 'Aucun LLM disponible. Configurez une clé API dans Paramètres ou chargez le modèle WebLLM.';
 
   return null;
 }
@@ -812,9 +815,9 @@ export async function streamLLM(
     return;
   }
 
-  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama, Azure)
+  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Azure)
   try {
-    const streamModel = provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel;
+    const streamModel = provider.mainModel;
     const reasoning = isReasoningModel(streamModel);
     // Azure o-series: system → developer role
     const config = getStoredLLMConfig();
@@ -933,13 +936,19 @@ Données: \n${dataPreview}`;
   if (!result) return null;
 
   try {
-    const parsed = JSON.parse(result);
+    // Use robust JSON extraction — reasoning models (o-series) may wrap
+    // the JSON in thinking/reasoning text
+    const parsed = extractJSONFromResponse(result);
+    if (!parsed) {
+      console.error('[AICoachEngine] Router: could not extract JSON from response:', result.substring(0, 300));
+      return null;
+    }
     // Validate and normalize
     const validIntents = ['chart_create', 'chart_modify', 'data_query', 'practitioner_info', 'strategic_advice', 'knowledge_query', 'follow_up', 'general'];
-    if (!validIntents.includes(parsed.intent)) {
+    if (!validIntents.includes(parsed.intent as string)) {
       parsed.intent = 'general';
     }
-    return parsed as RouterResult;
+    return parsed as unknown as RouterResult;
   } catch (err) {
     console.error('[AICoachEngine] Router parse error:', err);
     return null;
@@ -1705,7 +1714,7 @@ export async function processQuestion(
   const providerName = savedConfig ? `${savedConfig.provider} / ${savedConfig.model}` : 'aucun';
   console.error('[AICoachEngine] All LLM calls failed:', { errorDetail, provider: providerName, configSaved: !!savedConfig, apiKey: !!savedApiKey });
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\n**Config :** ${providerName}\n\n**Actions :**\n1. Allez dans **Paramètres** → **"Sauvegarder & Tester"** (bouton bleu)\n2. Ou configurez Ollama local : \`ollama run ${getOllamaModel()}\``,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\n**Config :** ${providerName}\n\n**Actions :**\n1. Allez dans **Paramètres** → **"Sauvegarder & Tester"** (bouton bleu)\n2. Ou chargez le modèle **WebLLM** dans Paramètres (fonctionne directement dans le navigateur)`,
     source: 'llm',
   };
 }
@@ -1740,7 +1749,7 @@ function findPractitionerCards(names: string[]): (Practitioner & { daysSinceVisi
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function isLLMConfigured(): boolean {
-  // Toujours true: soit API externe, soit Ollama local
+  // Toujours true: soit API externe, soit WebLLM navigateur
   return true;
 }
 
@@ -1760,7 +1769,7 @@ export function getLLMProviderName(): string {
       const modelId = webLlmService.getCurrentModelId();
       return `WebLLM navigateur (${modelId})`;
     }
-    return `Ollama local (${getOllamaModel()})`;
+    return 'Aucun LLM configuré';
   }
   return detectProvider(key).name;
 }

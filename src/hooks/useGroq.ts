@@ -5,7 +5,7 @@ import { getStoredApiKey, getStoredLLMConfig, resolveProvider, isReasoningModel 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Multi-provider LLM Hook
 // Supports explicit config from Settings + auto-detection from key prefix (legacy)
-// Fallback chain: API externe → Ollama local → WebLLM navigateur
+// Fallback chain: API externe → WebLLM navigateur
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface LLMMessage {
@@ -27,28 +27,6 @@ interface ProviderInfo {
   url: string;
   defaultModel: string;
   headers: Record<string, string>;
-}
-
-// ── Ollama local config ─────────────────────────────────────────────────────
-const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
-const OLLAMA_DEFAULT_MODEL = 'qwen3:8b';
-
-function getOllamaBaseUrl(): string {
-  return (import.meta.env.VITE_OLLAMA_BASE_URL as string) || OLLAMA_DEFAULT_URL;
-}
-
-function getOllamaModel(): string {
-  return (import.meta.env.VITE_OLLAMA_MODEL as string) || OLLAMA_DEFAULT_MODEL;
-}
-
-function getOllamaProvider(): ProviderInfo {
-  return {
-    type: 'openai-compat',
-    name: `Ollama (${getOllamaModel()})`,
-    url: `${getOllamaBaseUrl()}/v1/chat/completions`,
-    defaultModel: getOllamaModel(),
-    headers: { 'Content-Type': 'application/json' },
-  };
 }
 
 function getProviderConfig(apiKey: string): ProviderInfo {
@@ -239,7 +217,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
   const { temperature = 0.7, maxTokens = 2048 } = options;
 
-  // Streaming completion — with automatic Ollama fallback
+  // Streaming completion — with automatic WebLLM fallback
   const streamCompletion = useCallback(
     async (messages: LLMMessage[], onChunk: (chunk: string) => void, onComplete?: () => void) => {
       setIsLoading(true);
@@ -281,22 +259,12 @@ export function useGroq(options: UseGroqOptions = {}) {
             onComplete?.();
             return;
           } catch (externalErr) {
-            // External API failed — fallback to Ollama
-            console.warn(`[useGroq] ${provider.name} failed, falling back to Ollama local:`, externalErr);
+            // External API failed — fallback to WebLLM
+            console.warn(`[useGroq] ${provider.name} failed, falling back to WebLLM:`, externalErr);
           }
         }
 
-        // ── Ollama local fallback (or primary if no API key) ──
-        try {
-          const ollama = getOllamaProvider();
-          await streamOpenAICompat(ollama.url, ollama.headers, ollama.defaultModel, messages, temperature, maxTokens, onChunk);
-          onComplete?.();
-          return;
-        } catch (ollamaErr) {
-          console.warn('[useGroq] Ollama failed, trying WebLLM browser...', ollamaErr);
-        }
-
-        // ── WebLLM browser fallback (dernier recours) ──
+        // ── WebLLM browser fallback ──
         if (webLlmService.isWebGPUSupported()) {
           try {
             await webLlmService.ensureLoaded();
@@ -321,7 +289,7 @@ export function useGroq(options: UseGroqOptions = {}) {
     [temperature, maxTokens, options.model]
   );
 
-  // Non-streaming completion — with automatic Ollama fallback
+  // Non-streaming completion — with automatic WebLLM fallback
   const complete = useCallback(
     async (messages: LLMMessage[]): Promise<string | null> => {
       setIsLoading(true);
@@ -381,32 +349,12 @@ export function useGroq(options: UseGroqOptions = {}) {
             const data = await response.json();
             return data.choices?.[0]?.message?.content || null;
           } catch (externalErr) {
-            // External API failed — fallback to Ollama
-            console.warn(`[useGroq] External API failed, falling back to Ollama local:`, externalErr);
+            // External API failed — fallback to WebLLM
+            console.warn(`[useGroq] External API failed, falling back to WebLLM:`, externalErr);
           }
         }
 
-        // ── Ollama local fallback ──
-        try {
-          const ollama = getOllamaProvider();
-          const response = await fetch(ollama.url, {
-            method: 'POST',
-            headers: ollama.headers,
-            body: JSON.stringify({
-              model: ollama.defaultModel, messages, temperature, max_tokens: maxTokens, stream: false,
-            }),
-          });
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Ollama error: ${response.status}`);
-          }
-          const data = await response.json();
-          return data.choices?.[0]?.message?.content || null;
-        } catch (ollamaErr) {
-          console.warn('[useGroq] Ollama failed, trying WebLLM browser...', ollamaErr);
-        }
-
-        // ── WebLLM browser fallback (dernier recours) ──
+        // ── WebLLM browser fallback ──
         if (webLlmService.isWebGPUSupported()) {
           try {
             await webLlmService.ensureLoaded();

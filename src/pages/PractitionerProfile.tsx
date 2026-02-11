@@ -590,40 +590,70 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
           <Swords className="w-5 h-5 text-amber-600" />
           Battlecard vs Concurrence
+          {dbProfile?.previousProvider && (
+            <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
+              Ex-{dbProfile.previousProvider}
+            </span>
+          )}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-white/80 rounded-xl">
-            <p className="text-sm font-semibold text-amber-700 mb-2">vs Vivisol</p>
-            <p className="text-sm text-slate-600">
-              ✓ Réactivité SAV +30% (astreinte 24/7)<br />
-              ✓ Télésuivi O₂ inclus gratuitement<br />
-              ✓ Formation patient à domicile par IDE
-            </p>
-          </div>
-          <div className="p-4 bg-white/80 rounded-xl">
-            <p className="text-sm font-semibold text-amber-700 mb-2">vs Linde Healthcare</p>
-            <p className="text-sm text-slate-600">
-              ✓ Connectivité IoT native sur tous les DM<br />
-              ✓ Chronic Care Connect (suivi digital)<br />
-              ✓ Plateforme Orkyn' patient dédiée
-            </p>
-          </div>
-          <div className="p-4 bg-white/80 rounded-xl">
-            <p className="text-sm font-semibold text-amber-700 mb-2">vs SOS Oxygène</p>
-            <p className="text-sm text-slate-600">
-              ✓ Couverture nationale (vs régionale)<br />
-              ✓ Gamme VNI/PPC complète (ALMS)<br />
-              ✓ R&D interne et innovation continue
-            </p>
-          </div>
-          <div className="p-4 bg-white/80 rounded-xl">
-            <p className="text-sm font-semibold text-amber-700 mb-2">vs Bastide Médical</p>
-            <p className="text-sm text-slate-600">
-              ✓ Expertise respiratoire pure (vs multi-activité)<br />
-              ✓ LPPR spécialiste avec forfaits optimisés<br />
-              ✓ Support technique spécialisé 24/7
-            </p>
-          </div>
+          {dbProfile?.battlecards && dbProfile.battlecards.length > 0 ? (
+            dbProfile.battlecards.map((bc, idx) => (
+              <div key={idx} className={`p-4 rounded-xl ${bc.isPrimary ? 'bg-amber-100/80 ring-2 ring-amber-300' : 'bg-white/80'}`}>
+                <p className={`text-sm font-semibold mb-2 ${bc.isPrimary ? 'text-red-700' : 'text-amber-700'}`}>
+                  vs {bc.competitor} {bc.isPrimary && '(concurrent direct)'}
+                </p>
+                <div className="text-sm text-slate-700 space-y-1">
+                  {bc.ourAdvantages.slice(0, 3).map((adv, i) => (
+                    <p key={i}>✓ {adv}</p>
+                  ))}
+                </div>
+                {bc.isPrimary && bc.counterArguments.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-amber-200">
+                    <p className="text-xs font-semibold text-amber-800 mb-1">Contre-arguments clés :</p>
+                    {bc.counterArguments.slice(0, 2).map((ca, i) => (
+                      <p key={i} className="text-xs text-amber-700 mb-1">→ {ca}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="p-4 bg-white/80 rounded-xl">
+                <p className="text-sm font-semibold text-amber-700 mb-2">vs Vivisol</p>
+                <p className="text-sm text-slate-600">
+                  ✓ Réactivité SAV +30% (astreinte 24/7)<br />
+                  ✓ Télésuivi O₂ inclus gratuitement<br />
+                  ✓ Formation patient à domicile par IDE
+                </p>
+              </div>
+              <div className="p-4 bg-white/80 rounded-xl">
+                <p className="text-sm font-semibold text-amber-700 mb-2">vs Linde Healthcare</p>
+                <p className="text-sm text-slate-600">
+                  ✓ Connectivité IoT native sur tous les DM<br />
+                  ✓ Chronic Care Connect (suivi digital)<br />
+                  ✓ Plateforme Orkyn' patient dédiée
+                </p>
+              </div>
+              <div className="p-4 bg-white/80 rounded-xl">
+                <p className="text-sm font-semibold text-amber-700 mb-2">vs SOS Oxygène</p>
+                <p className="text-sm text-slate-600">
+                  ✓ Couverture nationale (vs régionale)<br />
+                  ✓ Gamme VNI/PPC complète (ALMS)<br />
+                  ✓ R&D interne et innovation continue
+                </p>
+              </div>
+              <div className="p-4 bg-white/80 rounded-xl">
+                <p className="text-sm font-semibold text-amber-700 mb-2">vs Bastide Médical</p>
+                <p className="text-sm text-slate-600">
+                  ✓ Expertise respiratoire pure (vs multi-activité)<br />
+                  ✓ LPPR spécialiste avec forfaits optimisés<br />
+                  ✓ Support technique spécialisé 24/7
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
