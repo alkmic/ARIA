@@ -358,7 +358,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     headers: () => ({
       'Content-Type': 'application/json',
     }),
-    buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+    buildBody: (messages, _model, temperature, maxTokens, jsonMode) => {
       const body: Record<string, unknown> = {
         model: getOllamaModel(), messages, temperature, max_tokens: maxTokens, stream: false,
       };

@@ -9,7 +9,6 @@
  */
 
 import {
-  MLCEngine,
   CreateMLCEngine,
   prebuiltAppConfig,
   type InitProgressReport,
@@ -257,9 +256,7 @@ class WebLLMService {
       const completion = result as { choices?: { message?: { content?: string } }[] };
       return completion.choices?.[0]?.message?.content || null;
     } finally {
-      if (this.status === 'generating') {
-        this.setStatus('ready');
-      }
+      this.setStatus('ready');
     }
   }
 
@@ -294,9 +291,7 @@ class WebLLMService {
         }
       }
     } finally {
-      if (this.status === 'generating') {
-        this.setStatus('ready');
-      }
+      this.setStatus('ready');
     }
   }
 
