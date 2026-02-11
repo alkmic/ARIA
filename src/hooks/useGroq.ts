@@ -263,14 +263,19 @@ export function useGroq(options: UseGroqOptions = {}) {
         }
 
         // ── WebLLM browser fallback (dernier recours) ──
-        if (webLlmService.isReady()) {
-          await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
-          onComplete?.();
-          return;
+        if (webLlmService.isWebGPUSupported()) {
+          try {
+            await webLlmService.ensureLoaded();
+            await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
+            onComplete?.();
+            return;
+          } catch (webErr) {
+            console.warn('[useGroq] WebLLM failed:', webErr);
+          }
         }
 
         // Tout a échoué
-        setError(`LLM indisponible. Options :\n• Lancez Ollama : ollama run ${getOllamaModel()}\n• Ou chargez le modèle WebLLM dans Paramètres`);
+        setError('LLM indisponible. Vérifiez que WebGPU est supporté par votre navigateur (Chrome 113+).');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         setError(msg);
@@ -352,12 +357,17 @@ export function useGroq(options: UseGroqOptions = {}) {
         }
 
         // ── WebLLM browser fallback (dernier recours) ──
-        if (webLlmService.isReady()) {
-          return await webLlmService.complete(messages, { temperature, maxTokens });
+        if (webLlmService.isWebGPUSupported()) {
+          try {
+            await webLlmService.ensureLoaded();
+            return await webLlmService.complete(messages, { temperature, maxTokens });
+          } catch (webErr) {
+            console.warn('[useGroq] WebLLM failed:', webErr);
+          }
         }
 
         // Tout a échoué
-        setError(`LLM indisponible. Options :\n• Lancez Ollama : ollama run ${getOllamaModel()}\n• Ou chargez le modèle WebLLM dans Paramètres`);
+        setError('LLM indisponible. Vérifiez que WebGPU est supporté par votre navigateur (Chrome 113+).');
         return null;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';

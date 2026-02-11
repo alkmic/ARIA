@@ -60,7 +60,7 @@ import {
   getKnowledgeSources,
   type ConversationMessage
 } from '../services/aiCoachEngine';
-import { webLlmService } from '../services/webLlmService';
+import { useWebLLM } from '../hooks/useWebLLM';
 import {
   DEFAULT_CHART_COLORS,
   clearChartHistory,
@@ -120,6 +120,8 @@ export default function AICoach() {
   // RAG Knowledge Base stats
   const ragStats = getRAGStats();
   const knowledgeSources = getKnowledgeSources();
+  // WebLLM state
+  const { status: webLlmStatus, progress: webLlmProgress, isReady: webLlmReady } = useWebLLM();
 
   // Suggestions contextuelles — 3 catégories : Data, Stratégie, Connaissances
   const SUGGESTION_CHIPS = [
@@ -439,14 +441,27 @@ export default function AICoach() {
           )}
 
           {!hasExternalLLMKey() && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border ${
-              webLlmService.isReady()
-                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                : 'bg-blue-50 text-blue-700 border-blue-200'
-            }`}>
-              <AlertCircle className="w-4 h-4" />
-              <span>{getLLMProviderName()}</span>
-            </div>
+            webLlmStatus === 'loading' ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-xs border border-purple-200">
+                <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                <span>WebLLM {(webLlmProgress.progress * 100).toFixed(0)}%</span>
+                <div className="w-16 bg-purple-200 rounded-full h-1.5 ml-1">
+                  <div
+                    className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.max(webLlmProgress.progress * 100, 2)}%` }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border ${
+                webLlmReady
+                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+              }`}>
+                <AlertCircle className="w-4 h-4" />
+                <span>{getLLMProviderName()}</span>
+              </div>
+            )
           )}
 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs border border-emerald-200">

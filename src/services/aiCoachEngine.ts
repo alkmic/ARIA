@@ -710,10 +710,12 @@ async function callLLM(
     }
   }
 
-  // 3. Dernier recours : WebLLM dans le navigateur (si le modèle est chargé)
-  if (webLlmService.isReady()) {
+  // 3. Dernier recours : WebLLM dans le navigateur
+  // Si WebGPU est supporté, on attend le chargement du modèle si nécessaire
+  if (webLlmService.isWebGPUSupported()) {
     console.warn('[AICoachEngine] Falling back to WebLLM browser...');
     try {
+      await webLlmService.ensureLoaded();
       const webResult = await webLlmService.complete(messages, {
         temperature: options.temperature ?? 0.3,
         maxTokens: options.maxTokens ?? 2048,
@@ -728,9 +730,7 @@ async function callLLM(
   }
 
   // Tout a échoué
-  if (apiKey && provider.provider !== 'ollama') {
-    lastLLMError = `API externe (${provider.name}), Ollama local et WebLLM navigateur indisponibles.`;
-  }
+  lastLLMError = 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
 
   return null;
 }
@@ -805,9 +805,14 @@ export async function streamLLM(
   }
 
   // Fallback: WebLLM streaming dans le navigateur
-  if (webLlmService.isReady()) {
-    await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
-    return;
+  if (webLlmService.isWebGPUSupported()) {
+    try {
+      await webLlmService.ensureLoaded();
+      await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
+      return;
+    } catch (webErr) {
+      console.warn('[AICoachEngine] WebLLM stream failed:', webErr);
+    }
   }
 
   // Dernier recours: non-streaming via callLLM (qui a ses propres fallbacks)
