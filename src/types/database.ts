@@ -61,6 +61,14 @@ export interface BusinessMetrics {
   churnRisk: 'low' | 'medium' | 'high';
 }
 
+export interface CompetitorBattlecard {
+  competitor: string;
+  ourAdvantages: string[];       // Nos points forts vs ce concurrent
+  theirStrengths: string[];      // Points forts du concurrent (à anticiper)
+  counterArguments: string[];    // Arguments de réponse aux objections
+  isPrimary?: boolean;           // true si c'est le concurrent principal pour ce praticien
+}
+
 export interface PractitionerProfile {
   id: string;
   title: string;
@@ -82,6 +90,7 @@ export interface PractitionerProfile {
   notes: PractitionerNote[];
   news: PractitionerNews[];
   visitHistory: VisitRecord[];
+  battlecards?: CompetitorBattlecard[]; // Battlecards concurrentielles contextualisées
 
   // Nouveau praticien détecté
   isNew?: boolean;               // Praticien récemment détecté, jamais visité

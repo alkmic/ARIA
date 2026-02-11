@@ -1,4 +1,4 @@
-import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitRecord, PracticeType } from '../types/database';
+import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitRecord, PracticeType, CompetitorBattlecard } from '../types/database';
 
 /**
  * Générateur de données réalistes et cohérentes pour les praticiens
@@ -225,6 +225,8 @@ const NEWS_TEMPLATES_PNEUMO = {
         "les nouvelles recommandations pour l'oxygénothérapie ambulatoire",
         "la place du télésuivi dans le parcours de soins BPCO",
         "l'évaluation de la dyspnée chez les patients sous OLD",
+        "la phénotypisation des patients BPCO pour l'oxygénothérapie personnalisée",
+        "les facteurs prédictifs de mauvaise observance de l'OLD",
       ],
     },
     {
@@ -236,6 +238,8 @@ const NEWS_TEMPLATES_PNEUMO = {
         "les complications de l'oxygénothérapie de longue durée",
         "l'optimisation de la VNI chez le patient obèse hypercapnique",
         "la réhabilitation respiratoire en post-exacerbation",
+        "la prise en charge de l'insuffisance respiratoire aiguë sur chronique",
+        "le suivi à distance des patients sous oxygénothérapie de déambulation",
       ],
     },
     {
@@ -245,6 +249,7 @@ const NEWS_TEMPLATES_PNEUMO = {
         "les biomarqueurs prédictifs d'exacerbation BPCO",
         "la télémédecine appliquée au suivi des patients sous O2",
         "les bénéfices de l'oxygénothérapie de déambulation",
+        "l'impact de l'activité physique supervisée chez le patient sous OLD",
       ],
     },
     {
@@ -254,6 +259,7 @@ const NEWS_TEMPLATES_PNEUMO = {
         "les critères de sevrage de l'oxygénothérapie longue durée",
         "l'utilisation du NO exhalé dans le suivi BPCO",
         "la place de la réhabilitation pulmonaire précoce",
+        "les recommandations ERS sur la VNI à domicile",
       ],
     },
     {
@@ -263,6 +269,26 @@ const NEWS_TEMPLATES_PNEUMO = {
         "l'observance de l'OLD au-delà de 15h/jour et mortalité",
         "la VNI versus l'O2 seul en BPCO sévère hypercapnique",
         "les dispositifs connectés en pneumologie ambulatoire",
+        "l'évaluation médico-économique du télésuivi respiratoire",
+      ],
+    },
+    {
+      title: "Article original dans Pneumologie Clinique",
+      contentTemplate: "Étude prospective sur {topic}",
+      topics: [
+        "la satisfaction des patients sous concentrateur portable",
+        "l'adhésion au traitement par PPC chez les patients SAHOS sévères",
+        "les comorbidités cardiovasculaires des patients BPCO sous OLD",
+        "le rôle de l'infirmier coordinateur dans le parcours BPCO",
+      ],
+    },
+    {
+      title: "Chapitre dans le Traité de Pneumologie (EMC)",
+      contentTemplate: "Rédaction d'un chapitre sur {topic}",
+      topics: [
+        "les indications et modalités de l'oxygénothérapie de longue durée",
+        "la ventilation mécanique à domicile : indications et surveillance",
+        "le syndrome obésité-hypoventilation : diagnostic et traitement",
       ],
     },
   ],
@@ -347,6 +373,8 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "les red flags en consultation pour orientation pneumologique",
         "l'accompagnement du patient BPCO en médecine générale",
         "le rôle du médecin traitant dans le renouvellement de l'OLD",
+        "la gestion du sevrage tabagique en cabinet de ville",
+        "les critères d'adressage au pneumologue pour bilan respiratoire",
       ],
     },
     {
@@ -357,6 +385,8 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "la place de la spirométrie au cabinet du généraliste",
         "l'éducation thérapeutique du patient insuffisant respiratoire",
         "le suivi à domicile des patients sous assistance respiratoire",
+        "l'intégration du télésuivi dans la pratique de médecine générale",
+        "le parcours patient BPCO vu depuis les soins primaires",
       ],
     },
     {
@@ -366,6 +396,17 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "l'enjeu du dépistage précoce de la BPCO en France",
         "la prise en charge ambulatoire de l'insuffisance respiratoire chronique",
         "l'apport du numérique dans le suivi des maladies chroniques",
+        "le rôle du généraliste dans la prévention de l'aggravation BPCO",
+      ],
+    },
+    {
+      title: "Article dans Médecine - Revue de l'UNAFORMEC",
+      contentTemplate: "Synthèse pratique sur {topic}",
+      topics: [
+        "la prescription d'oxygénothérapie de longue durée en ville",
+        "les outils d'évaluation de la dyspnée utilisables en consultation",
+        "le suivi post-hospitalisation du patient BPCO exacerbé",
+        "l'accompagnement du patient insuffisant respiratoire chronique et de son aidant",
       ],
     },
   ],
@@ -381,6 +422,8 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "gérontologie et polypathologies",
         "coordination des soins à domicile",
         "maladies respiratoires chroniques",
+        "soins palliatifs et accompagnement",
+        "médecine d'urgence ambulatoire",
       ],
     },
   ],
@@ -394,6 +437,8 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "la coordination des acteurs du domicile (HAD, PSAD, IDE)",
         "l'optimisation du suivi des patients chroniques",
         "les parcours de soins des patients insuffisants respiratoires",
+        "la téléconsultation et le télésuivi en médecine générale",
+        "l'impact de la pollution atmosphérique sur les pathologies respiratoires",
       ],
       events: [
         "Congrès de la Médecine Générale France",
@@ -401,6 +446,8 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "Journées régionales de FMC",
         "Rencontres de la HAS",
         "Colloque Soins Primaires et Coordination",
+        "Assises de la Médecine Générale",
+        "Congrès WONCA France",
       ],
     },
   ],
@@ -414,6 +461,8 @@ const NEWS_TEMPLATES_GENERALISTE = {
         "son rôle de maître de stage universitaire",
         "son implication dans la maison de santé pluriprofessionnelle",
         "sa participation active au réseau de soins respiratoire régional",
+        "son travail sur l'amélioration du parcours BPCO en soins primaires",
+        "sa contribution à la formation des internes en médecine générale",
       ],
     },
   ],
@@ -421,13 +470,16 @@ const NEWS_TEMPLATES_GENERALISTE = {
     {
       title: "Événement médical local",
       contentTemplate: "{event} sur {topic}",
-      events: ["Soirée FMC", "Atelier pratique", "Groupe de pairs", "Journée MSP", "Réunion pluriprofessionnelle"],
+      events: ["Soirée FMC", "Atelier pratique", "Groupe de pairs", "Journée MSP", "Réunion pluriprofessionnelle", "Séminaire DPC", "Staff paramédical"],
       topics: [
         "le bon usage des dispositifs médicaux respiratoires",
         "la prise en charge du patient BPCO en médecine de ville",
         "les innovations du PSAD et télésuivi",
         "la prévention et le sevrage tabagique",
         "la gestion des poly-pathologies chez le sujet âgé",
+        "l'organisation du maintien à domicile des patients chroniques",
+        "l'utilisation de la spirométrie en cabinet de ville",
+        "la coordination IDE-MG pour le suivi des patients sous O2",
       ],
     },
   ],
@@ -537,6 +589,7 @@ function generateNews(
   specialty: string,
   isKOL: boolean,
   rng: () => number,
+  globalUsedNews?: Set<string>,
 ): PractitionerNews[] {
   const news: PractitionerNews[] = [];
   // KOLs: 3-6, non-KOL pneumologues: 1-3, non-KOL generalistes: 0-2
@@ -545,7 +598,7 @@ function generateNews(
     : specialty === 'Pneumologue'
       ? randomInt(1, 3, rng)
       : randomInt(0, 2, rng);
-  const usedTitles = new Set<string>();
+  const usedTitles = globalUsedNews || new Set<string>();
 
   // Select specialty-specific templates
   const NEWS_TEMPLATES = specialty === 'Pneumologue' ? NEWS_TEMPLATES_PNEUMO : NEWS_TEMPLATES_GENERALISTE;
@@ -560,20 +613,30 @@ function generateNews(
 
     const templates = NEWS_TEMPLATES[type];
     if (!templates || templates.length === 0) continue;
-    const template: any = randomChoice(templates as any, rng);
 
-    let content: string = template.contentTemplate;
-    let title: string = template.title;
+    // Try multiple times to find a unique news item (avoid cross-practitioner duplicates)
+    let content = '';
+    let title = '';
+    let uniqueKey = '';
+    let found = false;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const template: any = randomChoice(templates as any, rng);
+      content = template.contentTemplate;
+      title = template.title;
 
-    if (template.topics) content = content.replace('{topic}', randomChoice(template.topics, rng));
-    if (template.certs) content = content.replace('{cert}', randomChoice(template.certs, rng));
-    if (template.domains) content = content.replace('{domain}', randomChoice(template.domains, rng));
-    if (template.events) content = content.replace('{event}', randomChoice(template.events, rng));
-    if (template.achievements) content = content.replace('{achievement}', randomChoice(template.achievements, rng));
+      if (template.topics) content = content.replace('{topic}', randomChoice(template.topics, rng));
+      if (template.certs) content = content.replace('{cert}', randomChoice(template.certs, rng));
+      if (template.domains) content = content.replace('{domain}', randomChoice(template.domains, rng));
+      if (template.events) content = content.replace('{event}', randomChoice(template.events, rng));
+      if (template.achievements) content = content.replace('{achievement}', randomChoice(template.achievements, rng));
 
-    // Ensure no duplicate titles
-    const uniqueKey = `${title}-${content.substring(0, 30)}`;
-    if (usedTitles.has(uniqueKey)) continue;
+      uniqueKey = `${title}-${content.substring(0, 50)}`;
+      if (!usedTitles.has(uniqueKey)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) continue;
     usedTitles.add(uniqueKey);
 
     const daysAgo = randomInt(10, 200, rng);
@@ -705,10 +768,124 @@ function generateVisitHistory(
 }
 
 // ═══════════════════════════════════════════════════════════
+// BATTLECARDS CONCURRENTIELLES
+// ═══════════════════════════════════════════════════════════
+
+const COMPETITOR_BATTLECARDS: Record<string, Omit<CompetitorBattlecard, 'isPrimary'>> = {
+  'Vivisol': {
+    competitor: 'Vivisol',
+    ourAdvantages: [
+      "Réactivité SAV +30% (astreinte 24/7 vs H+8 chez Vivisol)",
+      "Télésuivi O₂ Connect inclus gratuitement (supplément payant chez Vivisol)",
+      "Formation patient à domicile par IDE dédiée",
+      "Gamme complète O2 + VNI + PPC (Vivisol limité en VNI)",
+      "Plateforme Orkyn' patient avec appli mobile",
+    ],
+    theirStrengths: [
+      "Tarifs agressifs sur les concentrateurs fixes (-10 à -15%)",
+      "Implantation forte en Italie du Nord (patients frontaliers)",
+      "Bonne relation historique avec certains CHU",
+    ],
+    counterArguments: [
+      "Le coût total de prise en charge (incluant réhospitalisations évitées par le télésuivi) est inférieur chez Air Liquide",
+      "Notre astreinte 24/7 réduit les passages aux urgences — argument décisif pour les pneumologues hospitaliers",
+      "Nos données de télésuivi sont intégrables dans les DPI hospitaliers (interopérabilité HL7/FHIR)",
+    ],
+  },
+  'Linde Healthcare': {
+    competitor: 'Linde Healthcare',
+    ourAdvantages: [
+      "Connectivité IoT native sur tous les dispositifs médicaux",
+      "Chronic Care Connect — suivi digital patient complet",
+      "Plateforme Orkyn' dédiée avec éducation thérapeutique intégrée",
+      "Réseau technicien 2x plus dense en Rhône-Alpes",
+      "R&D interne avec brevets sur l'oxygénothérapie intelligente",
+    ],
+    theirStrengths: [
+      "Adossé au groupe Linde (solidité financière)",
+      "Bonne gamme de gaz médicaux hospitaliers",
+      "Prix compétitifs sur les gros volumes hospitaliers",
+    ],
+    counterArguments: [
+      "Linde est un industriel gazier — Air Liquide Santé est un spécialiste du parcours patient à domicile",
+      "Notre plateforme de télésuivi est propriétaire et évolutive, pas un simple rebranding",
+      "Nos IDE formateurs sont salariés (vs sous-traitance chez Linde) — continuité de la relation patient",
+    ],
+  },
+  'SOS Oxygène': {
+    competitor: 'SOS Oxygène',
+    ourAdvantages: [
+      "Couverture nationale complète (vs implantation régionale Sud)",
+      "Gamme VNI/PPC complète ALMS (SOS limité en ventilation)",
+      "R&D et innovation continue (télésuivi, IoT, IA)",
+      "Capacité de prise en charge multi-pathologies (BPCO + SAS + IRC)",
+      "Interlocuteur unique pour l'ensemble du parcours respiratoire",
+    ],
+    theirStrengths: [
+      "Forte proximité locale dans le Sud-Est",
+      "Image de PME réactive et à taille humaine",
+      "Bonne notoriété chez les MG de ville dans leur zone",
+    ],
+    counterArguments: [
+      "Notre maillage territorial en Rhône-Alpes est équivalent avec en plus la couverture nationale pour les patients voyageurs",
+      "Notre programme patient Orkyn' offre un suivi plus complet que la simple livraison",
+      "Pour les cas complexes (VNI + O2), un seul prestataire simplifie le parcours vs 2 intervenants",
+    ],
+  },
+  'Bastide Médical': {
+    competitor: 'Bastide Médical',
+    ourAdvantages: [
+      "Expertise respiratoire pure (vs Bastide multi-activité : nutrition, perf, stomie...)",
+      "Forfaits LPPR optimisés pour la pneumologie",
+      "Support technique respiratoire spécialisé 24/7",
+      "Équipes terrain 100% dédiées au respiratoire",
+      "Télésuivi O₂ avec algorithmes prédictifs d'exacerbation",
+    ],
+    theirStrengths: [
+      "Offre globale MAD (oxygène + nutrition + perfusion)",
+      "Réseau de pharmacies affiliées pour la capillarité",
+      "Communication active auprès des MG de ville",
+    ],
+    counterArguments: [
+      "Un généraliste du MAD ne peut pas égaler un spécialiste du respiratoire — nos techniciens sont formés exclusivement à la pneumologie",
+      "La dispersion multi-activité de Bastide impacte les délais d'intervention respiratoire urgente",
+      "Nos concentrateurs et VNI sont de dernière génération — Bastide revend souvent du matériel reconditionné",
+    ],
+  },
+};
+
+function generateBattlecards(previousProvider?: string, rng?: () => number): CompetitorBattlecard[] {
+  const allCompetitors = Object.keys(COMPETITOR_BATTLECARDS);
+  const battlecards: CompetitorBattlecard[] = [];
+
+  if (previousProvider && COMPETITOR_BATTLECARDS[previousProvider]) {
+    // Primary battlecard for the known previous provider
+    battlecards.push({
+      ...COMPETITOR_BATTLECARDS[previousProvider],
+      isPrimary: true,
+    });
+  }
+
+  // Add 1-2 other competitors for reference
+  const others = allCompetitors.filter(c => c !== previousProvider);
+  const otherCount = rng ? randomInt(1, 2, rng) : 1;
+  for (let i = 0; i < otherCount && i < others.length; i++) {
+    const idx = rng ? Math.floor(rng() * others.length) : i;
+    const competitor = others.splice(idx, 1)[0];
+    battlecards.push({
+      ...COMPETITOR_BATTLECARDS[competitor],
+      isPrimary: false,
+    });
+  }
+
+  return battlecards;
+}
+
+// ═══════════════════════════════════════════════════════════
 // GÉNÉRATEUR PRINCIPAL
 // ═══════════════════════════════════════════════════════════
 
-export function generatePractitioner(index: number): PractitionerProfile {
+export function generatePractitioner(index: number, globalUsedNews?: Set<string>): PractitionerProfile {
   // Use seeded RNG for reproducibility but unique per practitioner
   const rng = seededRandom(index * 7919 + 42);
 
@@ -803,8 +980,9 @@ export function generatePractitioner(index: number): PractitionerProfile {
     },
 
     notes: neverVisited ? [] : generateNotes(firstName, lastName, practTitle, specialty, rng),
-    news: generateNews(firstName, lastName, specialty, isKOL, rng),
+    news: generateNews(firstName, lastName, specialty, isKOL, rng, globalUsedNews),
     visitHistory: neverVisited ? [] : generateVisitHistory(firstName, lastName, practTitle, specialty, rng),
+    battlecards: generateBattlecards(undefined, rng),
 
     createdAt: new Date('2024-01-15').toISOString(),
     lastVisitDate,
@@ -831,6 +1009,7 @@ interface NewPractitionerTemplate {
   practiceType: PracticeType;
   detectedDaysAgo: number;
   previousProvider?: string;
+  titleOverride?: 'Pr' | 'Dr';  // Override auto-title (e.g. Pr for academics regardless of KOL)
   newsOverrides: PractitionerNews[];
 }
 
@@ -842,7 +1021,8 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
     specialty: 'Pneumologue',
     city: CITIES_RHONE_ALPES[0], // Lyon
     vingtile: 2,
-    isKOL: true,
+    isKOL: false,                // Pas encore KOL pour nous — à conquérir
+    titleOverride: 'Pr',         // Titre académique (PU-PH), indépendant du statut KOL
     subSpecialty: 'Réhabilitation respiratoire',
     practiceType: 'hospitalier',
     detectedDaysAgo: 5,
@@ -852,9 +1032,9 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
         id: 'news-delorme-1',
         date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         title: "Nomination comme chef de service pneumologie au CHU Lyon-Sud",
-        content: "Nommé chef du service de pneumologie au CHU Lyon-Sud, succédant au Pr Étienne qui part en retraite. Prend en charge un service de 45 lits avec une unité de soins intensifs respiratoires.",
+        content: "Nommé chef du service de pneumologie au CHU Lyon-Sud, succédant au Pr Étienne qui part en retraite. Prend en charge un service de 45 lits avec une unité de soins intensifs respiratoires. Fort potentiel prescripteur — pas encore dans notre réseau.",
         type: 'event',
-        relevance: "Opportunité majeure : nouveau chef de service = nouvelles décisions d'approvisionnement. Être le premier à le rencontrer.",
+        relevance: "Opportunité majeure : nouveau chef de service = nouvelles décisions d'approvisionnement. Profil haut potentiel KOL à conquérir.",
       },
       {
         id: 'news-delorme-2',
@@ -862,7 +1042,7 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
         title: "Publication dans The Lancet Respiratory Medicine",
         content: "Co-auteur principal d'une étude randomisée sur l'impact du télésuivi SpO2 continu sur la réduction des hospitalisations chez les patients BPCO sévères. Résultats : -42% de réhospitalisations à 6 mois.",
         type: 'publication',
-        relevance: "Sa publication porte EXACTEMENT sur le télésuivi O2 — notre produit phare. Levier de discussion idéal.",
+        relevance: "Sa publication porte EXACTEMENT sur le télésuivi O2 — notre produit phare. Levier de discussion idéal pour un premier contact.",
         source: 'PubMed',
       },
     ],
@@ -873,7 +1053,7 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
     isMale: false,
     specialty: 'Pneumologue',
     city: CITIES_RHONE_ALPES[2], // Grenoble
-    vingtile: 4,
+    vingtile: 15,               // Installation récente — patientèle en construction, volume faible
     isKOL: false,
     subSpecialty: 'Sommeil et ventilation',
     practiceType: 'mixte',
@@ -904,7 +1084,7 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
     isMale: true,
     specialty: 'Médecin généraliste',
     city: CITIES_RHONE_ALPES[4], // Annecy
-    vingtile: 3,
+    vingtile: 12,               // MSP récente — fort potentiel collectif mais volume individuel encore modeste
     isKOL: false,
     practiceType: 'ville',
     detectedDaysAgo: 12,
@@ -956,7 +1136,7 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
     isMale: true,
     specialty: 'Médecin généraliste',
     city: CITIES_RHONE_ALPES[6], // Valence
-    vingtile: 6,
+    vingtile: 10,               // Reprise cabinet avec 15 patients O2 — volume correct mais pas top prescripteur
     isKOL: false,
     practiceType: 'ville',
     detectedDaysAgo: 15,
@@ -981,7 +1161,7 @@ const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
     vingtile: 3,
     isKOL: true,
     subSpecialty: 'Allergologie respiratoire',
-    practiceType: 'ville',
+    practiceType: 'mixte',       // Coordonne réseau ville-hôpital (12 MG + 3 pneumo)
     detectedDaysAgo: 7,
     newsOverrides: [
       {
@@ -1024,7 +1204,7 @@ function generateNewPractitioner(template: NewPractitionerTemplate, baseIndex: n
   const detectedDate = new Date();
   detectedDate.setDate(detectedDate.getDate() - template.detectedDaysAgo);
 
-  const practTitle = template.isKOL ? 'Pr' : 'Dr';
+  const practTitle = template.titleOverride || (template.isKOL ? 'Pr' : 'Dr');
 
   return {
     id: `pract-new-${String(baseIndex + 1).padStart(2, '0')}`,
@@ -1067,6 +1247,7 @@ function generateNewPractitioner(template: NewPractitionerTemplate, baseIndex: n
     notes: [],
     news: template.newsOverrides,
     visitHistory: [],
+    battlecards: generateBattlecards(template.previousProvider, rng),
 
     // New practitioner fields
     isNew: true,
@@ -1081,9 +1262,11 @@ function generateNewPractitioner(template: NewPractitionerTemplate, baseIndex: n
 
 export function generateDatabase(count: number = 120): PractitionerProfile[] {
   const practitioners: PractitionerProfile[] = [];
+  // Shared set to prevent the same news from appearing on multiple practitioners
+  const globalUsedNews = new Set<string>();
 
   for (let i = 0; i < count; i++) {
-    practitioners.push(generatePractitioner(i));
+    practitioners.push(generatePractitioner(i, globalUsedNews));
   }
 
   // Add explicitly new practitioners (recently detected, never visited)
