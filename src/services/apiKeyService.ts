@@ -171,7 +171,7 @@ export const LLM_PROVIDERS: ProviderDefinition[] = [
     description: 'OpenAI via Azure AI Foundry (endpoint + déploiement + version)',
     apiFormat: 'openai-compat',
     defaultBaseUrl: '',
-    defaultModel: '',
+    defaultModel: 'o4-mini',
     models: [
       { id: 'o4-mini', name: 'o4 Mini' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
@@ -400,7 +400,16 @@ export function resolveProvider(config: LLMConfig): ResolvedProvider {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST — Valide la connexion avec une requête minimale (max_tokens=1)
+// O-SERIES (reasoning) MODEL DETECTION
+// o1, o3, o4-mini etc. don't support temperature/max_tokens, need max_completion_tokens
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function isReasoningModel(model: string): boolean {
+  return /^o\d/.test(model);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST — Valide la connexion avec une requête minimale
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function testLLMConfig(config: LLMConfig): Promise<ApiKeyTestResult> {
@@ -430,15 +439,24 @@ export async function testLLMConfig(config: LLMConfig): Promise<ApiKeyTestResult
         }),
       });
     } else {
+      // OpenAI-compatible (incl. Azure)
+      const reasoning = isReasoningModel(config.model) || isReasoningModel(config.deployment || '');
+      const body: Record<string, unknown> = {
+        messages: [{ role: 'user', content: 'Hi' }],
+      };
+      // Azure: model is determined by deployment URL, but sending it is harmless for most versions
+      if (config.provider !== 'azure') body.model = config.model;
+      if (reasoning) {
+        // o-series models: no temperature, use max_completion_tokens
+        body.max_completion_tokens = 50;
+      } else {
+        body.max_tokens = 1;
+        body.temperature = 0;
+      }
       response = await fetch(resolved.url, {
         method: 'POST',
         headers: resolved.headers,
-        body: JSON.stringify({
-          model: config.model,
-          messages: [{ role: 'user', content: 'Hi' }],
-          max_tokens: 1,
-          temperature: 0,
-        }),
+        body: JSON.stringify(body),
       });
     }
 
