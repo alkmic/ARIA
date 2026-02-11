@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react';
 import { webLlmService } from '../services/webLlmService';
-import { getStoredApiKey } from '../services/apiKeyService';
+import { getStoredApiKey, getStoredLLMConfig, resolveProvider } from '../services/apiKeyService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Multi-provider LLM Hook
-// Auto-detects provider from VITE_LLM_API_KEY format
-// Supports: Groq, Gemini, OpenAI, Anthropic, OpenRouter, custom endpoints
+// Supports explicit config from Settings + auto-detection from key prefix (legacy)
 // Fallback chain: API externe → Ollama local → WebLLM navigateur
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -53,6 +52,23 @@ function getOllamaProvider(): ProviderInfo {
 }
 
 function getProviderConfig(apiKey: string): ProviderInfo {
+  // 1. Explicit config from Settings UI
+  const config = getStoredLLMConfig();
+  if (config) {
+    const resolved = resolveProvider(config);
+    const type: ProviderType =
+      resolved.apiFormat === 'gemini' ? 'gemini' :
+      resolved.apiFormat === 'anthropic' ? 'anthropic' : 'openai-compat';
+    return {
+      type,
+      name: resolved.providerName,
+      url: type === 'gemini' ? resolved.baseUrl : resolved.url,
+      defaultModel: resolved.model,
+      headers: resolved.headers,
+    };
+  }
+
+  // 2. Legacy: auto-detect from key prefix
   const customUrl = import.meta.env.VITE_LLM_BASE_URL;
   if (customUrl && !customUrl.includes('your_') && customUrl.length >= 10) {
     const baseUrl = (customUrl as string).replace(/\/+$/, '');
@@ -68,7 +84,7 @@ function getProviderConfig(apiKey: string): ProviderInfo {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
   };
   if (apiKey.startsWith('AIzaSy')) return {
-    type: 'gemini', name: 'Gemini', url: '',
+    type: 'gemini', name: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta',
     defaultModel: 'gemini-1.5-flash',
     headers: { 'Content-Type': 'application/json' },
   };
@@ -94,8 +110,9 @@ function getProviderConfig(apiKey: string): ProviderInfo {
 
 // ── Gemini helpers ───────────────────────────────────────────────────────────
 
-function buildGeminiRequest(apiKey: string, model: string, messages: LLMMessage[], temperature: number, maxTokens: number) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+function buildGeminiRequest(apiKey: string, model: string, messages: LLMMessage[], temperature: number, maxTokens: number, baseUrl?: string) {
+  const base = baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+  const url = `${base}/models/${model}:generateContent?key=${apiKey}`;
   const systemParts = messages.filter(m => m.role === 'system').map(m => ({ text: m.content }));
   const contents = messages.filter(m => m.role !== 'system').map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -226,7 +243,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
           try {
             if (provider.type === 'gemini') {
-              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens);
+              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens, provider.url || undefined);
               const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
               if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -308,7 +325,7 @@ export function useGroq(options: UseGroqOptions = {}) {
 
           try {
             if (provider.type === 'gemini') {
-              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens);
+              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens, provider.url || undefined);
               const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
               if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
