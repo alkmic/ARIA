@@ -14,7 +14,7 @@
  */
 
 import { webLlmService } from './webLlmService';
-import { getStoredApiKey, getStoredLLMConfig, resolveProvider, getProviderDef } from './apiKeyService';
+import { getStoredApiKey, getStoredLLMConfig, resolveProvider, getProviderDef, isReasoningModel } from './apiKeyService';
 import { DataService } from './dataService';
 import {
   DATA_SCHEMA,
@@ -404,9 +404,20 @@ function getProvider(): ProviderConfig {
             return `${bUrl}/models/${model}:generateContent?key=${key}`;
           }
         : () => resolved.url,
-      headers: resolved.apiFormat === 'gemini'
-        ? () => resolved.headers
-        : () => resolved.headers,
+      headers: () => resolved.headers,
+      buildBody: (messages, model, temperature, maxTokens, jsonMode) => {
+        // o-series reasoning models: no temperature, use max_completion_tokens
+        if (resolved.apiFormat === 'openai-compat' && isReasoningModel(model)) {
+          const body: Record<string, unknown> = {
+            messages, max_completion_tokens: maxTokens, stream: false,
+          };
+          // Azure: model is in the deployment URL, but safe to send for others
+          if (resolved.providerType !== 'azure') body.model = model;
+          if (jsonMode) body.response_format = { type: 'json_object' };
+          return body;
+        }
+        return base.buildBody(messages, model, temperature, maxTokens, jsonMode);
+      },
     };
     _cachedConfigHash = hash;
     console.log(`[AICoachEngine] Provider from config: ${resolved.providerName} (model: ${resolved.model})`);
@@ -784,18 +795,21 @@ export async function streamLLM(
     return;
   }
 
-  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama)
+  // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama, Azure)
   try {
+    const streamModel = provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel;
+    const reasoning = isReasoningModel(streamModel);
+    const streamBody: Record<string, unknown> = { model: streamModel, messages, stream: true };
+    if (reasoning) {
+      streamBody.max_completion_tokens = maxTokens;
+    } else {
+      streamBody.temperature = temperature;
+      streamBody.max_tokens = maxTokens;
+    }
     const response = await fetch(provider.apiUrl(provider.mainModel, apiKey || ''), {
       method: 'POST',
       headers: provider.headers(apiKey || ''),
-      body: JSON.stringify({
-        model: provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
+      body: JSON.stringify(streamBody),
     });
 
     if (!response.ok) {
