@@ -710,8 +710,15 @@ async function callProvider(
       }
 
       const data = await response.json();
-      lastLLMError = null;
-      return provider.parseResponse(data as Record<string, unknown>);
+      const parsed = provider.parseResponse(data as Record<string, unknown>);
+      if (parsed) {
+        lastLLMError = null;
+        return parsed;
+      }
+      // 200 OK but empty/null content — treat as failure
+      lastLLMError = `[${provider.name}] Réponse vide (200 OK mais pas de contenu)`;
+      console.warn(`[AICoachEngine] ${provider.name} returned 200 but parseResponse got null`, JSON.stringify(data).substring(0, 500));
+      throw new Error('Empty response content');
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       lastLLMError = lastLLMError || `[${provider.name}] ${errMsg}`;
@@ -741,9 +748,15 @@ async function callLLM(
   const apiKey = getApiKey();
   const provider = getProvider();
 
+  // Reset error at the start of each callLLM invocation so stale errors don't carry over
+  lastLLMError = null;
+
   // 1. Essayer le provider principal (externe ou déjà Ollama si pas de clé)
   const result = await callProvider(provider, apiKey || '', messages, options, retries);
   if (result) return result;
+
+  // Capture the primary provider error before fallbacks overwrite it
+  const primaryError = lastLLMError;
 
   // 2. Si le provider était externe et a échoué, fallback vers Ollama local
   if (apiKey && provider.provider !== 'ollama') {
@@ -760,7 +773,6 @@ async function callLLM(
   }
 
   // 3. Dernier recours : WebLLM dans le navigateur
-  // Si WebGPU est supporté, on attend le chargement du modèle si nécessaire
   if (webLlmService.isWebGPUSupported()) {
     console.warn('[AICoachEngine] Falling back to WebLLM browser...');
     try {
@@ -778,10 +790,8 @@ async function callLLM(
     }
   }
 
-  // Tout a échoué — preserve the real error from callProvider if available
-  if (!lastLLMError) {
-    lastLLMError = 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
-  }
+  // Tout a échoué — restore the primary provider error (most relevant to the user)
+  lastLLMError = primaryError || lastLLMError || 'Aucun LLM disponible. Chargez le modèle WebLLM dans Paramètres ou configurez une clé API.';
 
   return null;
 }
@@ -1549,6 +1559,24 @@ export async function processQuestion(
   _userObjectives: { visitsMonthly: number; visitsCompleted: number },
   userCRMData?: UserCRMData
 ): Promise<AICoachResult> {
+  // ─── Early diagnostic: is any LLM configured? ─────────────────────────────
+  const savedConfig = getStoredLLMConfig();
+  const savedApiKey = getApiKey();
+  console.log('[AICoachEngine] processQuestion diagnostic:', {
+    configSaved: !!savedConfig,
+    configProvider: savedConfig?.provider,
+    configModel: savedConfig?.model,
+    apiKeyPresent: !!savedApiKey,
+    apiKeyLength: savedApiKey?.length,
+  });
+
+  if (!savedConfig && !savedApiKey) {
+    return {
+      textContent: `**Configuration LLM non trouvée.**\n\nLa connexion a peut-être été testée mais pas sauvegardée.\n\n**Solution :** Retournez dans **Paramètres** → section **LLM / IA** et cliquez sur **"Sauvegarder & Tester"** (le bouton bleu).\n\n_Le bouton vert "Tester la connexion" vérifie la connexion mais ne l'enregistre pas toujours._`,
+      source: 'llm',
+    };
+  }
+
   const chartHistory = getChartHistory();
   const lastAssistant = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0]?.content;
 
@@ -1559,8 +1587,6 @@ export async function processQuestion(
   // Si Phase 2 (réponse) échoue → on essaie le LLM direct sans routing
   // Si tout échoue → message d'erreur explicite (PAS de fallback local)
   // ═══════════════════════════════════════════════════════════════════════════
-
-  // Note: pas d'early exit si aucune clé API — on utilise Ollama ou WebLLM comme fallback
 
   // ─── Phase 1: LLM Routing ────────────────────────────────────────────────
   const routing = await routeQuestion(question, chartHistory, lastAssistant);
@@ -1676,9 +1702,10 @@ export async function processQuestion(
 
   // ─── ALL LLM CALLS FAILED: Explicit error with diagnostic ──────────────
   const errorDetail = lastLLMError || 'Aucune réponse du serveur';
-  console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
+  const providerName = savedConfig ? `${savedConfig.provider} / ${savedConfig.model}` : 'aucun';
+  console.error('[AICoachEngine] All LLM calls failed:', { errorDetail, provider: providerName, configSaved: !!savedConfig, apiKey: !!savedApiKey });
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Ollama n'est pas lancé en local\n- Le modèle \`${getOllamaModel()}\` n'est pas installé\n- Le modèle WebLLM n'est pas chargé dans le navigateur\n- Clé API externe invalide ou expirée\n\n**Actions :**\n1. Chargez le modèle WebLLM dans **Paramètres** (zéro installation)\n2. Ou installez Ollama : \`ollama run ${getOllamaModel()}\`\n3. Ou configurez une clé API externe dans \`VITE_LLM_API_KEY\``,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\n**Config :** ${providerName}\n\n**Actions :**\n1. Allez dans **Paramètres** → **"Sauvegarder & Tester"** (bouton bleu)\n2. Ou configurez Ollama local : \`ollama run ${getOllamaModel()}\``,
     source: 'llm',
   };
 }
