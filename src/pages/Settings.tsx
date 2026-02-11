@@ -150,6 +150,12 @@ export function Settings() {
     try {
       const result = await testLLMConfig(config);
       setTestResult(result);
+      // Auto-save on successful test so the Coach and all other services
+      // can use this config immediately (matches the UI message promise)
+      if (result.success) {
+        saveLLMConfig(config);
+        setHasKey(true);
+      }
     } catch {
       setTestResult({
         success: false,
