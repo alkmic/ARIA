@@ -416,7 +416,7 @@ function getProvider(): ProviderConfig {
 // PROMPTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON.
+const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON brut (premier caractère = {, dernier = }).
 
 Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle sur données CRM des praticiens/visites/territoire), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), knowledge_query (question métier: produits, services, catalogue, BPCO, oxygénothérapie, Air Liquide, Orkyn', réglementation, concurrence, GOLD, HAS, LPPR, épidémiologie, dispositifs médicaux), follow_up (suite de la conversation), general (salutations/hors sujet).
 
@@ -579,7 +579,7 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
 | "Fidélité vs volume top 15" | composed | null | [sum(volumeL)/k, avg(loyaltyScore)] | [] | limit:15 |
 | "Segments par vingtile" | bar | vingtileBucket | [count, sum(volumeL)/k] | [] |
 
-Réponds UNIQUEMENT avec le JSON, sans aucun texte avant ou après.`;
+Réponds UNIQUEMENT avec le JSON brut (pas de texte, pas de markdown, pas de \`\`\`). Le premier caractère doit être { et le dernier }.`;
 
 const CHART_MODIFY_PROMPT = `Tu es un expert en modification de visualisations de données CRM.
 
@@ -605,11 +605,67 @@ Règles :
 
 ${DATA_SCHEMA}
 
-Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même format que l'original).`;
+Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même format que l'original). Le premier caractère doit être { et le dernier }.`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LLM API CLIENT
 // ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Extrait un objet JSON d'une réponse LLM brute.
+ * Les modèles de raisonnement (o-series) peuvent préfixer/suffixer le JSON avec
+ * du texte de réflexion. Cette fonction gère tous les cas :
+ *   1. ```json ... ```  (markdown code block)
+ *   2. ``` ... ```      (generic code block)
+ *   3. JSON brut avec du texte autour
+ * Retourne l'objet parsé ou null.
+ */
+function extractJSONFromResponse(response: string): Record<string, unknown> | null {
+  // Pattern 1: ```json ... ```
+  const jsonBlockMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+  if (jsonBlockMatch) {
+    try { return JSON.parse(jsonBlockMatch[1].trim()); } catch { /* continue */ }
+  }
+
+  // Pattern 2: ``` ... ```
+  const codeBlockMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1].trim()); } catch { /* continue */ }
+  }
+
+  // Pattern 3: direct JSON.parse on full response
+  try { return JSON.parse(response.trim()); } catch { /* continue */ }
+
+  // Pattern 4: find the first balanced { ... } using bracket counting
+  // This handles reasoning models that prefix "Let me think... " before the JSON
+  const firstBrace = response.indexOf('{');
+  if (firstBrace === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = firstBrace; i < response.length; i++) {
+    const ch = response[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(response.substring(firstBrace, i + 1));
+        } catch {
+          // Malformed JSON — try to continue looking for another object
+          break;
+        }
+      }
+    }
+  }
+
+  return null;
+}
 
 function getApiKey(): string | null {
   return getStoredApiKey();
@@ -880,13 +936,19 @@ Données: \n${dataPreview}`;
   if (!result) return null;
 
   try {
-    const parsed = JSON.parse(result);
+    // Use robust JSON extraction — reasoning models (o-series) may wrap
+    // the JSON in thinking/reasoning text
+    const parsed = extractJSONFromResponse(result);
+    if (!parsed) {
+      console.error('[AICoachEngine] Router: could not extract JSON from response:', result.substring(0, 300));
+      return null;
+    }
     // Validate and normalize
     const validIntents = ['chart_create', 'chart_modify', 'data_query', 'practitioner_info', 'strategic_advice', 'knowledge_query', 'follow_up', 'general'];
-    if (!validIntents.includes(parsed.intent)) {
+    if (!validIntents.includes(parsed.intent as string)) {
       parsed.intent = 'general';
     }
-    return parsed as RouterResult;
+    return parsed as unknown as RouterResult;
   } catch (err) {
     console.error('[AICoachEngine] Router parse error:', err);
     return null;

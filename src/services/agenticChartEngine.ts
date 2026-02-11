@@ -528,62 +528,88 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
   return query.limit ? results.slice(0, query.limit) : results;
 }
 
-// Parser la réponse JSON du LLM avec meilleure tolérance
+// Parser la réponse JSON du LLM avec tolérance maximale
+// Les modèles de raisonnement (o-series) peuvent entourer le JSON de texte de réflexion.
 export function parseLLMChartResponse(response: string): ChartSpec | null {
   try {
-    // Essayer d'extraire le JSON du markdown
-    let jsonStr = response;
+    let parsed: Record<string, unknown> | null = null;
 
     // Pattern 1: ```json ... ```
     const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
     if (jsonMatch) {
-      jsonStr = jsonMatch[1];
-    } else {
-      // Pattern 2: ``` ... ```
+      try { parsed = JSON.parse(jsonMatch[1].trim()); } catch { /* continue */ }
+    }
+
+    // Pattern 2: ``` ... ```
+    if (!parsed) {
       const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
       if (codeMatch) {
-        jsonStr = codeMatch[1];
-      } else {
-        // Pattern 3: JSON brut commençant par {
-        const rawMatch = response.match(/\{[\s\S]*\}/);
-        if (rawMatch) {
-          jsonStr = rawMatch[0];
+        try { parsed = JSON.parse(codeMatch[1].trim()); } catch { /* continue */ }
+      }
+    }
+
+    // Pattern 3: direct parse
+    if (!parsed) {
+      try { parsed = JSON.parse(response.trim()); } catch { /* continue */ }
+    }
+
+    // Pattern 4: balanced brace extraction (handles reasoning text before/after JSON)
+    if (!parsed) {
+      const firstBrace = response.indexOf('{');
+      if (firstBrace !== -1) {
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+        for (let i = firstBrace; i < response.length; i++) {
+          const ch = response[i];
+          if (escape) { escape = false; continue; }
+          if (ch === '\\' && inString) { escape = true; continue; }
+          if (ch === '"') { inString = !inString; continue; }
+          if (inString) continue;
+          if (ch === '{') depth++;
+          else if (ch === '}') {
+            depth--;
+            if (depth === 0) {
+              try { parsed = JSON.parse(response.substring(firstBrace, i + 1)); } catch { /* malformed */ }
+              break;
+            }
+          }
         }
       }
     }
 
-    // Nettoyer le JSON
-    jsonStr = jsonStr.trim();
-
-    // Parser le JSON
-    const parsed = JSON.parse(jsonStr);
+    if (!parsed) {
+      console.error('Failed to extract JSON from LLM chart response:', response.substring(0, 300));
+      return null;
+    }
 
     // Valider et normaliser la structure
-    if (!parsed.chartType || !parsed.query || !parsed.query.metrics) {
+    if (!parsed.chartType || !parsed.query || !(parsed.query as Record<string, unknown>).metrics) {
       console.error('Invalid chart spec structure:', parsed);
       return null;
     }
 
     // S'assurer que les metrics ont le bon format
-    if (!Array.isArray(parsed.query.metrics)) {
-      parsed.query.metrics = [parsed.query.metrics];
+    const query = parsed.query as Record<string, unknown>;
+    if (!Array.isArray(query.metrics)) {
+      query.metrics = [query.metrics];
     }
 
     // S'assurer que les filtres sont un tableau
-    if (parsed.query.filters && !Array.isArray(parsed.query.filters)) {
-      parsed.query.filters = [parsed.query.filters];
+    if (query.filters && !Array.isArray(query.filters)) {
+      query.filters = [query.filters];
     }
 
     // Normaliser le chartType
     const validTypes = ['bar', 'pie', 'line', 'composed', 'radar'];
-    if (!validTypes.includes(parsed.chartType)) {
+    if (!validTypes.includes(parsed.chartType as string)) {
       parsed.chartType = 'bar';
     }
 
-    return parsed as ChartSpec;
+    return parsed as unknown as ChartSpec;
   } catch (error) {
     console.error('Failed to parse LLM chart response:', error);
-    console.error('Raw response:', response);
+    console.error('Raw response:', response.substring(0, 500));
     return null;
   }
 }
