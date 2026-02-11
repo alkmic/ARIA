@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { webLlmService } from '../services/webLlmService';
+import { getStoredApiKey } from '../services/apiKeyService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Multi-provider LLM Hook
@@ -205,24 +206,24 @@ export function useGroq(options: UseGroqOptions = {}) {
 
   const { temperature = 0.7, maxTokens = 2048 } = options;
 
-  const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
-
   // Streaming completion — with automatic Ollama fallback
   const streamCompletion = useCallback(
     async (messages: LLMMessage[], onChunk: (chunk: string) => void, onComplete?: () => void) => {
       setIsLoading(true);
       setError(null);
 
+      // Re-read key at call time (may have been updated in Settings)
+      const currentKey = getStoredApiKey();
+
       try {
-        if (isApiKeyValid) {
+        if (currentKey) {
           // ── External provider ──
-          const provider = getProviderConfig(apiKey);
+          const provider = getProviderConfig(currentKey);
           const model = options.model || provider.defaultModel;
 
           try {
             if (provider.type === 'gemini') {
-              const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens);
               const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
               if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -284,7 +285,7 @@ export function useGroq(options: UseGroqOptions = {}) {
         setIsLoading(false);
       }
     },
-    [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
+    [temperature, maxTokens, options.model]
   );
 
   // Non-streaming completion — with automatic Ollama fallback
@@ -293,15 +294,18 @@ export function useGroq(options: UseGroqOptions = {}) {
       setIsLoading(true);
       setError(null);
 
+      // Re-read key at call time (may have been updated in Settings)
+      const currentKey = getStoredApiKey();
+
       try {
-        if (isApiKeyValid) {
+        if (currentKey) {
           // ── External provider ──
-          const provider = getProviderConfig(apiKey);
+          const provider = getProviderConfig(currentKey);
           const model = options.model || provider.defaultModel;
 
           try {
             if (provider.type === 'gemini') {
-              const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens);
               const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
               if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -377,7 +381,7 @@ export function useGroq(options: UseGroqOptions = {}) {
         setIsLoading(false);
       }
     },
-    [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
+    [temperature, maxTokens, options.model]
   );
 
   return { streamCompletion, complete, isLoading, error };

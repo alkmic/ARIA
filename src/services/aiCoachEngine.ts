@@ -14,6 +14,7 @@
  */
 
 import { webLlmService } from './webLlmService';
+import { getStoredApiKey } from './apiKeyService';
 import { DataService } from './dataService';
 import {
   DATA_SCHEMA,
@@ -599,11 +600,7 @@ Réponds UNIQUEMENT avec le JSON complet de la nouvelle spécification (même fo
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function getApiKey(): string | null {
-  const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === 'your_llm_api_key_here' || apiKey === 'your_api_key_here' || apiKey.length < 10) {
-    return null;
-  }
-  return apiKey;
+  return getStoredApiKey();
 }
 
 // Last error captured for diagnostic display

@@ -14,6 +14,7 @@ import {
   type InitProgressReport,
   type MLCEngineInterface,
 } from '@mlc-ai/web-llm';
+import { hasApiKey } from './apiKeyService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -230,13 +231,28 @@ class WebLLMService {
         this.setStatus('ready');
         console.log(`[WebLLM] Model loaded: ${modelId}`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.lastError = msg;
+        const rawMsg = err instanceof Error ? err.message : String(err);
+        // Provide a user-friendly message for common network errors
+        let userMsg: string;
+        if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError') || rawMsg.includes('net::ERR_')) {
+          userMsg = 'Impossible de télécharger les poids du modèle. Vérifiez votre connexion internet. '
+            + 'Les fichiers sont hébergés sur HuggingFace (~1-3 Go au premier chargement). '
+            + 'Si le problème persiste, configurez une clé API externe dans les paramètres ci-dessus.';
+        } else if (rawMsg.includes('WebGPU') || rawMsg.includes('GPU')) {
+          userMsg = 'Erreur GPU : votre carte graphique ne supporte peut-être pas ce modèle. '
+            + 'Essayez un modèle plus léger (Qwen3 0.6B) ou utilisez une clé API externe.';
+        } else if (rawMsg.includes('out of memory') || rawMsg.includes('OOM')) {
+          userMsg = 'Mémoire GPU insuffisante pour ce modèle. '
+            + 'Essayez Qwen3 0.6B (plus léger) ou fermez d\'autres onglets utilisant le GPU.';
+        } else {
+          userMsg = rawMsg;
+        }
+        this.lastError = userMsg;
         this.setStatus('error');
         this.engine = null;
         this.currentModelId = null;
-        console.error('[WebLLM] Load failed:', msg);
-        throw err;
+        console.error('[WebLLM] Load failed:', rawMsg);
+        throw new Error(userMsg);
       } finally {
         this.loadPromise = null;
         this.loadingModelId = null;
@@ -352,15 +368,8 @@ function autoPreload() {
   // Skip if WebGPU is not supported
   if (!webLlmService.isWebGPUSupported()) return;
 
-  // Check if an external API key is configured
-  const apiKey = (import.meta.env.VITE_LLM_API_KEY as string) || '';
-  const hasExternalKey = apiKey && apiKey.length > 10
-    && apiKey !== 'your_groq_api_key_here'
-    && apiKey !== 'your_llm_api_key_here'
-    && apiKey !== 'your_api_key_here';
-
   // Only auto-preload when no external API key — WebLLM is the primary LLM
-  if (!hasExternalKey) {
+  if (!hasApiKey()) {
     const modelId = getSavedModelId();
     console.log(`[WebLLM] Auto-preloading ${modelId} (no external API key detected)`);
     webLlmService.loadModel(modelId).catch((err) => {
