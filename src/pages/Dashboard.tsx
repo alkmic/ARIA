@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Clock } from 'lucide-react';
+import { Calendar, UserPlus, Droplets, Star, AlertTriangle, Clock, Zap, ChevronRight, Mic } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { calculatePeriodMetrics } from '../services/metricsCalculator';
+import { generateIntelligentActions } from '../services/actionIntelligence';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { ObjectiveProgress } from '../components/dashboard/ObjectiveProgress';
 import { AnimatedStatCard } from '../components/dashboard/AnimatedStatCard';
@@ -16,10 +18,12 @@ import { NationalStats } from '../components/dashboard/NationalStats';
 import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
 import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
 import { QuickActions } from '../components/dashboard/QuickActions';
+import { DataService } from '../services/dataService';
 
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
   const { timePeriod, periodLabel, periodLabelShort } = useTimePeriod();
+  const navigate = useNavigate();
 
   // Calculer les métriques pour la période sélectionnée
   const periodMetrics = useMemo(() => {
@@ -137,22 +141,20 @@ export const Dashboard: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-3"
     >
       {/* Header avec date */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-al-navy">
+          <h1 className="text-xl sm:text-2xl font-bold text-al-navy">
             Bonjour {firstName}
           </h1>
-          <p className="text-sm sm:text-base text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-xs sm:text-sm">
-              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </span>
+          <p className="text-sm text-slate-500 flex flex-wrap items-center gap-2">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto">
+        <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto">
           <PeriodSelector className="flex-1 lg:flex-none" size="sm" />
           <span className="text-xs text-slate-400 hidden md:inline whitespace-nowrap flex items-center gap-1">
             <Clock className="w-3 h-3" />
@@ -170,7 +172,7 @@ export const Dashboard: React.FC = () => {
       />
 
       {/* 5 KPIs animés - clickable */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3">
         <AnimatedStatCard
           icon={Calendar}
           iconBgColor="bg-al-blue-500"
@@ -225,7 +227,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Ma journée + Mini carte (2 colonnes) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
         <div className="lg:col-span-3">
           <DayTimeline visits={todayVisits} />
         </div>
@@ -233,6 +235,9 @@ export const Dashboard: React.FC = () => {
           <TerritoryMiniMap stats={territoryStats} points={mapPoints} />
         </div>
       </div>
+
+      {/* Top 3 Next Best Actions — AI-powered recommendations */}
+      <TopActionsWidget navigate={navigate} />
 
       {/* Quick Actions */}
       <QuickActions />
@@ -250,7 +255,7 @@ export const Dashboard: React.FC = () => {
       <VingtileDistribution />
 
       {/* Graphique + Réussites (2 colonnes) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2">
           <PerformanceChart />
         </div>
@@ -261,3 +266,98 @@ export const Dashboard: React.FC = () => {
     </motion.div>
   );
 };
+
+// ─── Top Actions Widget: Shows top 3 AI-generated actions on dashboard ───────
+function TopActionsWidget({ navigate }: { navigate: (path: string) => void }) {
+  const topActions = useMemo(() => {
+    return generateIntelligentActions({ maxActions: 3 });
+  }, []);
+
+  const priorityStyles = {
+    critical: { border: 'border-l-red-500', bg: 'bg-red-50', badge: 'bg-red-100 text-red-700', label: 'Critique' },
+    high: { border: 'border-l-amber-500', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700', label: 'Haute' },
+    medium: { border: 'border-l-blue-500', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700', label: 'Moyenne' },
+    low: { border: 'border-l-slate-400', bg: 'bg-slate-50', badge: 'bg-slate-100 text-slate-600', label: 'Faible' },
+  };
+
+  if (topActions.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-amber-500 to-red-500 flex items-center justify-center">
+            <Zap className="w-3.5 h-3.5 text-white" />
+          </div>
+          Mes Prochaines Actions
+        </h2>
+        <button
+          onClick={() => navigate('/next-actions')}
+          className="text-xs text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
+        >
+          Voir tout
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {topActions.map((action, index) => {
+          const style = priorityStyles[action.priority];
+          const practitioner = DataService.getPractitionerById(action.practitionerId);
+
+          return (
+            <motion.div
+              key={`${action.practitionerId}-${action.type}-${index}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className={`glass-card border-l-4 ${style.border} overflow-hidden hover:shadow-lg transition-all cursor-pointer`}
+              onClick={() => navigate(`/practitioner/${action.practitionerId}`)}
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.badge}`}>
+                    {style.label}
+                  </span>
+                  <span className="text-xs text-slate-400">{action.suggestedDate}</span>
+                </div>
+
+                <h3 className="font-semibold text-slate-800 text-sm mb-1">{action.title}</h3>
+
+                {practitioner && (
+                  <p className="text-xs text-slate-500 mb-2">
+                    {practitioner.title} {practitioner.firstName} {practitioner.lastName} — {practitioner.specialty}
+                  </p>
+                )}
+
+                <p className="text-xs text-slate-600 line-clamp-2">{action.reason}</p>
+
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Score</span>
+                    <span className="text-sm font-bold text-slate-700">{action.scores.overall}/100</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/pitch?practitionerId=${action.practitionerId}`); }}
+                      className="text-xs px-2 py-1 rounded-md bg-al-blue-50 text-al-blue-600 hover:bg-al-blue-100 transition-colors"
+                    >
+                      Pitch
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/visit-report?practitionerId=${action.practitionerId}`); }}
+                      className="text-xs px-2 py-1 rounded-md bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors"
+                    >
+                      <Mic className="w-3 h-3 inline mr-0.5" />
+                      CRV
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

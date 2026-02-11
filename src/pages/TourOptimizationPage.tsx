@@ -43,7 +43,8 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'SAINT-ÉTIENNE': [45.4397, 4.3872],
   'CHAMBÉRY': [45.5646, 5.9178],
   'ANNECY': [45.8992, 6.1294],
-  'BOURG-EN-BRESSE': [46.2051, 5.2259],
+  'ANNEMASSE': [46.1958, 6.2354],
+  'BOURG-EN-BRESSE': [46.2056, 5.2256],
   'VILLEURBANNE': [45.7667, 4.8800],
   'VÉNISSIEUX': [45.6975, 4.8867],
   'VIENNE': [45.5255, 4.8769],
@@ -64,6 +65,7 @@ interface PractitionerWithCoords extends Practitioner {
 interface OptimizedDay {
   day: number;
   date: string;
+  isoDate: string;
   visits: {
     practitioner: PractitionerWithCoords;
     order: number;
@@ -76,6 +78,8 @@ interface OptimizedDay {
   totalDistance: number;
   totalTravelTime: number;
   totalVisitTime: number;
+  returnDistance: number;
+  returnTravelTime: number;
   endTime: string;
 }
 
@@ -83,8 +87,17 @@ interface OptimizationResult {
   days: OptimizedDay[];
   totalDistance: number;
   totalTravelTime: number;
+  totalVisits: number;
+  baselineDistance: number;
+  baselineTravelTime: number;
   kmSaved: number;
   timeSaved: number;
+  percentDistSaved: number;
+  percentTimeSaved: number;
+  totalKOLs: number;
+  kolsInFirstHalf: number;
+  totalVolumeCovered: number;
+  criteria: OptimizationCriteria;
 }
 
 // Component pour ajuster le zoom de la carte
@@ -229,7 +242,7 @@ export const TourOptimizationPage: React.FC = () => {
     setSelectedIds(prev => new Set([...prev, ...topIds]));
   };
 
-  // Calcul de distance
+  // Calcul de distance (haversine × facteur route pour approximer la distance réelle)
   const calculateDistance = (coords1: [number, number], coords2: [number, number]): number => {
     const R = 6371;
     const dLat = (coords2[0] - coords1[0]) * Math.PI / 180;
@@ -238,7 +251,17 @@ export const TourOptimizationPage: React.FC = () => {
       Math.cos(coords1[0] * Math.PI / 180) * Math.cos(coords2[0] * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    const haversine = R * c;
+    // Facteur route : les routes réelles sont ~30% plus longues que le vol d'oiseau
+    // (virages, relief, réseau routier — typique pour Rhône-Alpes)
+    return haversine * 1.3;
+  };
+
+  // Temps de trajet réaliste selon la distance (vitesse adaptative)
+  const estimateTravelMinutes = (distKm: number): number => {
+    if (distKm <= 5) return Math.ceil((distKm / 25) * 60);   // 25 km/h urbain
+    if (distKm <= 30) return Math.ceil((distKm / 45) * 60);  // 45 km/h périurbain
+    return Math.ceil((distKm / 70) * 60);                     // 70 km/h interurbain
   };
 
   // Algorithme Nearest Neighbor
@@ -271,8 +294,9 @@ export const TourOptimizationPage: React.FC = () => {
     return result;
   };
 
-  // Amélioration 2-opt
+  // Amélioration 2-opt (inclut le retour à la base pour un vrai round-trip)
   const twoOptImprovement = (route: PractitionerWithCoords[], start: [number, number]): PractitionerWithCoords[] => {
+    if (route.length <= 1) return route;
     let improved = true;
     let bestRoute = [...route];
 
@@ -281,23 +305,27 @@ export const TourOptimizationPage: React.FC = () => {
       for (let i = 0; i < r.length - 1; i++) {
         total += calculateDistance(r[i].coords, r[i + 1].coords);
       }
+      total += calculateDistance(r[r.length - 1].coords, start); // retour base
       return total;
     };
 
+    let bestDist = calcRouteDistance(bestRoute);
+
     while (improved) {
       improved = false;
-      const currentDist = calcRouteDistance(bestRoute);
 
       for (let i = 0; i < bestRoute.length - 1; i++) {
-        for (let j = i + 2; j < bestRoute.length; j++) {
+        for (let j = i + 1; j < bestRoute.length; j++) {
           const newRoute = [
-            ...bestRoute.slice(0, i + 1),
-            ...bestRoute.slice(i + 1, j + 1).reverse(),
+            ...bestRoute.slice(0, i),
+            ...bestRoute.slice(i, j + 1).reverse(),
             ...bestRoute.slice(j + 1)
           ];
 
-          if (calcRouteDistance(newRoute) < currentDist) {
+          const newDist = calcRouteDistance(newRoute);
+          if (newDist < bestDist) {
             bestRoute = newRoute;
+            bestDist = newDist;
             improved = true;
             break;
           }
@@ -337,66 +365,113 @@ export const TourOptimizationPage: React.FC = () => {
       setProgress(Math.min(currentProgress, 100));
     }
 
-    // Trier selon critère
-    let sortedPractitioners = [...selectedPractitioners];
+    // === OPTIMISATION GLOBALE PAR CLUSTERING GÉOGRAPHIQUE ===
+
+    // 1. Tournée nearest-neighbor globale sur TOUS les praticiens
+    //    → regroupe naturellement les praticiens géographiquement proches
+    const globalTour = nearestNeighborTSP(selectedPractitioners, start);
+
+    // 2. Distribution équilibrée en jours
+    const numDays = Math.ceil(globalTour.length / visitsPerDay);
+    const balancedPerDay = Math.ceil(globalTour.length / numDays);
+
+    // 3. Créer les clusters géographiques par jour
+    let dayClusters: PractitionerWithCoords[][] = [];
+    for (let d = 0; d < numDays; d++) {
+      const cluster = globalTour.slice(d * balancedPerDay, (d + 1) * balancedPerDay);
+      if (cluster.length > 0) dayClusters.push(cluster);
+    }
+
+    // 4. Optimiser l'ordre intra-jour: NN depuis la base + 2-opt
+    //    Le global NN détermine le groupement, mais l'ordre intra-jour
+    //    est recalculé indépendamment depuis le point de départ
+    dayClusters = dayClusters.map(cluster => {
+      const nnRoute = nearestNeighborTSP(cluster, start);
+      return twoOptImprovement(nnRoute, start);
+    });
+
+    // 5. Réordonner les jours selon le critère choisi
     switch (criteria) {
       case 'kol-first':
-        sortedPractitioners.sort((a, b) => {
-          if (a.isKOL && !b.isKOL) return -1;
-          if (!a.isKOL && b.isKOL) return 1;
-          return b.volumeL - a.volumeL;
+        dayClusters.sort((a, b) => {
+          const kolsA = a.filter(p => p.isKOL).length;
+          const kolsB = b.filter(p => p.isKOL).length;
+          if (kolsB !== kolsA) return kolsB - kolsA;
+          return b.reduce((s, p) => s + p.volumeL, 0) - a.reduce((s, p) => s + p.volumeL, 0);
         });
         break;
       case 'volume':
-        sortedPractitioners.sort((a, b) => b.volumeL - a.volumeL);
-        break;
-      case 'distance':
-        sortedPractitioners.sort((a, b) =>
-          calculateDistance(start, a.coords) - calculateDistance(start, b.coords)
+        dayClusters.sort((a, b) =>
+          b.reduce((s, p) => s + p.volumeL, 0) - a.reduce((s, p) => s + p.volumeL, 0)
         );
         break;
+      case 'distance':
       case 'time':
-        // Pour le temps: grouper les praticiens par proximité géographique
-        // puis optimiser pour minimiser le temps total de trajet
-        sortedPractitioners.sort((a, b) => {
-          const distA = calculateDistance(start, a.coords);
-          const distB = calculateDistance(start, b.coords);
-          return distA - distB;
+        // Plus proches du point de départ en premier
+        dayClusters.sort((a, b) => {
+          const avgA = a.reduce((s, p) => s + calculateDistance(start, p.coords), 0) / a.length;
+          const avgB = b.reduce((s, p) => s + calculateDistance(start, p.coords), 0) / b.length;
+          return avgA - avgB;
         });
         break;
       case 'balanced':
-      default:
-        sortedPractitioners.sort((a, b) => {
-          const scoreA = (a.isKOL ? 100 : 0) + (a.volumeL / 50000) - calculateDistance(start, a.coords) * 2;
-          const scoreB = (b.isKOL ? 100 : 0) + (b.volumeL / 50000) - calculateDistance(start, b.coords) * 2;
+      default: {
+        const maxVol = Math.max(...globalTour.map(p => p.volumeL), 1);
+        dayClusters.sort((a, b) => {
+          const scoreA = a.filter(p => p.isKOL).length * 3
+            + a.reduce((s, p) => s + p.volumeL, 0) / (maxVol * a.length) * 2;
+          const scoreB = b.filter(p => p.isKOL).length * 3
+            + b.reduce((s, p) => s + p.volumeL, 0) / (maxVol * b.length) * 2;
           return scoreB - scoreA;
         });
+        break;
+      }
     }
 
-    // Diviser en jours
-    const numDays = Math.ceil(sortedPractitioners.length / visitsPerDay);
-    const days: OptimizedDay[] = [];
-    const baseDate = new Date(startDate);
+    // Pré-calculer les dates ouvrées (sauter weekends correctement)
+    const workingDates: Date[] = [];
+    {
+      let nextDate = new Date(startDate);
+      while (nextDate.getDay() === 0 || nextDate.getDay() === 6) {
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+      for (let i = 0; i < dayClusters.length; i++) {
+        workingDates.push(new Date(nextDate));
+        nextDate.setDate(nextDate.getDate() + 1);
+        while (nextDate.getDay() === 0 || nextDate.getDay() === 6) {
+          nextDate.setDate(nextDate.getDate() + 1);
+        }
+      }
+    }
 
+    // Baseline: ordre de sélection original, pas de clustering géographique
+    let baselineDistance = 0;
+    let baselineTravelTime = 0;
+    for (let d = 0; d < numDays; d++) {
+      const dayPracts = selectedPractitioners.slice(d * balancedPerDay, (d + 1) * balancedPerDay);
+      if (dayPracts.length === 0) continue;
+      let prev = start;
+      for (const p of dayPracts) {
+        const segDist = calculateDistance(prev, p.coords);
+        baselineDistance += segDist;
+        baselineTravelTime += estimateTravelMinutes(segDist);
+        prev = p.coords;
+      }
+      const retDist = calculateDistance(prev, start);
+      baselineDistance += retDist;
+      baselineTravelTime += estimateTravelMinutes(retDist);
+    }
+
+    // Construire le résultat jour par jour
+    const days: OptimizedDay[] = [];
     let totalDistanceAll = 0;
     let totalTravelTimeAll = 0;
+    let totalKOLs = 0;
+    let totalVolume = 0;
 
-    for (let d = 0; d < numDays; d++) {
-      const dayPractitioners = sortedPractitioners.slice(d * visitsPerDay, (d + 1) * visitsPerDay);
-      if (dayPractitioners.length === 0) continue;
+    for (let d = 0; d < dayClusters.length; d++) {
+      const optimizedRoute = dayClusters[d];
 
-      // Optimiser l'ordre pour ce jour
-      let optimizedRoute = nearestNeighborTSP(dayPractitioners, start);
-      optimizedRoute = twoOptImprovement(optimizedRoute, start);
-
-      // Forcer KOLs en premier si critère
-      if (criteria === 'kol-first') {
-        const kols = optimizedRoute.filter(p => p.isKOL);
-        const nonKols = optimizedRoute.filter(p => !p.isKOL);
-        optimizedRoute = [...kols, ...nonKols];
-      }
-
-      // Calculer les métriques
       let dayDistance = 0;
       let dayTravelTime = 0;
       let dayVisitTime = 0;
@@ -407,12 +482,20 @@ export const TourOptimizationPage: React.FC = () => {
       for (let i = 0; i < optimizedRoute.length; i++) {
         const p = optimizedRoute[i];
         const dist = calculateDistance(prevCoords, p.coords);
-        const travel = Math.ceil(dist / 0.6); // 36 km/h moyenne
+        const travel = estimateTravelMinutes(dist);
+
+        if (p.isKOL) totalKOLs++;
+        totalVolume += p.volumeL;
 
         dayDistance += dist;
         dayTravelTime += travel;
         dayVisitTime += visitDuration;
         currentTime += travel;
+
+        // Pause déjeuner: si l'arrivée tombe entre 12h et 13h, attendre 13h
+        if (currentTime >= 12 * 60 && currentTime < 13 * 60) {
+          currentTime = 13 * 60;
+        }
 
         const arrivalTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
         const endOfVisit = currentTime + visitDuration;
@@ -432,46 +515,61 @@ export const TourOptimizationPage: React.FC = () => {
         prevCoords = p.coords;
       }
 
-      // Calculer l'heure de fin de journée (retour)
+      // Retour à la base
       const returnDist = calculateDistance(prevCoords, start);
-      const returnTime = Math.ceil(returnDist / 0.6);
+      const returnTravelMin = estimateTravelMinutes(returnDist);
       dayDistance += returnDist;
-      dayTravelTime += returnTime;
-      currentTime += returnTime;
+      dayTravelTime += returnTravelMin;
+      currentTime += returnTravelMin;
       const endTime = `${Math.floor(currentTime / 60)}h${(currentTime % 60).toString().padStart(2, '0')}`;
 
-      // Date du jour
-      const dayDate = new Date(baseDate);
-      dayDate.setDate(baseDate.getDate() + d);
-      // Sauter les weekends
-      while (dayDate.getDay() === 0 || dayDate.getDay() === 6) {
-        dayDate.setDate(dayDate.getDate() + 1);
-      }
+      const dayDate = workingDates[d];
+      const roundedDayDist = Math.round(dayDistance * 10) / 10;
+      const roundedDayTravel = Math.round(dayTravelTime);
 
       days.push({
         day: d + 1,
         date: dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+        isoDate: dayDate.toISOString().split('T')[0],
         visits,
-        totalDistance: Math.round(dayDistance * 10) / 10,
-        totalTravelTime: Math.round(dayTravelTime),
+        totalDistance: roundedDayDist,
+        totalTravelTime: roundedDayTravel,
         totalVisitTime: dayVisitTime,
+        returnDistance: Math.round(returnDist * 10) / 10,
+        returnTravelTime: Math.round(returnTravelMin),
         endTime,
       });
 
-      totalDistanceAll += dayDistance;
-      totalTravelTimeAll += dayTravelTime;
+      totalDistanceAll += roundedDayDist;
+      totalTravelTimeAll += roundedDayTravel;
     }
 
-    // Calcul des gains (parcours non optimisé = +35% distance)
-    const nonOptimizedDistance = totalDistanceAll * 1.35;
-    const nonOptimizedTime = totalTravelTimeAll * 1.40;
+    // KOLs dans la première moitié des jours
+    const halfDays = Math.ceil(days.length / 2);
+    const kolsInFirstHalf = days.slice(0, halfDays).reduce((sum, d) =>
+      sum + d.visits.filter(v => v.practitioner.isKOL).length, 0
+    );
+
+    const roundedBaselineDist = Math.round(baselineDistance * 10) / 10;
+    const roundedBaselineTime = Math.round(baselineTravelTime);
+    const kmSaved = Math.max(0, Math.round((roundedBaselineDist - totalDistanceAll) * 10) / 10);
+    const timeSaved = Math.max(0, roundedBaselineTime - totalTravelTimeAll);
 
     const finalResult: OptimizationResult = {
       days,
       totalDistance: Math.round(totalDistanceAll * 10) / 10,
       totalTravelTime: Math.round(totalTravelTimeAll),
-      kmSaved: Math.round((nonOptimizedDistance - totalDistanceAll) * 10) / 10,
-      timeSaved: Math.round(nonOptimizedTime - totalTravelTimeAll),
+      totalVisits: selectedPractitioners.length,
+      baselineDistance: roundedBaselineDist,
+      baselineTravelTime: roundedBaselineTime,
+      kmSaved,
+      timeSaved,
+      percentDistSaved: roundedBaselineDist > 0 ? Math.round((kmSaved / roundedBaselineDist) * 100) : 0,
+      percentTimeSaved: roundedBaselineTime > 0 ? Math.round((timeSaved / roundedBaselineTime) * 100) : 0,
+      totalKOLs,
+      kolsInFirstHalf,
+      totalVolumeCovered: totalVolume,
+      criteria,
     };
 
     setResult(finalResult);
@@ -563,7 +661,7 @@ export const TourOptimizationPage: React.FC = () => {
       icon: Zap,
       description: 'Compromis temps/priorité',
       benefit: 'Optimise le temps tout en respectant les priorités métier',
-      expectedSaving: '~25% km économisés'
+      expectedSaving: 'Meilleur compromis global'
     },
     {
       id: 'time' as const,
@@ -571,7 +669,7 @@ export const TourOptimizationPage: React.FC = () => {
       icon: Clock,
       description: 'Minimiser les trajets',
       benefit: 'Regroupe les visites par proximité géographique',
-      expectedSaving: '~35% temps gagné'
+      expectedSaving: 'Trajets regroupés par zone'
     },
     {
       id: 'kol-first' as const,
@@ -579,7 +677,7 @@ export const TourOptimizationPage: React.FC = () => {
       icon: Star,
       description: 'KOLs visités en premier',
       benefit: 'Garantit les RDV avec les leaders d\'opinion avant tout',
-      expectedSaving: 'KOLs planifiés le matin'
+      expectedSaving: 'KOLs dans les premiers jours'
     },
     {
       id: 'volume' as const,
@@ -587,7 +685,7 @@ export const TourOptimizationPage: React.FC = () => {
       icon: Droplets,
       description: 'Gros prescripteurs en priorité',
       benefit: 'Priorise les praticiens à fort volume de prescription',
-      expectedSaving: 'Focus sur le top 20%'
+      expectedSaving: 'Focus top prescripteurs'
     },
     {
       id: 'distance' as const,
@@ -595,7 +693,7 @@ export const TourOptimizationPage: React.FC = () => {
       icon: Navigation,
       description: 'Trajet le plus court',
       benefit: 'Minimise le kilométrage total de la tournée',
-      expectedSaving: '~40% km économisés'
+      expectedSaving: 'Kilométrage minimisé'
     },
   ];
 
@@ -609,24 +707,16 @@ export const TourOptimizationPage: React.FC = () => {
     if (!result || saved) return;
 
     const newVisits: UpcomingVisit[] = [];
-    const baseDate = new Date(startDate);
     let visitCounter = Date.now();
 
-    result.days.forEach((day, dayIndex) => {
-      // Calculate the actual date for this day (skipping weekends)
-      const dayDate = new Date(baseDate);
-      dayDate.setDate(baseDate.getDate() + dayIndex);
-      while (dayDate.getDay() === 0 || dayDate.getDay() === 6) {
-        dayDate.setDate(dayDate.getDate() + 1);
-      }
-
+    result.days.forEach((day) => {
       day.visits.forEach((visit) => {
         const p = visit.practitioner;
         newVisits.push({
           id: `V-OPT-${visitCounter++}`,
           practitionerId: p.id,
           practitioner: p,
-          date: dayDate.toISOString().split('T')[0],
+          date: day.isoDate,
           time: visit.arrivalTime.replace('h', ':').padStart(5, '0'),
           type: 'scheduled',
           notes: `Visite planifiée via optimisation de tournée (${criteriaOptions.find(c => c.id === criteria)?.label})`,
@@ -642,12 +732,24 @@ export const TourOptimizationPage: React.FC = () => {
   const exportIcal = () => {
     if (!result) return;
 
-    let ical = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ARIA//Tour Optimization//FR\n';
+    const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    let ical = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ARIA//Tour Optimization//FR\nCALSCALE:GREGORIAN\n';
 
     result.days.forEach(day => {
       day.visits.forEach(visit => {
         const p = visit.practitioner;
+        const dateStr = day.isoDate.replace(/-/g, '');
+        const arrParts = visit.arrivalTime.split('h');
+        const depParts = visit.departureTime.split('h');
+        const dtStart = `${dateStr}T${arrParts[0].padStart(2, '0')}${arrParts[1]}00`;
+        const dtEnd = `${dateStr}T${depParts[0].padStart(2, '0')}${depParts[1]}00`;
+        const uid = `${day.isoDate}-${p.id}@aria-tour`;
+
         ical += 'BEGIN:VEVENT\n';
+        ical += `UID:${uid}\n`;
+        ical += `DTSTAMP:${now}\n`;
+        ical += `DTSTART:${dtStart}\n`;
+        ical += `DTEND:${dtEnd}\n`;
         ical += `SUMMARY:Visite - ${p.title} ${p.lastName}\n`;
         ical += `DESCRIPTION:${p.specialty} - ${p.city}\n`;
         ical += `LOCATION:${p.city}\n`;
@@ -842,7 +944,7 @@ export const TourOptimizationPage: React.FC = () => {
                       }`}
                     >
                       {isPlanned && (
-                        <div className="absolute top-2 right-2 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                        <div className="absolute top-2 right-2 bg-amber-500 text-white text-[11px] px-2 py-0.5 rounded-full font-medium">
                           Planifié {plannedVisit?.date}
                         </div>
                       )}
@@ -1120,40 +1222,87 @@ export const TourOptimizationPage: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* Métriques */}
+            {/* Métrique critère + bandeau gain */}
+            {criteria === 'kol-first' || criteria === 'volume' ? (
+              <div className="glass-card p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
+                <div className="flex items-center gap-3">
+                  {criteria === 'kol-first'
+                    ? <Star className="w-6 h-6 text-amber-600" />
+                    : <Droplets className="w-6 h-6 text-amber-600" />}
+                  <div>
+                    <div className="font-bold text-amber-800">
+                      {criteria === 'kol-first'
+                        ? `${result.totalKOLs} KOLs planifiés en priorité`
+                        : `Volume ciblé : ${Math.round(result.totalVolumeCovered / 1000)}K L`}
+                    </div>
+                    <div className="text-sm text-amber-700">
+                      {criteria === 'kol-first'
+                        ? `${result.kolsInFirstHalf} KOLs dans les ${Math.ceil(result.days.length / 2)} premiers jours, puis optimisation des trajets`
+                        : `${result.totalVisits} prescripteurs visités, triés par volume puis trajets optimisés`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* KPIs toujours visibles */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Distance économisée */}
               <div className="glass-card p-4 bg-gradient-to-br from-green-50 to-emerald-50">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingDown className="w-5 h-5 text-green-600" />
                   <span className="text-sm text-slate-600">Distance économisée</span>
                 </div>
-                <div className="text-2xl font-bold text-green-700">{result.kmSaved} km</div>
-              </div>
-
-              <div className="glass-card p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
-                  <span className="text-sm text-slate-600">Temps gagné</span>
+                <div className="text-2xl font-bold text-green-700">
+                  {result.kmSaved > 0 ? `${result.kmSaved} km` : '~0 km'}
                 </div>
-                <div className="text-2xl font-bold text-blue-700">
-                  {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')}
+                <div className="text-xs text-green-600 mt-1">
+                  {result.percentDistSaved > 0
+                    ? `-${result.percentDistSaved}% vs sans optimisation`
+                    : 'Praticiens regroupés par zone'}
                 </div>
               </div>
 
+              {/* Card 2: Distance totale */}
               <div className="glass-card p-4 bg-gradient-to-br from-purple-50 to-pink-50">
                 <div className="flex items-center gap-2 mb-2">
                   <Navigation className="w-5 h-5 text-purple-600" />
                   <span className="text-sm text-slate-600">Distance totale</span>
                 </div>
                 <div className="text-2xl font-bold text-purple-700">{result.totalDistance} km</div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {result.baselineDistance > result.totalDistance
+                    ? `vs ${result.baselineDistance} km sans optim.`
+                    : `${result.totalVisits} visites optimisées`}
+                </div>
               </div>
 
-              <div className="glass-card p-4 bg-gradient-to-br from-amber-50 to-orange-50">
+              {/* Card 3: Temps de trajet */}
+              <div className="glass-card p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-5 h-5 text-amber-600" />
+                  <Clock className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm text-slate-600">Temps de trajet</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {result.totalTravelTime >= 60
+                    ? `${Math.floor(result.totalTravelTime / 60)}h${(result.totalTravelTime % 60).toString().padStart(2, '0')}`
+                    : `${result.totalTravelTime} min`}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {result.timeSaved > 0
+                    ? `${result.timeSaved} min économisées (-${result.percentTimeSaved}%)`
+                    : 'Temps global de conduite'}
+                </div>
+              </div>
+
+              {/* Card 4: Jours planifiés */}
+              <div className="glass-card p-4 bg-gradient-to-br from-slate-50 to-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-slate-600" />
                   <span className="text-sm text-slate-600">Jours planifiés</span>
                 </div>
-                <div className="text-2xl font-bold text-amber-700">{result.days.length}</div>
+                <div className="text-2xl font-bold text-slate-700">{result.days.length}</div>
+                <div className="text-xs text-slate-500 mt-1">{result.totalVisits} visites au total</div>
               </div>
             </div>
 
@@ -1289,6 +1438,9 @@ export const TourOptimizationPage: React.FC = () => {
                     <div className="flex-1">
                       <span className="font-medium text-sm text-slate-700">Retour à la base</span>
                     </div>
+                    <div className="text-right text-xs text-slate-500">
+                      {editableResult[activeDay]?.returnTravelTime} min • {editableResult[activeDay]?.returnDistance} km
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1312,7 +1464,13 @@ export const TourOptimizationPage: React.FC = () => {
                     <>
                       <h3 className="font-bold text-lg text-slate-800">Tournée optimisée avec succès !</h3>
                       <p className="text-sm text-slate-600 mt-1">
-                        Économie de {result.kmSaved} km et {Math.floor(result.timeSaved / 60)}h{(result.timeSaved % 60).toString().padStart(2, '0')} de trajet
+                        {criteria === 'kol-first'
+                          ? `${result.totalKOLs} KOLs planifiés en priorité${result.kmSaved > 0 ? ` • ${result.kmSaved} km économisés grâce au regroupement géographique` : ` • ${result.totalVisits} visites sur ${result.days.length} jours`}`
+                          : criteria === 'volume'
+                          ? `${Math.round(result.totalVolumeCovered / 1000)}K L de volume ciblé${result.kmSaved > 0 ? ` • ${result.kmSaved} km économisés grâce au regroupement géographique` : ` • ${result.totalVisits} prescripteurs visités`}`
+                          : result.kmSaved > 0
+                          ? `Regroupement géographique : ${result.kmSaved} km économisés (-${result.percentDistSaved}%) grâce au clustering par zone`
+                          : `${result.totalVisits} visites planifiées sur ${result.days.length} jours • Praticiens regroupés par zone géographique`}
                       </p>
                     </>
                   )}

@@ -475,7 +475,7 @@ const ActionCard = ({
                     Voir profil
                   </button>
                   <button
-                    onClick={() => navigate(`/pitch?practitioner=${practitioner.id}`)}
+                    onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}
                     className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
@@ -644,11 +644,11 @@ export default function NextBestActions() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/data-explorer')}
+            onClick={() => navigate('/dashboard')}
             className="text-sm text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
           >
             <BarChart3 className="w-4 h-4" />
-            Voir analytics
+            Voir dashboard
           </button>
         </div>
       </div>

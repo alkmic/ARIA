@@ -9,7 +9,7 @@ interface CardProps {
 
 export const Card: React.FC<CardProps> = ({ children, className = '', hover = false, onClick }) => {
   const hoverStyles = hover
-    ? 'hover:scale-[1.02] hover:shadow-2xl hover:shadow-al-blue-500/20 cursor-pointer'
+    ? 'hover:shadow-2xl hover:shadow-al-blue-500/20 cursor-pointer'
     : '';
 
   return (

@@ -82,13 +82,13 @@ export function AnimatedStatCard({
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.5, delay }}
       onClick={isClickable ? handleClick : undefined}
-      className={`glass-card p-3 sm:p-4 hover:shadow-lg transition-all duration-300 group ${isClickable ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
+      className={`glass-card p-3 sm:p-4 hover:shadow-lg transition-shadow duration-300 group ${isClickable ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className={`p-1.5 sm:p-2 rounded-lg ${iconBgColor}`}>
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        <div className={`p-2 rounded-lg ${iconBgColor}`}>
+          <Icon className="w-4 h-4 text-white" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {trend !== undefined && (
             <div className={`flex items-center gap-0.5 text-xs font-medium ${trendColor}`}>
               <TrendIcon className="w-3 h-3" />
@@ -96,21 +96,21 @@ export function AnimatedStatCard({
             </div>
           )}
           {isClickable && (
-            <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
           )}
         </div>
       </div>
 
-      <div className="mb-0.5">
+      <div className="mb-1">
         <span className="text-xl sm:text-2xl font-bold text-al-navy">
           {prefix}{displayValue.toFixed(decimals)}{suffix}
         </span>
       </div>
 
-      <p className="text-xs sm:text-sm text-slate-500 leading-tight">{label}</p>
+      <p className="text-xs text-slate-500 leading-tight">{label}</p>
 
       {trendLabel && (
-        <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{trendLabel}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{trendLabel}</p>
       )}
     </motion.div>
   );

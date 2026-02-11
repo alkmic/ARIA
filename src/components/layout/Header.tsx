@@ -16,8 +16,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const initials = currentUser.name.split(' ').map(n => n[0]).join('');
 
   return (
-    <header className="h-16 lg:h-20 bg-white/95 backdrop-blur-sm border-b border-slate-200 flex items-center px-4 lg:px-8 fixed top-0 right-0 left-0 lg:left-64 z-10">
-      <div className="flex items-center justify-between w-full gap-4">
+    <header className="h-12 lg:h-14 bg-white/95 backdrop-blur-sm border-b border-slate-200 flex items-center px-3 lg:px-6 fixed top-0 right-0 left-0 lg:left-64 z-10">
+      <div className="flex items-center justify-between w-full gap-3">
         {/* Mobile menu button */}
         <button
           onClick={onMenuClick}
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </button>
 
           {/* User Initials */}
-          <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-al-blue-500 to-al-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-lg shadow-al-blue-500/20">
+          <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-gradient-to-br from-al-blue-500 to-al-blue-600 flex items-center justify-center text-white font-semibold text-xs shadow-md shadow-al-blue-500/20">
             {initials}
           </div>
         </div>

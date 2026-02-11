@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, MessageCircle, Map, Route, Users, Calendar } from 'lucide-react';
+import { Sparkles, MessageCircle, Map, Route, Mic, Zap } from 'lucide-react';
 
 interface QuickAction {
   id: string;
@@ -14,12 +14,28 @@ interface QuickAction {
 
 const actions: QuickAction[] = [
   {
+    id: 'actions',
+    icon: Zap,
+    label: 'Mes Actions',
+    description: 'Actions IA prioritaires',
+    path: '/next-actions',
+    color: 'from-amber-500 to-red-500',
+  },
+  {
     id: 'pitch',
     icon: Sparkles,
     label: 'Pitch IA',
     description: 'Générer un pitch personnalisé',
     path: '/pitch',
     color: 'from-purple-500 to-indigo-500',
+  },
+  {
+    id: 'visit-report',
+    icon: Mic,
+    label: 'Compte-rendu',
+    description: 'Dicter un CRV vocal',
+    path: '/visit-report',
+    color: 'from-teal-500 to-cyan-500',
   },
   {
     id: 'coach',
@@ -45,48 +61,31 @@ const actions: QuickAction[] = [
     path: '/map',
     color: 'from-amber-500 to-orange-500',
   },
-  {
-    id: 'practitioners',
-    icon: Users,
-    label: 'Praticiens',
-    description: 'Voir votre portefeuille',
-    path: '/practitioners',
-    color: 'from-cyan-500 to-blue-500',
-  },
-  {
-    id: 'visits',
-    icon: Calendar,
-    label: 'Visites',
-    description: 'Gérer votre agenda',
-    path: '/visits',
-    color: 'from-rose-500 to-pink-500',
-  },
 ];
 
 export const QuickActions: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold text-slate-800">
+    <div className="space-y-2">
+      <h2 className="text-base font-bold text-slate-800">
         Accès rapide
       </h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {actions.map((action, index) => (
           <motion.button
             key={action.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
+            transition={{ duration: 0.2, delay: index * 0.03 }}
             onClick={() => navigate(action.path)}
-            className="glass-card p-4 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:scale-[1.03]"
+            className="glass-card p-3 hover:shadow-lg transition-shadow duration-300 cursor-pointer group"
           >
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform`}>
-              <action.icon className="w-5 h-5 text-white" />
+            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-2 mx-auto`}>
+              <action.icon className="w-4.5 h-4.5 text-white" />
             </div>
             <p className="font-semibold text-slate-800 text-sm text-center">{action.label}</p>
-            <p className="text-xs text-slate-500 text-center mt-1 hidden sm:block">{action.description}</p>
           </motion.button>
         ))}
       </div>

@@ -2,9 +2,13 @@ import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitReco
 
 /**
  * Générateur de données réalistes et cohérentes pour les praticiens
+ * V2 : Données ultra-variées et crédibles pour démo Air Liquide Santé
  */
 
-// Données de référence pour la région Rhône-Alpes
+// ═══════════════════════════════════════════════════════════
+// DONNÉES DE RÉFÉRENCE
+// ═══════════════════════════════════════════════════════════
+
 const CITIES_RHONE_ALPES = [
   { name: 'LYON', postalCode: '69001', coords: { lat: 45.7640, lng: 4.8357 } },
   { name: 'VILLEURBANNE', postalCode: '69100', coords: { lat: 45.7676, lng: 4.8799 } },
@@ -19,33 +23,208 @@ const CITIES_RHONE_ALPES = [
 ];
 
 const STREET_NAMES = [
-  'Avenue de la République',
-  'Rue Victor Hugo',
-  'Boulevard Gambetta',
-  'Place de la Liberté',
-  'Rue du Général de Gaulle',
-  'Avenue Jean Jaurès',
-  'Rue Anatole France',
-  'Boulevard des Belges',
-  'Rue de la Paix',
-  'Avenue Maréchal Foch',
+  'Avenue de la République', 'Rue Victor Hugo', 'Boulevard Gambetta',
+  'Place de la Liberté', 'Rue du Général de Gaulle', 'Avenue Jean Jaurès',
+  'Rue Anatole France', 'Boulevard des Belges', 'Rue de la Paix',
+  'Avenue Maréchal Foch', 'Rue Émile Zola', 'Boulevard Voltaire',
+  'Rue Pasteur', 'Avenue des Alpes', 'Rue du Docteur Bonhomme',
 ];
 
-const FIRST_NAMES_M = ['Jean', 'Pierre', 'Louis', 'Michel', 'Paul', 'André', 'François', 'Philippe', 'Antoine', 'Marc', 'Alain', 'Jacques', 'Henri', 'Bernard', 'Christophe'];
-const FIRST_NAMES_F = ['Marie', 'Sophie', 'Catherine', 'Anne', 'Isabelle', 'Claire', 'Nathalie', 'Sylvie', 'Françoise', 'Hélène', 'Valérie', 'Monique', 'Brigitte', 'Élise', 'Charlotte'];
-const LAST_NAMES = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel', 'Girard', 'André', 'Lefèvre', 'Mercier', 'Dupont', 'Lambert', 'Bonnet', 'François', 'Martinez', 'Legrand', 'Garnier', 'Faure', 'Rousseau', 'Blanc', 'Guerin', 'Muller', 'Henry', 'Roussel', 'Nicolas', 'Perrin', 'Morin', 'Mathieu', 'Clement', 'Gauthier', 'Dumont', 'Lopez', 'Fontaine', 'Chevalier', 'Robin'];
+const FIRST_NAMES_M = [
+  'Jean', 'Pierre', 'Louis', 'Michel', 'Paul', 'André', 'François',
+  'Philippe', 'Antoine', 'Marc', 'Alain', 'Jacques', 'Henri', 'Bernard',
+  'Christophe', 'Éric', 'Stéphane', 'Olivier', 'Nicolas', 'Thierry',
+  'Laurent', 'Patrick', 'Yves', 'Sébastien', 'Frédéric',
+];
 
-// Templates d'actualités réalistes par type
-const NEWS_TEMPLATES = {
+const FIRST_NAMES_F = [
+  'Marie', 'Sophie', 'Catherine', 'Anne', 'Isabelle', 'Claire',
+  'Nathalie', 'Sylvie', 'Françoise', 'Hélène', 'Valérie', 'Monique',
+  'Brigitte', 'Élise', 'Charlotte', 'Céline', 'Sandrine', 'Aurélie',
+  'Caroline', 'Delphine', 'Laurence', 'Véronique', 'Martine', 'Julie',
+];
+
+const LAST_NAMES = [
+  'Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit',
+  'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel',
+  'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel',
+  'Girard', 'André', 'Lefèvre', 'Mercier', 'Dupont', 'Lambert', 'Bonnet',
+  'François', 'Martinez', 'Legrand', 'Garnier', 'Faure', 'Rousseau',
+  'Blanc', 'Guerin', 'Muller', 'Henry', 'Roussel', 'Nicolas', 'Perrin',
+  'Morin', 'Mathieu', 'Clement', 'Gauthier', 'Dumont', 'Lopez', 'Fontaine',
+  'Chevalier', 'Robin',
+];
+
+// ═══════════════════════════════════════════════════════════
+// AUTEURS DES NOTES (équipe commerciale variée)
+// ═══════════════════════════════════════════════════════════
+const NOTE_AUTHORS = [
+  'Marie Dupont', 'Sophie Martin', 'Lucas Bernard', 'Thomas Lefebvre',
+  'Julie Moreau', 'Antoine Garnier',
+];
+
+// Products are defined in PRODUCT_COMBOS below (used for visit history generation)
+
+// ═══════════════════════════════════════════════════════════
+// TEMPLATES DE NOTES - PNEUMOLOGUES (30+ templates uniques)
+// ═══════════════════════════════════════════════════════════
+const NOTES_PNEUMO = [
+  {
+    content: "Visite approfondie avec {title} {lastName}. Discussion sur {count} patients BPCO stade III-IV actuellement sous OLD. Très intéressé(e) par le nouveau concentrateur portable FreeStyle pour améliorer l'autonomie de ses patients les plus mobiles. Demande une démonstration en cabinet.",
+    type: 'visit' as const,
+    nextAction: "Planifier démonstration FreeStyle en cabinet sous 15 jours",
+  },
+  {
+    content: "Échange téléphonique productif avec {title} {lastName}. Souhaite mettre en place le télésuivi O2 Connect pour ses {count} patients les plus instables. Questions sur l'intégration avec son logiciel médical. A mentionné avoir reçu une proposition de Vivisol récemment.",
+    type: 'phone' as const,
+    nextAction: "Envoyer documentation technique télésuivi + tarifs",
+  },
+  {
+    content: "Rendez-vous avec {title} {lastName} au CHU. Présentation des données cliniques sur l'observance avec le télésuivi. Convaincu(e) par les résultats de l'étude multicentrique. Souhaite équiper progressivement tous ses patients sous OLD.",
+    type: 'visit' as const,
+    nextAction: "Préparer convention de partenariat télésuivi",
+  },
+  {
+    content: "Visite de routine. {title} {lastName} satisfait(e) de la qualité du service Air Liquide. Aucun incident technique signalé sur les {count} patients suivis. Discussion sur les recommandations GOLD 2025 et l'impact sur les prescriptions d'oxygénothérapie.",
+    type: 'visit' as const,
+  },
+  {
+    content: "{title} {lastName} m'a contacté(e) pour un problème d'approvisionnement en oxygène liquide pour un patient à domicile. Incident résolu en moins de 4h grâce au service d'astreinte. Le praticien a apprécié la réactivité et compare favorablement à son expérience passée avec SOS Oxygène.",
+    type: 'phone' as const,
+    nextAction: "Suivi qualité dans 1 semaine",
+  },
+  {
+    content: "Participation à la réunion pluridisciplinaire du service de pneumologie. {title} {lastName} a présenté un cas complexe de patient BPCO avec comorbidités cardiaques. Nos solutions de télésuivi ont été citées comme référence. Excellent pour notre image.",
+    type: 'visit' as const,
+  },
+  {
+    content: "Entretien avec {title} {lastName} sur la VNI (Ventilation Non Invasive). {count} patients candidats identifiés dans son service. Souhaite comparer nos appareils BiLevel aux solutions Philips. Discussion technique sur les masques et l'observance.",
+    type: 'visit' as const,
+    nextAction: "Organiser essai comparatif BiLevel vs Philips",
+  },
+  {
+    content: "Email de {title} {lastName} demandant des informations sur nos programmes de réhabilitation respiratoire à domicile. Patient BPCO stade II avec déconditionnement. Intérêt pour une approche intégrée O2 + activité physique adaptée.",
+    type: 'email' as const,
+    nextAction: "Répondre avec brochure programme réhabilitation",
+  },
+  {
+    content: "Rencontre fortuite avec {title} {lastName} au congrès SPLF. Discussion informelle sur les avancées en matière d'oxygénothérapie de courte durée (OCT). Évoque un intérêt pour la nébulisation connectée. Très engagé(e) dans la recherche clinique.",
+    type: 'visit' as const,
+    nextAction: "Inviter au prochain symposium Air Liquide",
+  },
+  {
+    content: "Appel de {title} {lastName} pour signaler le transfert de {count} patients vers un autre pneumologue de la ville. Raison : départ en retraite partielle. S'assurer de la continuité du service et identifier le praticien reprenant le suivi.",
+    type: 'phone' as const,
+    nextAction: "Contacter le pneumologue successeur pour présentation",
+  },
+  {
+    content: "Visite avec démonstration du nouvel oxymètre connecté. {title} {lastName} impressionné(e) par la précision et la transmission automatique des données SpO2. Souhaite l'intégrer dans le protocole de suivi de ses patients sous OLD. Demande {count} unités en test.",
+    type: 'visit' as const,
+    nextAction: "Livrer {count} oxymètres connectés en test sous 10 jours",
+  },
+  {
+    content: "Discussion stratégique avec {title} {lastName} sur la transition des patients vers l'oxygène concentré vs liquide. Analyse coût-bénéfice présentée. Le praticien confirme que la mobilité reste le critère n°1 pour ses patients actifs.",
+    type: 'visit' as const,
+  },
+  {
+    content: "Entretien téléphonique suite à la publication récente de {title} {lastName} dans l'European Respiratory Journal. Échange sur les implications cliniques. Proposition de co-organiser un webinaire sur le sujet avec nos équipes médicales.",
+    type: 'phone' as const,
+    nextAction: "Proposer date pour webinaire conjoint",
+  },
+  {
+    content: "{title} {lastName} mentionne des retours négatifs sur le bruit du concentrateur fixe chez {count} patients. Discussion sur les solutions : passage au modèle silencieux ou au liquide portable pour la nuit. Patient prioritaire identifié.",
+    type: 'visit' as const,
+    nextAction: "Échange concentrateur bruyant chez M. [patient] sous 5 jours",
+  },
+  {
+    content: "Formation continue organisée dans le service de {title} {lastName}. 12 IDE et 3 internes formés à l'utilisation des concentrateurs et au protocole de télésuivi. Excellente réception. Le praticien demande une session de rappel dans 6 mois.",
+    type: 'visit' as const,
+    nextAction: "Planifier session de rappel formation dans 6 mois",
+  },
+];
+
+// ═══════════════════════════════════════════════════════════
+// TEMPLATES DE NOTES - MÉDECINS GÉNÉRALISTES (20+ templates)
+// ═══════════════════════════════════════════════════════════
+const NOTES_GENERALISTE = [
+  {
+    content: "Visite de présentation chez {title} {lastName}. Le médecin suit actuellement {count} patient(s) sous oxygénothérapie de longue durée. Bonne connaissance de nos services mais peu informé(e) sur les évolutions récentes du télésuivi. Intérêt marqué.",
+    type: 'visit' as const,
+    nextAction: "Envoyer plaquette télésuivi et rappeler dans 3 semaines",
+  },
+  {
+    content: "Appel de {title} {lastName} pour une première prescription d'oxygénothérapie. Patient BPCO diagnostiqué récemment avec PaO2 < 55 mmHg. Accompagnement sur les démarches administratives LPPR. Mise en place prévue sous 48h.",
+    type: 'phone' as const,
+    nextAction: "Coordonner installation O2 chez le patient sous 48h",
+  },
+  {
+    content: "Discussion avec {title} {lastName} sur le suivi de {count} patients sous O2 à domicile. Tout se passe bien, pas de problème technique signalé. Le médecin apprécie notre service de livraison et la ponctualité des techniciens.",
+    type: 'visit' as const,
+  },
+  {
+    content: "Passage rapide au cabinet de {title} {lastName}. En retard sur ses consultations, échange bref mais cordial. A mentionné un patient dont l'état se dégrade et qui pourrait nécessiter un passage de l'O2 gazeux au liquide portable.",
+    type: 'visit' as const,
+    nextAction: "Rappeler pour évaluation patient avec dégradation",
+  },
+  {
+    content: "{title} {lastName} m'a signalé par email un problème de remboursement CPAM pour un patient sous concentrateur. Problème d'ordonnance de renouvellement. Accompagnement administratif effectué. Résolu en 3 jours.",
+    type: 'email' as const,
+  },
+  {
+    content: "Visite de courtoisie chez {title} {lastName}. Discussion sur l'éducation thérapeutique des patients BPCO. Intéressé(e) par notre programme de formation patients et le kit pédagogique. Remise de la documentation.",
+    type: 'visit' as const,
+  },
+  {
+    content: "Échange avec {title} {lastName} sur le sevrage tabagique et son impact sur les patients sous O2. {count} patients fumeurs identifiés. Discussion sur l'accompagnement que nous pouvons proposer en complément.",
+    type: 'visit' as const,
+    nextAction: "Fournir documentation programme sevrage tabagique",
+  },
+  {
+    content: "Contact téléphonique de {title} {lastName} : question sur la conduite à tenir en cas de voyage à l'étranger pour un patient sous O2. Informations sur le service d'assistance internationale Air Liquide communiquées.",
+    type: 'phone' as const,
+  },
+  {
+    content: "{title} {lastName} mentionne avoir été démarché(e) par Bastide Médical. Prix plus bas annoncé mais service limité. J'ai présenté notre valeur ajoutée : télésuivi, astreinte 24/7, formation patients. Le médecin reste fidèle.",
+    type: 'visit' as const,
+    nextAction: "Surveillance concurrentielle Bastide sur ce secteur",
+  },
+  {
+    content: "Visite chez {title} {lastName} avec présentation du nouveau kit éducation thérapeutique patient. Très bonne réception. Le médecin souhaite en distribuer à ses {count} patients sous O2 lors des prochaines consultations.",
+    type: 'visit' as const,
+    nextAction: "Livrer {count} kits éducation thérapeutique",
+  },
+  {
+    content: "Appel de suivi après installation d'un concentrateur chez un patient de {title} {lastName}. Le patient est satisfait. Le médecin confirme une amélioration des symptômes après 2 semaines. Bon retour sur la qualité du matériel.",
+    type: 'phone' as const,
+  },
+  {
+    content: "{title} {lastName} signale un patient isolé géographiquement qui a des difficultés avec les livraisons d'O2 liquide. Discussion sur un passage au concentrateur avec backup bouteille. Solution acceptée par le praticien.",
+    type: 'visit' as const,
+    nextAction: "Organiser changement d'équipement chez patient isolé",
+  },
+  {
+    content: "Première visite après la prise de contact initiale. {title} {lastName} prescrit occasionnellement de l'O2 (environ {count} patient(s)/an). Intéressé(e) par notre offre simplifiée pour les prescripteurs occasionnels. Bon potentiel à développer.",
+    type: 'visit' as const,
+    nextAction: "Envoyer offre simplifiée prescripteurs occasionnels",
+  },
+];
+
+// ═══════════════════════════════════════════════════════════
+// TEMPLATES D'ACTUALITÉS ET PUBLICATIONS
+// ═══════════════════════════════════════════════════════════
+// Separate news templates per specialty for maximum diversity
+const NEWS_TEMPLATES_PNEUMO = {
   publication: [
     {
       title: "Publication dans l'European Respiratory Journal",
       contentTemplate: "Co-auteur d'une étude sur {topic}",
       topics: [
-        "le sevrage tabagique chez le patient BPCO avec oxygénothérapie",
-        "l'optimisation des débits d'oxygène en fonction de l'activité physique",
+        "le sevrage tabagique chez le patient BPCO sous oxygénothérapie",
+        "l'optimisation des débits d'O2 en fonction de l'activité physique",
         "l'impact de l'oxygénothérapie nocturne sur la qualité de vie",
         "les nouvelles recommandations pour l'oxygénothérapie ambulatoire",
+        "la place du télésuivi dans le parcours de soins BPCO",
+        "l'évaluation de la dyspnée chez les patients sous OLD",
       ],
     },
     {
@@ -55,35 +234,74 @@ const NEWS_TEMPLATES = {
         "la gestion de l'hypoxémie sévère en ambulatoire",
         "l'adaptation des traitements chez les patients BPCO âgés",
         "les complications de l'oxygénothérapie de longue durée",
+        "l'optimisation de la VNI chez le patient obèse hypercapnique",
+        "la réhabilitation respiratoire en post-exacerbation",
+      ],
+    },
+    {
+      title: "Étude multicentrique parue dans CHEST",
+      contentTemplate: "Investigateur principal pour une étude sur {topic}",
+      topics: [
+        "les biomarqueurs prédictifs d'exacerbation BPCO",
+        "la télémédecine appliquée au suivi des patients sous O2",
+        "les bénéfices de l'oxygénothérapie de déambulation",
+      ],
+    },
+    {
+      title: "Lettre à l'éditeur dans Thorax",
+      contentTemplate: "Commentaire sur {topic}",
+      topics: [
+        "les critères de sevrage de l'oxygénothérapie longue durée",
+        "l'utilisation du NO exhalé dans le suivi BPCO",
+        "la place de la réhabilitation pulmonaire précoce",
+      ],
+    },
+    {
+      title: "Revue systématique dans Respiratory Medicine",
+      contentTemplate: "Analyse de la littérature sur {topic}",
+      topics: [
+        "l'observance de l'OLD au-delà de 15h/jour et mortalité",
+        "la VNI versus l'O2 seul en BPCO sévère hypercapnique",
+        "les dispositifs connectés en pneumologie ambulatoire",
       ],
     },
   ],
   certification: [
     {
-      title: "Certification Universitaire en Pneumologie",
+      title: "Certification Universitaire",
       contentTemplate: "Obtention d'un {cert} en {domain}",
-      certs: ["DU", "DIU", "Master 2"],
+      certs: ["DU", "DIU", "Master 2", "Capacité"],
       domains: [
         "réhabilitation respiratoire",
         "pneumologie interventionnelle",
         "allergologie respiratoire",
         "oncologie thoracique",
+        "soins palliatifs respiratoires",
+        "sommeil et ventilation",
       ],
     },
   ],
   conference: [
     {
-      title: "Intervention au Congrès de Pneumologie",
+      title: "Intervention au congrès",
       contentTemplate: "Présentation sur {topic} au {event}",
       topics: [
         "les avancées en oxygénothérapie",
         "la prise en charge des BPCO sévères",
         "l'éducation thérapeutique du patient respiratoire",
+        "l'observance du traitement par O2 au long cours",
+        "les parcours de soins innovants en pneumologie",
+        "le rôle du télésuivi en post-hospitalisation BPCO",
+        "les nouvelles cibles thérapeutiques dans l'asthme sévère",
       ],
       events: [
-        "Congrès de la SPLF (Société de Pneumologie de Langue Française)",
+        "Congrès de la SPLF",
         "Congrès ERS (European Respiratory Society)",
         "Journées de Pneumologie Rhône-Alpes",
+        "Congrès CPLF",
+        "Journées Francophones d'Allergologie",
+        "Assises Nationales de la BPCO",
+        "Congrès CHEST (American College of Chest Physicians)",
       ],
     },
   ],
@@ -95,6 +313,9 @@ const NEWS_TEMPLATES = {
         "son excellence dans la prise en charge des patients sous oxygénothérapie",
         "sa contribution à la recherche en pneumologie",
         "son engagement dans l'éducation thérapeutique",
+        "son rôle dans l'amélioration du parcours de soins BPCO dans la région",
+        "sa participation au réseau sentinelle de surveillance BPCO",
+        "son implication dans le programme de dépistage BPCO en médecine de ville",
       ],
     },
   ],
@@ -102,154 +323,333 @@ const NEWS_TEMPLATES = {
     {
       title: "Organisation d'un événement médical",
       contentTemplate: "{event} sur {topic}",
-      events: ["Formation continue", "Atelier pratique", "Table ronde"],
+      events: ["Formation continue", "Atelier pratique", "Table ronde", "Séminaire", "Journée d'étude", "Webinaire"],
       topics: [
         "la gestion de l'oxygénothérapie en ville",
         "les nouvelles technologies en assistance respiratoire",
         "le parcours de soins du patient BPCO",
+        "l'interprofessionnalité dans la prise en charge respiratoire",
+        "les innovations en ventilation à domicile",
+        "l'utilisation des données connectées en pneumologie",
       ],
     },
   ],
 };
 
-// Templates de notes réalistes
-const NOTE_TEMPLATES = [
-  "Visite très productive. {name} intéressé(e) par nos nouvelles solutions d'oxygénothérapie portable. Discussion approfondie sur les besoins de {count} patients actuellement sous OLD. RDV prévu dans 2 mois pour suivi.",
-  "Excellente relation. {name} prescrit régulièrement nos concentrateurs. Évoqué la possibilité d'une présentation produit à son équipe. Très satisfait(e) de notre service technique.",
-  "Discussion sur l'amélioration de l'observance des patients. {name} apprécie notre programme d'éducation thérapeutique. Demande de documentation sur les nouveaux débitmètres intelligents.",
-  "Entretien court mais productif. {name} a 2 nouveaux patients à équiper. Insiste sur la qualité du service et la rapidité d'intervention. Très bon potentiel de développement.",
-  "Visite de courtoisie. {name} satisfait(e) de nos prestations. Discussion sur les évolutions réglementaires de l'oxygénothérapie. Aucun besoin immédiat identifié.",
+const NEWS_TEMPLATES_GENERALISTE = {
+  publication: [
+    {
+      title: "Article dans la Revue du Praticien",
+      contentTemplate: "Publication sur {topic}",
+      topics: [
+        "le dépistage de la BPCO en soins primaires",
+        "la coordination ville-hôpital pour les patients sous O2",
+        "les red flags en consultation pour orientation pneumologique",
+        "l'accompagnement du patient BPCO en médecine générale",
+        "le rôle du médecin traitant dans le renouvellement de l'OLD",
+      ],
+    },
+    {
+      title: "Publication dans Exercer - Revue de médecine générale",
+      contentTemplate: "Retour d'expérience sur {topic}",
+      topics: [
+        "l'organisation de la consultation BPCO en cabinet libéral",
+        "la place de la spirométrie au cabinet du généraliste",
+        "l'éducation thérapeutique du patient insuffisant respiratoire",
+        "le suivi à domicile des patients sous assistance respiratoire",
+      ],
+    },
+    {
+      title: "Contribution au Quotidien du Médecin",
+      contentTemplate: "Tribune sur {topic}",
+      topics: [
+        "l'enjeu du dépistage précoce de la BPCO en France",
+        "la prise en charge ambulatoire de l'insuffisance respiratoire chronique",
+        "l'apport du numérique dans le suivi des maladies chroniques",
+      ],
+    },
+  ],
+  certification: [
+    {
+      title: "Formation certifiante",
+      contentTemplate: "Obtention d'un {cert} en {domain}",
+      certs: ["DU", "DIU", "Attestation", "DPC"],
+      domains: [
+        "éducation thérapeutique du patient",
+        "tabacologie",
+        "médecine du sommeil",
+        "gérontologie et polypathologies",
+        "coordination des soins à domicile",
+        "maladies respiratoires chroniques",
+      ],
+    },
+  ],
+  conference: [
+    {
+      title: "Participation à un congrès",
+      contentTemplate: "Intervention sur {topic} au {event}",
+      topics: [
+        "le repérage des maladies respiratoires en soins primaires",
+        "les outils numériques pour le médecin traitant",
+        "la coordination des acteurs du domicile (HAD, PSAD, IDE)",
+        "l'optimisation du suivi des patients chroniques",
+        "les parcours de soins des patients insuffisants respiratoires",
+      ],
+      events: [
+        "Congrès de la Médecine Générale France",
+        "Journées Nationales de Médecine Générale (JNMG)",
+        "Journées régionales de FMC",
+        "Rencontres de la HAS",
+        "Colloque Soins Primaires et Coordination",
+      ],
+    },
+  ],
+  award: [
+    {
+      title: "Distinction professionnelle",
+      contentTemplate: "Reconnaissance pour {achievement}",
+      achievements: [
+        "son engagement dans le dépistage des maladies respiratoires",
+        "sa qualité de coordination avec les prestataires de santé à domicile",
+        "son rôle de maître de stage universitaire",
+        "son implication dans la maison de santé pluriprofessionnelle",
+        "sa participation active au réseau de soins respiratoire régional",
+      ],
+    },
+  ],
+  event: [
+    {
+      title: "Événement médical local",
+      contentTemplate: "{event} sur {topic}",
+      events: ["Soirée FMC", "Atelier pratique", "Groupe de pairs", "Journée MSP", "Réunion pluriprofessionnelle"],
+      topics: [
+        "le bon usage des dispositifs médicaux respiratoires",
+        "la prise en charge du patient BPCO en médecine de ville",
+        "les innovations du PSAD et télésuivi",
+        "la prévention et le sevrage tabagique",
+        "la gestion des poly-pathologies chez le sujet âgé",
+      ],
+    },
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════
+// TEMPLATES D'HISTORIQUE DE VISITE (variés et uniques)
+// ═══════════════════════════════════════════════════════════
+const VISIT_NOTES_PNEUMO = [
+  "Présentation des résultats du télésuivi sur le trimestre. {count} patients suivis à distance avec 0 hospitalisations évitables. {title} {lastName} très satisfait(e).",
+  "Discussion sur les critères d'éligibilité à l'O2 de déambulation. Revue de {count} dossiers patients. 2 candidats identifiés pour passage au portable.",
+  "Évaluation conjointe de la satisfaction des patients sous concentrateur. Taux de satisfaction > 90%. Discussion sur les améliorations possibles du service de livraison.",
+  "Présentation des nouvelles gammes de masques pour VNI. Test de 3 modèles sur mannequin. {title} {lastName} retient le modèle ComfortGel pour ses patients.",
+  "Visite de suivi post-installation chez {count} patients. Tous les équipements fonctionnent correctement. Un patient demande un changement d'horaire de livraison.",
+  "Réunion de coordination avec l'équipe paramédicale. Formation des IDE du service sur les alertes du télésuivi. Très bon accueil.",
+  "Point sur les renouvellements d'ordonnances à venir. {count} patients à renouveler dans les 30 prochains jours. Planning établi avec le secrétariat.",
+  "Entretien avec {title} {lastName} sur un cas complexe : patient sous O2 + VNI avec syndrome obésité-hypoventilation. Proposition d'un suivi renforcé avec BiPAP adaptée.",
 ];
 
-function randomChoice<T>(array: T[]): T {
-  return array[Math.floor(Math.random() * array.length)];
+const VISIT_NOTES_GENERALISTE = [
+  "Visite de suivi chez {title} {lastName}. Discussion sur le patient Mme D. sous O2 depuis 3 mois. Amélioration nette des symptômes. Pas de modification de débit nécessaire.",
+  "Échange bref mais efficace. {title} {lastName} confirme la bonne observance de son patient M. L. sous concentrateur fixe. Demande de documentation sur les consignes de sécurité.",
+  "Passage au cabinet pour présenter la nouvelle plaquette d'éducation thérapeutique BPCO. {title} {lastName} apprécie le format simplifié pour ses patients.",
+  "Accompagnement pour une première mise sous O2. Patient anxieux, {title} {lastName} demande un appel de suivi à J+7 par notre équipe. Mise en place effectuée sans incident.",
+  "Visite de courtoisie. Pas de nouveau patient à équiper. {title} {lastName} mentionne une formation DPC à venir sur les pathologies respiratoires. Proposition d'intervenir en tant que partenaire.",
+  "Discussion sur les critères d'alerte pour les patients BPCO en médecine de ville. Remise d'un protocole simplifié d'évaluation de la dyspnée (échelle mMRC).",
+];
+
+// ═══════════════════════════════════════════════════════════
+// COMBINAISONS DE PRODUITS RÉALISTES
+// ═══════════════════════════════════════════════════════════
+const PRODUCT_COMBOS_PNEUMO = [
+  ['VitalAire Confort+', 'Télésuivi O2 Connect'],
+  ['Concentrateur portable FreeStyle', 'Oxymètre connecté'],
+  ['VNI DreamStation', 'Formation patient'],
+  ['Station extracteur fixe', 'Service 24/7'],
+  ['Oxygène liquide portable', 'Télésuivi O2 Connect'],
+  ['PPC ResMed AirSense', 'Masques VNI'],
+  ['Nébuliseur ultrasonique', 'Aérosol doseur'],
+  ['BPAP BiLevel', 'Oxymètre connecté', 'Télésuivi O2 Connect'],
+  ['VitalAire Confort+', 'Kit éducation thérapeutique', 'Service 24/7'],
+  ['Concentrateur portable FreeStyle', 'Oxygène liquide portable'],
+];
+
+const PRODUCT_COMBOS_GENERALISTE = [
+  ['Concentrateur fixe standard', 'Service technique SAV'],
+  ['Oxygène bouteille gazeux', 'Formation patient OLD'],
+  ['VitalAire Confort+', 'Service 24/7'],
+  ['Kit éducation thérapeutique', 'Oxymètre de pouls'],
+  ['Concentrateur fixe standard', 'Télésuivi O2 basique'],
+  ['Oxygène bouteille gazeux', 'Service 24/7'],
+  ['Formation patient OLD', 'Kit éducation thérapeutique'],
+];
+
+// ═══════════════════════════════════════════════════════════
+// UTILITAIRES
+// ═══════════════════════════════════════════════════════════
+
+// Générateur pseudo-aléatoire déterministe (pour éviter les doublons)
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
 }
 
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function randomChoice<T>(array: T[], rng: () => number = Math.random): T {
+  return array[Math.floor(rng() * array.length)];
 }
 
-function generateRealisticVolume(vingtile: number, specialty: string, isKOL: boolean): number {
-  // Volumes RÉALISTES en litres/an d'oxygène prescrit
-  //
-  // Contexte réel en France :
-  // - Patient sous OLD : ~5 000 - 15 000 L/an d'O2 liquide
-  // - Un médecin généraliste suit 1-5 patients sous O2
-  // - Un pneumologue suit 10-50 patients sous O2
-  // - Vingtile 1 = top 5% prescripteurs, Vingtile 20 = bottom 5%
+function randomInt(min: number, max: number, rng: () => number = Math.random): number {
+  return Math.floor(rng() * (max - min + 1)) + min;
+}
 
+// ═══════════════════════════════════════════════════════════
+// GÉNÉRATEURS
+// ═══════════════════════════════════════════════════════════
+
+function generateRealisticVolume(vingtile: number, specialty: string, isKOL: boolean, rng: () => number): number {
   let baseVolume: number;
 
   if (specialty === 'Pneumologue') {
-    // Pneumologues : 30K - 300K L/an (suivent 5-40 patients)
-    if (vingtile <= 2) {
-      baseVolume = randomInt(200000, 300000); // ~25-40 patients
-    } else if (vingtile <= 5) {
-      baseVolume = randomInt(120000, 200000); // ~15-25 patients
-    } else if (vingtile <= 10) {
-      baseVolume = randomInt(60000, 120000);  // ~8-15 patients
-    } else if (vingtile <= 15) {
-      baseVolume = randomInt(30000, 60000);   // ~4-8 patients
-    } else {
-      baseVolume = randomInt(10000, 30000);   // ~1-4 patients
-    }
+    if (vingtile <= 2) baseVolume = randomInt(200000, 300000, rng);
+    else if (vingtile <= 5) baseVolume = randomInt(120000, 200000, rng);
+    else if (vingtile <= 10) baseVolume = randomInt(60000, 120000, rng);
+    else if (vingtile <= 15) baseVolume = randomInt(30000, 60000, rng);
+    else baseVolume = randomInt(10000, 30000, rng);
   } else {
-    // Médecins généralistes : 5K - 80K L/an (suivent 1-10 patients)
-    if (vingtile <= 2) {
-      baseVolume = randomInt(50000, 80000);   // ~6-10 patients
-    } else if (vingtile <= 5) {
-      baseVolume = randomInt(30000, 50000);   // ~4-6 patients
-    } else if (vingtile <= 10) {
-      baseVolume = randomInt(15000, 30000);   // ~2-4 patients
-    } else if (vingtile <= 15) {
-      baseVolume = randomInt(8000, 15000);    // ~1-2 patients
-    } else {
-      baseVolume = randomInt(3000, 8000);     // ~0-1 patients (occasionnel)
-    }
+    if (vingtile <= 2) baseVolume = randomInt(50000, 80000, rng);
+    else if (vingtile <= 5) baseVolume = randomInt(30000, 50000, rng);
+    else if (vingtile <= 10) baseVolume = randomInt(15000, 30000, rng);
+    else if (vingtile <= 15) baseVolume = randomInt(8000, 15000, rng);
+    else baseVolume = randomInt(3000, 8000, rng);
   }
 
-  // Bonus KOL : +15-25% (influence plus de patients via leur réseau)
   if (isKOL) {
-    baseVolume *= 1 + (randomInt(15, 25) / 100);
+    baseVolume *= 1 + (randomInt(15, 25, rng) / 100);
   }
 
   return Math.round(baseVolume);
 }
 
 function generateNews(
-  _firstName: string,
-  _lastName: string,
-  _specialty: string,
-  isKOL: boolean
+  firstName: string,
+  lastName: string,
+  specialty: string,
+  isKOL: boolean,
+  rng: () => number,
 ): PractitionerNews[] {
   const news: PractitionerNews[] = [];
+  // KOLs: 3-6, non-KOL pneumologues: 1-3, non-KOL generalistes: 0-2
+  const newsCount = isKOL
+    ? randomInt(3, 6, rng)
+    : specialty === 'Pneumologue'
+      ? randomInt(1, 3, rng)
+      : randomInt(0, 2, rng);
+  const usedTitles = new Set<string>();
 
-  // KOLs ont plus d'actualités (3-6), autres ont moins (0-2)
-  const newsCount = isKOL ? randomInt(3, 6) : randomInt(0, 2);
+  // Select specialty-specific templates
+  const NEWS_TEMPLATES = specialty === 'Pneumologue' ? NEWS_TEMPLATES_PNEUMO : NEWS_TEMPLATES_GENERALISTE;
+
+  // Type distribution per specialty
+  const typeDistribution = specialty === 'Pneumologue'
+    ? ['publication', 'publication', 'conference', 'conference', 'certification', 'award', 'event'] as const
+    : ['event', 'event', 'certification', 'publication', 'conference', 'award'] as const;
 
   for (let i = 0; i < newsCount; i++) {
-    const typeKeys = Object.keys(NEWS_TEMPLATES) as Array<keyof typeof NEWS_TEMPLATES>;
-    const type = randomChoice(typeKeys);
+    const type = randomChoice([...typeDistribution], rng) as keyof typeof NEWS_TEMPLATES;
+
     const templates = NEWS_TEMPLATES[type];
-    const template: any = randomChoice(templates as any);
+    if (!templates || templates.length === 0) continue;
+    const template: any = randomChoice(templates as any, rng);
 
     let content: string = template.contentTemplate;
     let title: string = template.title;
 
-    // Remplacer les placeholders selon le type
-    if (template.topics && Array.isArray(template.topics)) {
-      const topic = randomChoice(template.topics as string[]);
-      content = content.replace('{topic}', topic);
-    }
-    if (template.certs && Array.isArray(template.certs)) {
-      const cert = randomChoice(template.certs as string[]);
-      content = content.replace('{cert}', cert);
-    }
-    if (template.domains && Array.isArray(template.domains)) {
-      const domain = randomChoice(template.domains as string[]);
-      content = content.replace('{domain}', domain);
-    }
-    if (template.events && Array.isArray(template.events)) {
-      const event = randomChoice(template.events as string[]);
-      content = content.replace('{event}', event);
-    }
-    if (template.achievements && Array.isArray(template.achievements)) {
-      const achievement = randomChoice(template.achievements as string[]);
-      content = content.replace('{achievement}', achievement);
-    }
+    if (template.topics) content = content.replace('{topic}', randomChoice(template.topics, rng));
+    if (template.certs) content = content.replace('{cert}', randomChoice(template.certs, rng));
+    if (template.domains) content = content.replace('{domain}', randomChoice(template.domains, rng));
+    if (template.events) content = content.replace('{event}', randomChoice(template.events, rng));
+    if (template.achievements) content = content.replace('{achievement}', randomChoice(template.achievements, rng));
 
-    // Date dans les 6 derniers mois
-    const daysAgo = randomInt(10, 180);
+    // Ensure no duplicate titles
+    const uniqueKey = `${title}-${content.substring(0, 30)}`;
+    if (usedTitles.has(uniqueKey)) continue;
+    usedTitles.add(uniqueKey);
+
+    const daysAgo = randomInt(10, 200, rng);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
 
+    // More specific relevance messages
+    const relevanceMessages = isKOL
+      ? [
+          `Opportunité de renforcer le partenariat avec ${firstName} ${lastName}`,
+          `Levier de discussion stratégique sur nos innovations`,
+          `Sujet aligné avec notre offre de télésuivi`,
+          `Occasion de proposer un partenariat académique`,
+        ]
+      : [
+          `Point d'accroche pour la prochaine visite`,
+          `Occasion de présenter nos services complémentaires`,
+          `Sujet en lien avec notre gamme de produits`,
+          `Bon prétexte pour reprendre contact`,
+        ];
+
     news.push({
-      id: `news-${i + 1}`,
+      id: `news-${firstName.toLowerCase()}-${i + 1}`,
       date: date.toISOString().split('T')[0],
       title,
       content,
       type,
-      relevance: isKOL
-        ? "Pertinence : Opportunité de discussion sur nos programmes d'accompagnement et innovations"
-        : "Pertinence : Maintenir la relation et valoriser l'expertise",
-      source: type === 'publication' ? 'Base bibliographique médicale' : undefined,
+      relevance: randomChoice(relevanceMessages, rng),
+      source: type === 'publication' ? randomChoice([
+        'PubMed',
+        'Base bibliographique médicale',
+        'Google Scholar',
+        'SUDOC',
+      ], rng) : undefined,
     });
   }
 
   return news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-function generateNotes(_firstName: string, lastName: string): PractitionerNote[] {
+function generateNotes(
+  firstName: string,
+  lastName: string,
+  title: string,
+  specialty: string,
+  rng: () => number,
+): PractitionerNote[] {
   const notes: PractitionerNote[] = [];
-  const noteCount = randomInt(2, 6);
+  const noteCount = randomInt(3, 7, rng);
+  const templates = specialty === 'Pneumologue' ? NOTES_PNEUMO : NOTES_GENERALISTE;
+  const usedIndices = new Set<number>();
 
   for (let i = 0; i < noteCount; i++) {
-    const template = randomChoice(NOTE_TEMPLATES);
-    let content = template;
-    content = content.replace('{name}', `Dr ${lastName}`);
-    content = content.replace('{count}', String(randomInt(2, 8)));
+    // Pick a template that hasn't been used yet
+    let templateIdx: number;
+    let attempts = 0;
+    do {
+      templateIdx = Math.floor(rng() * templates.length);
+      attempts++;
+    } while (usedIndices.has(templateIdx) && attempts < 20);
+    usedIndices.add(templateIdx);
 
-    const daysAgo = randomInt(30, 365);
+    const template = templates[templateIdx];
+    const patientCount = randomInt(2, 12, rng);
+    let content = template.content
+      .replace(/{name}/g, `${title} ${lastName}`)
+      .replace(/{title}/g, title)
+      .replace(/{lastName}/g, lastName)
+      .replace(/{firstName}/g, firstName)
+      .replace(/{count}/g, String(patientCount));
+
+    let nextAction = template.nextAction
+      ? template.nextAction.replace(/{count}/g, String(patientCount))
+      : undefined;
+
+    const daysAgo = randomInt(14 + i * 40, 45 + i * 50, rng);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
 
@@ -257,86 +657,103 @@ function generateNotes(_firstName: string, lastName: string): PractitionerNote[]
       id: `note-${i + 1}`,
       date: date.toISOString().split('T')[0],
       content,
-      author: 'Sophie Martin',
-      type: randomChoice(['visit', 'phone', 'email'] as const),
-      nextAction: i === 0 ? 'Relancer dans 2 mois pour présentation équipe' : undefined,
+      author: randomChoice(NOTE_AUTHORS, rng),
+      type: template.type,
+      nextAction,
     });
   }
 
   return notes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-function generateVisitHistory(lastName: string): VisitRecord[] {
+function generateVisitHistory(
+  firstName: string,
+  lastName: string,
+  title: string,
+  specialty: string,
+  rng: () => number,
+): VisitRecord[] {
   const visits: VisitRecord[] = [];
-  const visitCount = randomInt(4, 10);
+  const visitCount = randomInt(4, 10, rng);
+  const visitNoteTemplates = specialty === 'Pneumologue' ? VISIT_NOTES_PNEUMO : VISIT_NOTES_GENERALISTE;
+  const productCombos = specialty === 'Pneumologue' ? PRODUCT_COMBOS_PNEUMO : PRODUCT_COMBOS_GENERALISTE;
 
   for (let i = 0; i < visitCount; i++) {
-    const daysAgo = randomInt(30 + i * 30, 60 + i * 30);
+    const daysAgo = randomInt(30 + i * 25, 55 + i * 30, rng);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
+
+    // Pick a unique visit note
+    const noteTemplate = visitNoteTemplates[i % visitNoteTemplates.length];
+    const visitNote = noteTemplate
+      .replace(/{title}/g, title)
+      .replace(/{lastName}/g, lastName)
+      .replace(/{firstName}/g, firstName)
+      .replace(/{count}/g, String(randomInt(2, 8, rng)));
 
     visits.push({
       id: `visit-${i + 1}`,
       date: date.toISOString().split('T')[0],
       type: 'completed',
-      duration: randomInt(20, 45),
-      notes: `Visite productive avec Dr ${lastName}. Discussion sur les patients actuels.`,
-      productsDiscussed: randomChoice([
-        ['Concentrateur portable'],
-        ['OLD classique', 'Concentrateur'],
-        ['Service technique', 'Formation patient'],
-      ]),
+      duration: randomInt(15, 45, rng),
+      notes: visitNote,
+      productsDiscussed: randomChoice(productCombos, rng),
     });
   }
 
   return visits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+// ═══════════════════════════════════════════════════════════
+// GÉNÉRATEUR PRINCIPAL
+// ═══════════════════════════════════════════════════════════
+
 export function generatePractitioner(index: number): PractitionerProfile {
-  // Déterminer si c'est un homme ou une femme
-  const isMale = Math.random() > 0.4;
-  const firstName = isMale ? randomChoice(FIRST_NAMES_M) : randomChoice(FIRST_NAMES_F);
-  const lastName = randomChoice(LAST_NAMES);
+  // Use seeded RNG for reproducibility but unique per practitioner
+  const rng = seededRandom(index * 7919 + 42);
 
-  // Spécialité (20% pneumologues, 80% généralistes - ratio réaliste France)
-  // En France : ~2000 pneumologues vs ~64000 médecins généralistes
-  const specialty = Math.random() < 0.20 ? 'Pneumologue' : 'Médecin généraliste';
+  const isMale = rng() > 0.4;
+  const firstName = isMale ? randomChoice(FIRST_NAMES_M, rng) : randomChoice(FIRST_NAMES_F, rng);
 
-  // Vingtile : distribution réaliste (plus de monde dans les vingtiles élevés)
-  const vingtile = Math.random() < 0.15 ? randomInt(1, 5) : Math.random() < 0.4 ? randomInt(6, 10) : randomInt(11, 20);
+  // Ensure unique last names by using index-based selection with rotation
+  const lastName = LAST_NAMES[(index * 3 + Math.floor(rng() * 7)) % LAST_NAMES.length];
 
-  // KOL : seulement 15% des praticiens, principalement vingtile 1-5
-  const isKOL = vingtile <= 5 && Math.random() < 0.3;
-
-  // Volume réaliste
-  const volumeL = generateRealisticVolume(vingtile, specialty, isKOL);
+  const specialty = rng() < 0.20 ? 'Pneumologue' : 'Médecin généraliste';
+  const vingtile = rng() < 0.15 ? randomInt(1, 5, rng) : rng() < 0.4 ? randomInt(6, 10, rng) : randomInt(11, 20, rng);
+  const isKOL = vingtile <= 5 && rng() < 0.3;
+  const volumeL = generateRealisticVolume(vingtile, specialty, isKOL, rng);
   const volumeMonthly = Math.round(volumeL / 12);
+  const loyaltyScore = vingtile <= 5 ? randomInt(7, 10, rng) : vingtile <= 10 ? randomInt(6, 9, rng) : randomInt(4, 8, rng);
 
-  // Loyalty score : corrélé au vingtile (meilleurs prescripteurs = plus fidèles en général)
-  const loyaltyScore = vingtile <= 5 ? randomInt(7, 10) : vingtile <= 10 ? randomInt(6, 9) : randomInt(4, 8);
+  const city = CITIES_RHONE_ALPES[index % CITIES_RHONE_ALPES.length];
+  const streetNumber = randomInt(1, 150, rng);
+  const streetName = randomChoice(STREET_NAMES, rng);
 
-  // Adresse
-  const city = randomChoice(CITIES_RHONE_ALPES);
-  const streetNumber = randomInt(1, 150);
-  const streetName = randomChoice(STREET_NAMES);
+  const emailDomain = randomChoice(['gmail.com', 'wanadoo.fr', 'orange.fr', 'outlook.fr', 'medecin.fr'], rng);
+  const email = `${firstName.toLowerCase().replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a').replace(/[ùû]/g, 'u').replace(/ç/g, 'c').replace(/[ïî]/g, 'i')}.${lastName.toLowerCase().replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a')}@${emailDomain}`;
+  const phone = `04 ${randomInt(70, 79, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)}`;
 
-  // Email et téléphone
-  const emailDomain = randomChoice(['gmail.com', 'wanadoo.fr', 'orange.fr', 'outlook.fr']);
-  const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${emailDomain}`;
-  const phone = `04 ${randomInt(70, 79)} ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)}`;
+  // 10% of practitioners never visited (new detections)
+  const neverVisited = rng() < 0.10;
+  let lastVisitDate: string | undefined;
+  if (!neverVisited) {
+    const lastVisitDaysAgo = randomInt(5, 180, rng);
+    const lvDate = new Date();
+    lvDate.setDate(lvDate.getDate() - lastVisitDaysAgo);
+    lastVisitDate = lvDate.toISOString().split('T')[0];
+  }
 
-  // Dernière visite
-  const lastVisitDaysAgo = randomInt(5, 180);
-  const lastVisitDate = new Date();
-  lastVisitDate.setDate(lastVisitDate.getDate() - lastVisitDaysAgo);
+  const practTitle = isKOL && rng() < 0.3 ? 'Pr' : 'Dr';
+
+  const subSpecialtyOptions = ['Allergologie respiratoire', 'Oncologie thoracique', 'Réhabilitation respiratoire', 'Sommeil et ventilation', 'Pneumologie interventionnelle'];
 
   return {
     id: `pract-${String(index + 1).padStart(3, '0')}`,
-    title: 'Dr',
+    title: practTitle,
     firstName,
     lastName,
     specialty,
-    subSpecialty: specialty === 'Pneumologue' ? randomChoice(['Allergologie', 'Oncologie thoracique', 'Réhabilitation respiratoire', undefined, undefined]) : undefined,
+    subSpecialty: specialty === 'Pneumologue' ? randomChoice([...subSpecialtyOptions, undefined, undefined], rng) as string | undefined : undefined,
     avatarUrl: `https://i.pravatar.cc/150?img=${index + 1}`,
 
     address: {
@@ -345,15 +762,15 @@ export function generatePractitioner(index: number): PractitionerProfile {
       postalCode: city.postalCode,
       country: 'France',
       coords: {
-        lat: city.coords.lat + (Math.random() - 0.5) * 0.02,
-        lng: city.coords.lng + (Math.random() - 0.5) * 0.02,
+        lat: city.coords.lat + (rng() - 0.5) * 0.02,
+        lng: city.coords.lng + (rng() - 0.5) * 0.02,
       },
     },
 
     contact: {
       email,
       phone,
-      mobile: Math.random() > 0.5 ? `06 ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)}` : undefined,
+      mobile: rng() > 0.4 ? `06 ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)}` : undefined,
     },
 
     metrics: {
@@ -362,17 +779,19 @@ export function generatePractitioner(index: number): PractitionerProfile {
       loyaltyScore,
       vingtile,
       isKOL,
-      potentialGrowth: vingtile <= 10 ? randomInt(10, 30) : randomInt(5, 15),
+      potentialGrowth: vingtile <= 10 ? randomInt(10, 35, rng) : randomInt(5, 15, rng),
       churnRisk: loyaltyScore >= 8 ? 'low' : loyaltyScore >= 6 ? 'medium' : 'high',
     },
 
-    notes: generateNotes(firstName, lastName),
-    news: generateNews(firstName, lastName, specialty, isKOL),
-    visitHistory: generateVisitHistory(lastName),
+    notes: neverVisited ? [] : generateNotes(firstName, lastName, practTitle, specialty, rng),
+    news: generateNews(firstName, lastName, specialty, isKOL, rng),
+    visitHistory: neverVisited ? [] : generateVisitHistory(firstName, lastName, practTitle, specialty, rng),
 
     createdAt: new Date('2024-01-15').toISOString(),
-    lastVisitDate: lastVisitDate.toISOString().split('T')[0],
-    nextScheduledVisit: Math.random() > 0.6 ? new Date(Date.now() + randomInt(7, 60) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
+    lastVisitDate,
+    nextScheduledVisit: !neverVisited && rng() > 0.6
+      ? new Date(Date.now() + randomInt(7, 60, rng) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      : undefined,
   };
 }
 
@@ -383,6 +802,5 @@ export function generateDatabase(count: number = 120): PractitionerProfile[] {
     practitioners.push(generatePractitioner(i));
   }
 
-  // Trier par volume décroissant pour avoir les top prescripteurs en premier
   return practitioners.sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
 }

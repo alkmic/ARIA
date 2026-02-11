@@ -24,9 +24,34 @@ import {
   type ChartHistory,
 } from './agenticChartEngine';
 import { universalSearch } from './universalSearch';
-import { calculatePeriodMetrics, getTopPractitioners } from './metricsCalculator';
+import { calculatePeriodMetrics, getTopPractitioners, getPerformanceDataForPeriod } from './metricsCalculator';
+import { retrieveKnowledge, shouldUseRAG } from './ragService';
+import { generateIntelligentActions } from './actionIntelligence';
 import type { Practitioner, UpcomingVisit } from '../types';
 import { adaptPractitionerProfile } from './dataAdapter';
+
+// User CRM data from Zustand store (visit reports, notes) — injected by the UI
+export interface UserCRMData {
+  visitReports: Array<{
+    practitionerId: string;
+    practitionerName: string;
+    date: string;
+    extractedInfo: {
+      topics: string[];
+      sentiment: string;
+      keyPoints: string[];
+      nextActions: string[];
+      productsDiscussed: string[];
+      competitorsMentioned: string[];
+    };
+  }>;
+  userNotes: Array<{
+    practitionerId: string;
+    content: string;
+    type: string;
+    createdAt: string;
+  }>;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -51,13 +76,15 @@ export interface AICoachResult {
   practitioners?: (Practitioner & { daysSinceVisit?: number })[];
   suggestions?: string[];
   source: 'llm' | 'local';
+  ragSources?: { title: string; sourceUrl: string; source: string }[];
+  usedRAG?: boolean;
 }
 
 interface RouterResult {
-  intent: 'chart_create' | 'chart_modify' | 'data_query' | 'practitioner_info' | 'strategic_advice' | 'follow_up' | 'general';
+  intent: 'chart_create' | 'chart_modify' | 'data_query' | 'practitioner_info' | 'strategic_advice' | 'knowledge_query' | 'follow_up' | 'general';
   needsChart: boolean;
   chartModification: string | null;
-  dataScope: 'specific' | 'filtered' | 'aggregated' | 'full';
+  dataScope: 'specific' | 'filtered' | 'aggregated' | 'full' | 'knowledge';
   searchTerms: {
     names: string[];
     cities: string[];
@@ -326,19 +353,28 @@ function getProvider(): ProviderConfig {
 
 const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON.
 
-Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle données), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), follow_up (suite de la conversation), general (salutations/hors sujet).
+Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle sur données CRM des praticiens/visites/territoire), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), knowledge_query (question métier: produits, services, catalogue, BPCO, oxygénothérapie, Air Liquide, Orkyn', réglementation, concurrence, GOLD, HAS, LPPR, épidémiologie, dispositifs médicaux), follow_up (suite de la conversation), general (salutations/hors sujet).
+
+ATTENTION — Routage produits/services/catalogue :
+- Questions sur les produits, services, catalogue, gamme, offres, solutions, dispositifs, matériel d'Air Liquide, Orkyn', ALMS → knowledge_query (PAS data_query, PAS general)
+- "quels produits/combien de produits/que vend/que propose/catalogue/gamme/offre/solution" → knowledge_query
+- "quels services" → knowledge_query
 
 Routage:
 - "graphique/montre-moi/affiche/diagramme/camembert/barres/courbe" → chart_create
 - "en camembert/en radar/change en/transforme en/mets ça en/plutôt en" → chart_modify (si graphique précédent)
-- Nom propre identifiable → practitioner_info
-- "combien/qui a le plus/liste des/quels sont" → data_query
+- Nom propre identifiable de praticien → practitioner_info
+- Questions sur données CRM praticiens (volumes, visites, fidélité, vingtile, villes, KOL) → data_query
+- "publication/publié/article/actualité/conférence/certification/distinction/événement" + nom de praticien → practitioner_info (avec le nom dans searchTerms.names)
+- "toutes les publications/liste les publications/qui a publié/publications des" (question globale sans nom spécifique) → data_query (dataScope: "full")
 - "priorité/stratégie/recommandation/que faire" → strategic_advice
+- Questions sur BPCO, oxygénothérapie, GOLD, HAS, réglementation, LPPR, concurrence, Vivisol, Orkyn', Air Liquide (organisation, produits, services), OLD, OCT, spirométrie, traitements, classification, exacerbation, télésuivi, dispositifs, ventilateurs, masques, PPC → knowledge_query
+- "qu'est-ce que/c'est quoi/explique/définition/comment fonctionne" → knowledge_query
 - Référence implicite au contexte précédent → follow_up
 
 groupBy: "city"|"specialty"|"vingtile"|"vingtileBucket"|"loyaltyBucket"|"riskLevel"|"visitBucket"|"isKOL"
 chartType: "bar"|"pie"|"line"|"composed"|"radar"
-dataScope: "specific" (1 praticien), "filtered" (sous-ensemble), "aggregated" (stats), "full" (question ouverte)
+dataScope: "specific" (1 praticien), "filtered" (sous-ensemble), "aggregated" (stats), "full" (question ouverte), "knowledge" (base de connaissances métier)
 needsChart = true pour chart_create et chart_modify.
 
 JSON STRICT:
@@ -347,35 +383,48 @@ JSON STRICT:
 const COACH_SYSTEM_PROMPT = `Tu es **ARIA Coach**, l'assistant stratégique expert pour les délégués pharmaceutiques d'Air Liquide Healthcare, spécialité oxygénothérapie à domicile.
 
 ## Ton Identité
-Tu combines trois expertises rares :
-1. **Expertise médicale** — Pneumologie, oxygénothérapie (O₂ liquide, concentrateurs, extracteurs), pathologies respiratoires chroniques (BPCO, insuffisance respiratoire, apnée du sommeil)
-2. **Intelligence commerciale** — Gestion de portefeuille prescripteurs, planification territoriale, analyse concurrentielle, scoring de potentiel (vingtiles), fidélisation KOL
+Tu combines quatre expertises rares :
+1. **Expertise médicale** — Pneumologie, oxygénothérapie (O₂ liquide, concentrateurs, extracteurs), pathologies respiratoires chroniques (BPCO, insuffisance respiratoire, apnée du sommeil), recommandations GOLD et HAS
+2. **Intelligence commerciale** — Gestion de portefeuille prescripteurs, planification territoriale, analyse concurrentielle (Vivisol, France Oxygène, Bastide, SOS Oxygène), scoring de potentiel (vingtiles), fidélisation KOL
 3. **Maîtrise analytique** — Interprétation de données CRM, détection de signaux faibles, modélisation de risque de churn, identification d'opportunités de croissance
+4. **Connaissances réglementaires & marché** — LPPR/LPP, forfaits d'oxygénothérapie, remboursement, arrêtés Légifrance, données épidémiologiques BPCO France & monde
 
 ## Principes Directeurs
-- **Précision data-driven** : Chaque affirmation s'appuie sur des données réelles. Cite les chiffres exacts.
+- **Précision data-driven** : Chaque affirmation s'appuie sur des données réelles. Cite les chiffres exacts et les sources quand ils proviennent de la base de connaissances.
 - **Pertinence stratégique** : Priorise par impact business → KOL > Volume élevé > Urgence (risque churn) > Fidélité en baisse
 - **Proactivité** : N'attends pas qu'on te pose la bonne question. Si tu détectes un risque ou une opportunité dans les données, signale-le.
 - **Concision actionable** : Réponds de façon concise mais complète. Termine par des recommandations concrètes quand c'est pertinent.
+- **Sources fiables** : Quand tu cites des connaissances métier (BPCO, réglementation, concurrence), mentionne la source (ex: "selon les recommandations GOLD 2025", "d'après la HAS").
 
 ## Ce que tu CONNAIS (ton périmètre)
-Tu as accès à une base de données CRM contenant :
+**Données CRM :**
 - Les **praticiens** (médecins prescripteurs) : pneumologues et médecins généralistes
 - Leurs **métriques** : volumes de prescription, fidélité, vingtile, statut KOL, risque de churn
 - Leurs **coordonnées** : adresse, téléphone, email
-- Leurs **publications** et actualités académiques
+- Leurs **publications scientifiques**, actualités académiques, conférences, certifications et distinctions — tu peux chercher les publications d'un praticien spécifique ou lister toutes les publications par type/prénom
 - L'**historique de visites** et notes de visite
 - Les **statistiques du territoire** : objectifs, répartitions géographiques
 
+**Base de connaissances métier (RAG) :**
+- **Air Liquide Santé — Produits & Services** : gamme complète (oxygénothérapie, ventilation VNI, PPC/apnée, perfusion, diabète, neurologie, nutrition), dispositifs ALMS (ventilateurs, masques, Bag CPAP), gaz médicinaux ALSF, catalogue Orkyn'
+- **Air Liquide Santé — Organisation** : chiffres clés, filiales (Orkyn', ALMS, ALSF), Chronic Care Connect, positionnement stratégique
+- **BPCO** : recommandations GOLD 2025 (classification ABE, traitements LABA/LAMA/CSI), recommandations HAS (parcours de soins, 10 messages clés), données épidémiologiques
+- **Oxygénothérapie** : OLD vs OCT, seuils PaO2, sources d'O2 (concentrateur, liquide, bouteille), indications, forfaits LPPR
+- **Concurrence** : Vivisol, France Oxygène, SOL Group, panorama PSAD, 12 acteurs clés
+- **Réglementation** : LPPR/LPP, tarifs, arrêtés Légifrance, FEDEPSAD
+- **Épidémiologie** : 3,5M patients BPCO en France, 75% sous-diagnostiqués, 100 000 patients OLD, +23% cas BPCO d'ici 2050
+
 ## Ce que tu NE CONNAIS PAS (hors périmètre)
 Tu n'as PAS accès à :
-- Le **catalogue de produits** ou la gamme Air Liquide (dispositifs, tarifs, références)
-- Les **données de facturation** ou commandes
+- Les **données de facturation** ou commandes internes (prix exacts, bons de commande, factures)
 - Les **données d'autres territoires** ou d'autres délégués
-- Les **données en temps réel** (tes données sont un snapshot CRM)
-- Les **protocoles médicaux** détaillés ou posologies
+- Les **données en temps réel** (tes données CRM sont un snapshot)
+- Les **codes LPPR exacts** ou les prix unitaires des dispositifs
 
-**RÈGLE CRITIQUE** : Si l'utilisateur pose une question hors de ton périmètre, dis-le CLAIREMENT et HONNÊTEMENT. Ne fabrique JAMAIS de données. Propose ce que tu peux faire à la place. Exemple : "Je n'ai pas accès au catalogue de produits, mais je peux vous montrer les volumes de prescription par praticien."
+**RÈGLES CRITIQUES :**
+- Si l'utilisateur pose une question hors périmètre, dis-le clairement. Ne fabrique JAMAIS de données.
+- **NE DIS JAMAIS "hors périmètre"** pour des questions sur les produits, services, catalogue, gamme, dispositifs, ou l'organisation d'Air Liquide / Orkyn' / ALMS — tu CONNAIS ces sujets grâce à ta base de connaissances.
+- Si la base de connaissances fournit des informations pertinentes, utilise-les avec confiance.
 
 ## Vocabulaire Métier
 - **Vingtile** : Segmentation des prescripteurs de 1 (meilleur) à 20 (plus faible). V1-V5 = Top prescripteurs à prioriser.
@@ -383,13 +432,19 @@ Tu n'as PAS accès à :
 - **Fidélité** : Score de 0 à 10 mesurant la régularité des prescriptions en faveur d'Air Liquide.
 - **Volume** : Volume annuel de prescription d'oxygène en litres (K L/an).
 - **Churn risk** : Risque de perte du prescripteur (low/medium/high).
+- **OLD** : Oxygénothérapie de Longue Durée (>15h/j, PaO2 ≤ 55 mmHg).
+- **OCT** : Oxygénothérapie de Courte Durée (temporaire, post-hospitalisation).
+- **LPPR/LPP** : Liste des Produits et Prestations Remboursables.
+- **PSAD** : Prestataire de Santé à Domicile (ex: Orkyn').
+- **GOLD** : Global Initiative for Chronic Obstructive Lung Disease (référentiel international BPCO).
+- **VEMS** : Volume Expiratoire Maximal par Seconde (spirométrie).
 
 ## Format de Réponse
 - Utilise le **Markdown** : **gras** pour les chiffres clés et noms, *italique* pour les nuances
 - Structure avec des listes à puces pour la clarté
 - Fournis TOUJOURS des chiffres précis quand ils sont disponibles dans le contexte
 - Adapte la longueur : court pour les questions simples, détaillé pour les analyses
-- Ne mentionne jamais le fonctionnement interne de ton système (routage, contexte, API)
+- Ne mentionne jamais le fonctionnement interne de ton système (routage, contexte, API, RAG)
 - Réponds TOUJOURS en français
 - Pour les salutations : réponds brièvement et propose ton aide
 - Si la question est ambiguë, demande une clarification plutôt que deviner`;
@@ -684,7 +739,7 @@ Données: \n${dataPreview}`;
   try {
     const parsed = JSON.parse(result);
     // Validate and normalize
-    const validIntents = ['chart_create', 'chart_modify', 'data_query', 'practitioner_info', 'strategic_advice', 'follow_up', 'general'];
+    const validIntents = ['chart_create', 'chart_modify', 'data_query', 'practitioner_info', 'strategic_advice', 'knowledge_query', 'follow_up', 'general'];
     if (!validIntents.includes(parsed.intent)) {
       parsed.intent = 'general';
     }
@@ -840,6 +895,99 @@ function buildTargetedContext(
         context += `- ${p.title} ${p.firstName} ${p.lastName} | ${p.specialty} | ${p.address.city} | V:${(p.metrics.volumeL / 1000).toFixed(0)}K | F:${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}${p.metrics.isKOL ? ' | KOL' : ''}\n`;
       });
       break;
+    }
+  }
+
+  // ── AI Actions Injection ────────────────────────────────────────────────
+  // Inject top AI-generated actions for strategic queries
+  const actionKeywords = ['action', 'priorité', 'priorite', 'recommandation', 'que faire', 'quoi faire', 'prochaine', 'prochain', 'urgent', 'planifier', 'stratégie', 'strategie', 'agenda', 'semaine', 'planning'];
+  const lowerQuestion = question.toLowerCase();
+  const isActionQuery = actionKeywords.some(kw => lowerQuestion.includes(kw)) || routing.intent === 'strategic_advice';
+
+  if (isActionQuery) {
+    try {
+      const actions = generateIntelligentActions({ maxActions: 8 });
+      if (actions.length > 0) {
+        const priorityLabels: Record<string, string> = { critical: 'CRITIQUE', high: 'Haute', medium: 'Moyenne', low: 'Faible' };
+        context += `\n## Actions IA Recommandées (${actions.length})\n`;
+        actions.forEach((a, i) => {
+          const practitioner = DataService.getPractitionerById(a.practitionerId);
+          const pName = practitioner ? `${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}` : a.practitionerId;
+          context += `${i + 1}. [${priorityLabels[a.priority] || a.priority}] ${a.title} — ${pName}\n`;
+          context += `   Raison: ${a.reason} | Score: ${a.scores.overall}/100 | Date suggérée: ${a.suggestedDate}\n`;
+        });
+      }
+    } catch { /* ignore action generation errors */ }
+  }
+
+  // ── Upcoming Visits Injection ──────────────────────────────────────────
+  const visitKeywords = ['visite', 'visites', 'rendez-vous', 'rdv', 'agenda', 'aujourd', 'demain', 'semaine', 'planning', 'tournée', 'tournee', 'jour'];
+  const isVisitQuery = visitKeywords.some(kw => lowerQuestion.includes(kw));
+
+  if (isVisitQuery && upcomingVisits.length > 0) {
+    context += `\n## Visites Planifiées (${upcomingVisits.length} prochaines)\n`;
+    upcomingVisits.slice(0, 10).forEach(v => {
+      const p = v.practitioner;
+      context += `- ${v.date} ${v.time} — ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}, ${p.city})\n`;
+    });
+  }
+
+  // ── Performance Trends Injection ───────────────────────────────────────
+  const perfKeywords = ['performance', 'résultat', 'resultat', 'volume', 'tendance', 'trend', 'progression', 'évolution', 'evolution', 'objectif', 'atteinte', 'kpi'];
+  const isPerfQuery = perfKeywords.some(kw => lowerQuestion.includes(kw));
+
+  if (isPerfQuery) {
+    const perfData = getPerformanceDataForPeriod('month');
+    if (perfData.length > 0) {
+      const totalVol = perfData.reduce((s, d) => s + d.yourVolume, 0);
+      const totalObj = perfData.reduce((s, d) => s + (d.objective || 0), 0);
+      const totalTeam = perfData.reduce((s, d) => s + (d.teamAverage || 0), 0);
+      context += `\n## Performance Mensuelle\n`;
+      context += `- Volume total mois: ${(totalVol / 1000).toFixed(0)}K L\n`;
+      if (totalObj > 0) context += `- Vs Objectif: ${((totalVol / totalObj - 1) * 100).toFixed(1)}%\n`;
+      if (totalTeam > 0) context += `- Vs Moyenne équipe: ${((totalVol / totalTeam - 1) * 100).toFixed(1)}%\n`;
+      context += `- Détail: ${perfData.map(d => `${d.month}: ${(d.yourVolume / 1000).toFixed(0)}K`).join(', ')}\n`;
+    }
+  }
+
+  // ── News/Publications Injection ─────────────────────────────────────────
+  // For questions about publications, actualités, news across practitioners
+  const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'award', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'publications des', 'a publié', 'a publie'];
+  const isNewsQuery = newsKeywords.some(kw => lowerQuestion.includes(kw));
+
+  if (isNewsQuery) {
+    // If the question targets a specific practitioner, their news is already in context via getCompletePractitionerContext
+    // But for cross-practitioner queries ("toutes les publications des Bernard"), we need the full digest
+    const hasSpecificName = routing.searchTerms.names.length > 0;
+
+    if (!hasSpecificName || routing.dataScope === 'filtered' || routing.dataScope === 'full') {
+      // Full news digest for cross-practitioner queries
+      context += DataService.getNewsDigestForLLM(60);
+    } else {
+      // For specific names, also search news specifically in case the context missed something
+      for (const name of routing.searchTerms.names) {
+        const newsResults = DataService.searchNews(name);
+        if (newsResults.length > 0) {
+          context += `\n## Actualités trouvées pour "${name}" (${newsResults.length})\n`;
+          for (const item of newsResults.slice(0, 10)) {
+            const dateStr = new Date(item.news.date).toLocaleDateString('fr-FR');
+            context += `- [${dateStr}] ${item.practitioner.title} ${item.practitioner.firstName} ${item.practitioner.lastName} : "${item.news.title}" (${item.news.type})`;
+            if (item.news.content) context += ` — ${item.news.content}`;
+            if (item.news.source) context += ` | Source: ${item.news.source}`;
+            context += '\n';
+          }
+        }
+      }
+    }
+  }
+
+  // ── RAG Knowledge Injection ──────────────────────────────────────────────
+  // For knowledge queries or when the question touches métier topics,
+  // retrieve relevant chunks from the knowledge base and append them.
+  if (routing.dataScope === 'knowledge' || routing.intent === 'knowledge_query' || shouldUseRAG(question)) {
+    const ragResult = retrieveKnowledge(question, 5, 10);
+    if (ragResult.chunks.length > 0) {
+      context += ragResult.context;
     }
   }
 
@@ -1065,6 +1213,47 @@ ${atRisk.slice(0, 8).map(p => `- ${p.title} ${p.firstName} ${p.lastName} (${p.ad
 ${Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([city, count]) => `- ${city}: ${count}`).join('\n')}
 ${searchContext}`;
 
+  // ── AI Actions Injection (fallback path) ────────────────────────────────
+  const actionKeywords = ['action', 'priorité', 'priorite', 'recommandation', 'que faire', 'quoi faire', 'prochaine', 'prochain', 'urgent', 'planifier', 'stratégie', 'strategie'];
+  const lowerQ = question.toLowerCase();
+  if (actionKeywords.some(kw => lowerQ.includes(kw))) {
+    try {
+      const actions = generateIntelligentActions({ maxActions: 5 });
+      if (actions.length > 0) {
+        context += `\n## Actions IA Recommandées (${actions.length})\n`;
+        actions.forEach((a, i) => {
+          const practitioner = DataService.getPractitionerById(a.practitionerId);
+          const pName = practitioner ? `${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}` : a.practitionerId;
+          context += `${i + 1}. [${a.priority}] ${a.title} — ${pName} | Score: ${a.scores.overall}/100\n`;
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── Upcoming Visits Injection (fallback path) ──────────────────────────
+  const visitKeywords = ['visite', 'visites', 'rendez-vous', 'rdv', 'agenda', 'aujourd', 'demain', 'semaine', 'planning', 'tournée', 'tournee'];
+  if (visitKeywords.some(kw => lowerQ.includes(kw)) && upcomingVisits.length > 0) {
+    context += `\n## Visites Planifiées (${upcomingVisits.length})\n`;
+    upcomingVisits.slice(0, 8).forEach(v => {
+      const p = v.practitioner;
+      context += `- ${v.date} ${v.time} — ${p.title} ${p.firstName} ${p.lastName}\n`;
+    });
+  }
+
+  // ── News/Publications Injection (fallback path) ────────────────────────
+  const newsKeywords = ['publication', 'publié', 'article', 'actualité', 'actualites', 'news', 'conférence', 'conference', 'certification', 'distinction', 'événement', 'evenement', 'dernière publication', 'derniere publication', 'a publié', 'a publie'];
+  if (newsKeywords.some(kw => lowerQ.includes(kw))) {
+    context += DataService.getNewsDigestForLLM(40);
+  }
+
+  // ── RAG Knowledge Injection (fallback path) ────────────────────────────
+  if (shouldUseRAG(question)) {
+    const ragResult = retrieveKnowledge(question, 5, 10);
+    if (ragResult.chunks.length > 0) {
+      context += ragResult.context;
+    }
+  }
+
   return context;
 }
 
@@ -1097,13 +1286,66 @@ async function generateDirectResponse(
 // MAIN PIPELINE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER CRM DATA CONTEXT — Inject visit reports and notes from user's session
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function formatUserCRMContext(data: UserCRMData, question: string): string {
+  if (!data.visitReports.length && !data.userNotes.length) return '';
+
+  const lowerQ = question.toLowerCase();
+  let context = '\n\n## Données CRM Utilisateur (comptes-rendus de visite et notes)\n';
+
+  // Include recent visit reports (last 10)
+  if (data.visitReports.length > 0) {
+    context += `\n### Comptes-rendus de visite récents (${data.visitReports.length} total)\n`;
+    const relevantReports = data.visitReports
+      .filter(r => {
+        // If question mentions a specific practitioner name, prioritize their reports
+        const nameParts = r.practitionerName.toLowerCase().split(' ');
+        const nameMatch = nameParts.some(part => part.length > 2 && lowerQ.includes(part));
+        return nameMatch || data.visitReports.indexOf(r) < 5;
+      })
+      .slice(0, 8);
+
+    relevantReports.forEach(r => {
+      context += `- [${r.date}] ${r.practitionerName} (${r.extractedInfo.sentiment}) : `;
+      if (r.extractedInfo.keyPoints.length > 0) {
+        context += `Points clés: ${r.extractedInfo.keyPoints.join('; ')}. `;
+      }
+      if (r.extractedInfo.productsDiscussed.length > 0) {
+        context += `Produits: ${r.extractedInfo.productsDiscussed.join(', ')}. `;
+      }
+      if (r.extractedInfo.competitorsMentioned.length > 0) {
+        context += `Concurrents: ${r.extractedInfo.competitorsMentioned.join(', ')}. `;
+      }
+      if (r.extractedInfo.nextActions.length > 0) {
+        context += `Actions: ${r.extractedInfo.nextActions.join('; ')}. `;
+      }
+      context += '\n';
+    });
+  }
+
+  // Include user notes (last 10)
+  if (data.userNotes.length > 0) {
+    context += `\n### Notes utilisateur (${data.userNotes.length} total)\n`;
+    data.userNotes.slice(0, 10).forEach(n => {
+      const date = new Date(n.createdAt).toLocaleDateString('fr-FR');
+      context += `- [${date}] (${n.type}) ${n.content.substring(0, 200)}${n.content.length > 200 ? '...' : ''}\n`;
+    });
+  }
+
+  return context;
+}
+
 export async function processQuestion(
   question: string,
   conversationHistory: ConversationMessage[],
   periodLabel: string,
   practitioners: Practitioner[],
   upcomingVisits: UpcomingVisit[],
-  _userObjectives: { visitsMonthly: number; visitsCompleted: number }
+  _userObjectives: { visitsMonthly: number; visitsCompleted: number },
+  userCRMData?: UserCRMData
 ): Promise<AICoachResult> {
   const chartHistory = getChartHistory();
   const lastAssistant = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0]?.content;
@@ -1131,7 +1373,28 @@ export async function processQuestion(
     console.log('[AICoachEngine] Router:', routing.intent, routing.dataScope, routing.needsChart ? '📊' : '💬');
 
     // ─── Build Targeted Context ────────────────────────────────────────────
-    const dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
+    let dataContext = buildTargetedContext(routing, question, periodLabel, practitioners, upcomingVisits);
+
+    // ─── Inject User CRM Data (visit reports, notes) ─────────────────────
+    if (userCRMData) {
+      dataContext += formatUserCRMContext(userCRMData, question);
+    }
+
+    // ─── Track RAG usage ───────────────────────────────────────────────────
+    let ragSources: AICoachResult['ragSources'] = undefined;
+    let usedRAG = false;
+    if (routing.intent === 'knowledge_query' || routing.dataScope === 'knowledge' || shouldUseRAG(question)) {
+      const ragResult = retrieveKnowledge(question, 5, 10);
+      if (ragResult.chunks.length > 0) {
+        usedRAG = true;
+        ragSources = ragResult.chunks.map(c => ({
+          title: c.chunk.title,
+          sourceUrl: c.chunk.sourceUrl,
+          source: c.chunk.source,
+        }));
+        console.log(`[AICoachEngine] RAG: ${ragResult.chunks.length} chunks retrieved (scores: ${ragResult.chunks.map(c => c.score.toFixed(0)).join(', ')})`);
+      }
+    }
 
     // ─── Phase 2A: Chart Generation (if needed) ────────────────────────────
     let chartResult: AICoachResult['chart'] | null = null;
@@ -1157,6 +1420,8 @@ export async function processQuestion(
       const result: AICoachResult = {
         textContent: textResponse,
         source: 'llm',
+        usedRAG,
+        ragSources,
       };
 
       if (chartResult) {
@@ -1191,9 +1456,25 @@ export async function processQuestion(
 
   if (directResponse) {
     console.log('[AICoachEngine] Direct LLM succeeded');
+    // Check if RAG was used in the direct path
+    let directRAGSources: AICoachResult['ragSources'] = undefined;
+    let directUsedRAG = false;
+    if (shouldUseRAG(question)) {
+      const ragResult = retrieveKnowledge(question, 5, 10);
+      if (ragResult.chunks.length > 0) {
+        directUsedRAG = true;
+        directRAGSources = ragResult.chunks.map(c => ({
+          title: c.chunk.title,
+          sourceUrl: c.chunk.sourceUrl,
+          source: c.chunk.source,
+        }));
+      }
+    }
     return {
       textContent: directResponse,
       source: 'llm',
+      usedRAG: directUsedRAG,
+      ragSources: directRAGSources,
     };
   }
 
@@ -1244,3 +1525,6 @@ export function getLLMProviderName(): string {
   if (!key) return 'Non configuré';
   return detectProvider(key).name;
 }
+
+export { getRAGStats, getKnowledgeSources, getDownloadableSources } from './ragService';
+export type { KnowledgeSource } from '../data/ragKnowledgeBase';

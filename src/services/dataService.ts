@@ -187,6 +187,110 @@ HISTORIQUE DE RELATION :
   }
 
   /**
+   * Recherche de news/publications à travers TOUS les praticiens
+   * Permet de répondre à "dernière publication du Dr X" ou "toutes les publications des Bernard"
+   */
+  static searchNews(query: string): { practitioner: PractitionerProfile; news: PractitionerNews }[] {
+    const lowerQuery = query.toLowerCase();
+    const results: { practitioner: PractitionerProfile; news: PractitionerNews }[] = [];
+
+    for (const p of practitionersDB.practitioners) {
+      if (!p.news || p.news.length === 0) continue;
+
+      // Check if query matches practitioner name
+      const nameMatch =
+        p.firstName.toLowerCase().includes(lowerQuery) ||
+        p.lastName.toLowerCase().includes(lowerQuery) ||
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(lowerQuery) ||
+        `${p.lastName} ${p.firstName}`.toLowerCase().includes(lowerQuery);
+
+      // Check each news item
+      for (const news of p.news) {
+        const newsMatch =
+          news.title.toLowerCase().includes(lowerQuery) ||
+          news.content.toLowerCase().includes(lowerQuery) ||
+          news.type.toLowerCase().includes(lowerQuery) ||
+          (news.source && news.source.toLowerCase().includes(lowerQuery));
+
+        if (nameMatch || newsMatch) {
+          results.push({ practitioner: p, news });
+        }
+      }
+    }
+
+    // Sort by date descending (most recent first)
+    return results.sort((a, b) => new Date(b.news.date).getTime() - new Date(a.news.date).getTime());
+  }
+
+  /**
+   * Recherche de news par type à travers tous les praticiens
+   */
+  static searchNewsByType(type: PractitionerNews['type']): { practitioner: PractitionerProfile; news: PractitionerNews }[] {
+    const results: { practitioner: PractitionerProfile; news: PractitionerNews }[] = [];
+
+    for (const p of practitionersDB.practitioners) {
+      if (!p.news) continue;
+      for (const news of p.news) {
+        if (news.type === type) {
+          results.push({ practitioner: p, news });
+        }
+      }
+    }
+
+    return results.sort((a, b) => new Date(b.news.date).getTime() - new Date(a.news.date).getTime());
+  }
+
+  /**
+   * Digest formaté de toutes les actualités pour injection dans le contexte LLM
+   * Utilisé par le Coach IA pour répondre à des questions cross-praticiens sur les publications
+   */
+  static getNewsDigestForLLM(maxItems: number = 50): string {
+    const allNews: { practitioner: PractitionerProfile; news: PractitionerNews }[] = [];
+
+    for (const p of practitionersDB.practitioners) {
+      if (!p.news) continue;
+      for (const news of p.news) {
+        allNews.push({ practitioner: p, news });
+      }
+    }
+
+    // Sort by date (most recent first)
+    allNews.sort((a, b) => new Date(b.news.date).getTime() - new Date(a.news.date).getTime());
+
+    if (allNews.length === 0) return '';
+
+    // Group by type for better readability
+    const byType: Record<string, typeof allNews> = {};
+    for (const item of allNews.slice(0, maxItems)) {
+      const type = item.news.type;
+      if (!byType[type]) byType[type] = [];
+      byType[type].push(item);
+    }
+
+    const typeLabels: Record<string, string> = {
+      publication: 'Publications scientifiques',
+      conference: 'Conférences',
+      certification: 'Certifications & Formations',
+      award: 'Distinctions',
+      event: 'Événements',
+    };
+
+    let digest = `\n## ACTUALITÉS & PUBLICATIONS DE TOUS LES PRATICIENS (${allNews.length} total)\n`;
+
+    for (const [type, items] of Object.entries(byType)) {
+      digest += `\n### ${typeLabels[type] || type} (${items.length})\n`;
+      for (const item of items) {
+        const dateStr = new Date(item.news.date).toLocaleDateString('fr-FR');
+        digest += `- [${dateStr}] ${item.practitioner.title} ${item.practitioner.firstName} ${item.practitioner.lastName} (${item.practitioner.specialty}, ${item.practitioner.address.city}) : "${item.news.title}"`;
+        if (item.news.source) digest += ` — Source: ${item.news.source}`;
+        digest += '\n';
+      }
+    }
+
+    return digest;
+  }
+
+  /**
    * Statistiques globales
    */
   static getGlobalStats() {

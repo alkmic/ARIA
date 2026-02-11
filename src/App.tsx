@@ -15,7 +15,6 @@ import KOLPlanningPage from './pages/KOLPlanningPage';
 import TourOptimizationPage from './pages/TourOptimizationPage';
 import VoiceVisitReport from './pages/VoiceVisitReport';
 import NextBestActions from './pages/NextBestActions';
-import DataExplorer from './pages/DataExplorer';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
 
 function App() {
@@ -44,7 +43,6 @@ function App() {
           {/* New AI-powered pages */}
           <Route path="/visit-report" element={<Layout><VoiceVisitReport /></Layout>} />
           <Route path="/next-actions" element={<Layout><NextBestActions /></Layout>} />
-          <Route path="/data-explorer" element={<Layout><DataExplorer /></Layout>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

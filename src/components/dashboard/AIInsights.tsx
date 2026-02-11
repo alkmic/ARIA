@@ -180,24 +180,24 @@ export const AIInsights: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
+        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
           ARIA recommande aujourd'hui
         </h2>
         <button
           onClick={() => navigate('/next-actions')}
-          className="text-sm text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
+          className="text-xs text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
         >
           Toutes les actions
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
+      <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
         {dynamicInsights.map((insight, index) => {
           const config = typeConfig[insight.type];
           const Icon = config.icon;
@@ -208,7 +208,7 @@ export const AIInsights: React.FC = () => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="min-w-[320px] glass-card overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+              className="min-w-[280px] glass-card overflow-hidden hover:shadow-lg transition-shadow duration-300"
             >
               {/* Colored top bar */}
               <div className={`h-1 ${
@@ -217,11 +217,11 @@ export const AIInsights: React.FC = () => {
                 'bg-gradient-to-r from-blue-500 to-cyan-500'
               }`} />
 
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center`}>
-                      <Icon className={`w-4 h-4 ${config.color}`} />
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-md ${config.bg} flex items-center justify-center`}>
+                      <Icon className={`w-3.5 h-3.5 ${config.color}`} />
                     </div>
                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       {typeLabels[insight.type]}
@@ -233,8 +233,8 @@ export const AIInsights: React.FC = () => {
                   </Badge>
                 </div>
 
-                <h3 className="font-bold text-slate-800 mb-2">{insight.title}</h3>
-                <p className="text-sm text-slate-600 mb-4 line-clamp-3">{insight.message}</p>
+                <h3 className="font-bold text-slate-800 text-sm mb-1">{insight.title}</h3>
+                <p className="text-xs text-slate-600 mb-3 line-clamp-2">{insight.message}</p>
 
                 {insight.actionLabel && (
                   <Button
@@ -245,7 +245,7 @@ export const AIInsights: React.FC = () => {
                   >
                     <Zap className="w-3 h-3 mr-1" />
                     {insight.actionLabel}
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    <ChevronRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 )}
               </div>
