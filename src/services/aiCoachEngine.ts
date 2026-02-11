@@ -13,6 +13,7 @@
  * - Fallback automatique vers le LLM local si l'API externe échoue
  */
 
+import { webLlmService } from './webLlmService';
 import { DataService } from './dataService';
 import {
   DATA_SCHEMA,
@@ -707,8 +708,28 @@ async function callLLM(
       lastLLMError = null;
       return ollamaResult;
     }
-    // Ollama also failed — provide helpful error
-    lastLLMError = `API externe (${provider.name}) et Ollama local indisponibles. Lancez Ollama avec: ollama run ${getOllamaModel()}`;
+  }
+
+  // 3. Dernier recours : WebLLM dans le navigateur (si le modèle est chargé)
+  if (webLlmService.isReady()) {
+    console.warn('[AICoachEngine] Falling back to WebLLM browser...');
+    try {
+      const webResult = await webLlmService.complete(messages, {
+        temperature: options.temperature ?? 0.3,
+        maxTokens: options.maxTokens ?? 2048,
+      });
+      if (webResult) {
+        lastLLMError = null;
+        return webResult;
+      }
+    } catch (webErr) {
+      console.warn('[AICoachEngine] WebLLM failed:', webErr);
+    }
+  }
+
+  // Tout a échoué
+  if (apiKey && provider.provider !== 'ollama') {
+    lastLLMError = `API externe (${provider.name}), Ollama local et WebLLM navigateur indisponibles.`;
   }
 
   return null;
@@ -731,52 +752,67 @@ export async function streamLLM(
   }
 
   // OpenAI-compatible streaming (Groq, OpenAI, OpenRouter, Ollama)
-  const response = await fetch(provider.apiUrl(provider.mainModel, apiKey || ''), {
-    method: 'POST',
-    headers: provider.headers(apiKey || ''),
-    body: JSON.stringify({
-      model: provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      stream: true,
-    }),
-  });
+  try {
+    const response = await fetch(provider.apiUrl(provider.mainModel, apiKey || ''), {
+      method: 'POST',
+      headers: provider.headers(apiKey || ''),
+      body: JSON.stringify({
+        model: provider.provider === 'ollama' ? getOllamaModel() : provider.mainModel,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(provider.parseError(errorData as Record<string, unknown>, response.status));
-  }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(provider.parseError(errorData as Record<string, unknown>, response.status));
+    }
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error('No reader available');
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No reader available');
 
-  const decoder = new TextDecoder();
-  let buffer = '';
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('data: ')) {
-        const data = trimmed.slice(6);
-        if (data === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) onChunk(content);
-        } catch {
-          // Ignore incomplete chunks
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) onChunk(content);
+          } catch {
+            // Ignore incomplete chunks
+          }
         }
       }
     }
+    return;
+  } catch (streamErr) {
+    console.warn('[AICoachEngine] Stream failed, trying WebLLM...', streamErr);
   }
+
+  // Fallback: WebLLM streaming dans le navigateur
+  if (webLlmService.isReady()) {
+    await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
+    return;
+  }
+
+  // Dernier recours: non-streaming via callLLM (qui a ses propres fallbacks)
+  const result = await callLLM(messages, { temperature, maxTokens });
+  if (result) onChunk(result);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1459,13 +1495,7 @@ export async function processQuestion(
   // Si tout échoue → message d'erreur explicite (PAS de fallback local)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Early exit: no API key configured
-  if (!getApiKey()) {
-    return {
-      textContent: `**La clé API LLM n'est pas configurée.**\n\nPour utiliser le Coach IA, définissez la variable d'environnement \`VITE_LLM_API_KEY\` avec une clé API valide.\n\n**Fournisseurs supportés (auto-détection) :**\n- **Groq** (clé \`gsk_...\`) → [console.groq.com](https://console.groq.com)\n- **Google Gemini** (clé \`AIzaSy...\`) → [aistudio.google.com](https://aistudio.google.com)\n- **OpenAI** (clé \`sk-...\`) → [platform.openai.com](https://platform.openai.com)\n- **Anthropic / Claude** (clé \`sk-ant-...\`) → [console.anthropic.com](https://console.anthropic.com)\n- **OpenRouter** (clé \`sk-or-...\`) → [openrouter.ai](https://openrouter.ai) (accès à Llama, Mistral, Claude, GPT, etc.)\n\n**Endpoint personnalisé** (Mistral, Azure, local) : ajoutez aussi \`VITE_LLM_BASE_URL\`.\n\nLe fournisseur est détecté automatiquement à partir du format de la clé.`,
-      source: 'llm',
-    };
-  }
+  // Note: pas d'early exit si aucune clé API — on utilise Ollama ou WebLLM comme fallback
 
   // ─── Phase 1: LLM Routing ────────────────────────────────────────────────
   const routing = await routeQuestion(question, chartHistory, lastAssistant);
@@ -1583,7 +1613,7 @@ export async function processQuestion(
   const errorDetail = lastLLMError || 'Aucune réponse du serveur';
   console.error('[AICoachEngine] All LLM calls failed:', errorDetail);
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Ollama n'est pas lancé en local\n- Le modèle \`${getOllamaModel()}\` n'est pas installé\n- Clé API externe invalide ou expirée\n- Problème de connexion réseau\n\n**Actions :**\n1. Installez et lancez Ollama : \`ollama run ${getOllamaModel()}\`\n2. Ou configurez une clé API externe dans \`VITE_LLM_API_KEY\`\n3. Réessayez dans quelques instants`,
+    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\nCauses possibles :\n- Ollama n'est pas lancé en local\n- Le modèle \`${getOllamaModel()}\` n'est pas installé\n- Le modèle WebLLM n'est pas chargé dans le navigateur\n- Clé API externe invalide ou expirée\n\n**Actions :**\n1. Chargez le modèle WebLLM dans **Paramètres** (zéro installation)\n2. Ou installez Ollama : \`ollama run ${getOllamaModel()}\`\n3. Ou configurez une clé API externe dans \`VITE_LLM_API_KEY\``,
     source: 'llm',
   };
 }
@@ -1628,7 +1658,13 @@ export function hasExternalLLMKey(): boolean {
 
 export function getLLMProviderName(): string {
   const key = getApiKey();
-  if (!key) return `Ollama local (${getOllamaModel()})`;
+  if (!key) {
+    if (webLlmService.isReady()) {
+      const modelId = webLlmService.getCurrentModelId();
+      return `WebLLM navigateur (${modelId})`;
+    }
+    return `Ollama local (${getOllamaModel()})`;
+  }
   return detectProvider(key).name;
 }
 

@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
+import { webLlmService } from '../services/webLlmService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Multi-provider LLM Hook
 // Auto-detects provider from VITE_LLM_API_KEY format
 // Supports: Groq, Gemini, OpenAI, Anthropic, OpenRouter, custom endpoints
-// Fallback: Ollama local (Qwen3 8B) quand aucune clé API n'est configurée
+// Fallback chain: API externe → Ollama local → WebLLM navigateur
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface LLMMessage {
@@ -252,16 +253,27 @@ export function useGroq(options: UseGroqOptions = {}) {
         }
 
         // ── Ollama local fallback (or primary if no API key) ──
-        const ollama = getOllamaProvider();
-        await streamOpenAICompat(ollama.url, ollama.headers, ollama.defaultModel, messages, temperature, maxTokens, onChunk);
-        onComplete?.();
+        try {
+          const ollama = getOllamaProvider();
+          await streamOpenAICompat(ollama.url, ollama.headers, ollama.defaultModel, messages, temperature, maxTokens, onChunk);
+          onComplete?.();
+          return;
+        } catch (ollamaErr) {
+          console.warn('[useGroq] Ollama failed, trying WebLLM browser...', ollamaErr);
+        }
+
+        // ── WebLLM browser fallback (dernier recours) ──
+        if (webLlmService.isReady()) {
+          await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
+          onComplete?.();
+          return;
+        }
+
+        // Tout a échoué
+        setError(`LLM indisponible. Options :\n• Lancez Ollama : ollama run ${getOllamaModel()}\n• Ou chargez le modèle WebLLM dans Paramètres`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED')) {
-          setError(`Ollama n'est pas accessible. Lancez : ollama run ${getOllamaModel()}`);
-        } else {
-          setError(msg);
-        }
+        setError(msg);
         console.error('LLM Error:', msg);
       } finally {
         setIsLoading(false);
@@ -320,27 +332,36 @@ export function useGroq(options: UseGroqOptions = {}) {
         }
 
         // ── Ollama local fallback ──
-        const ollama = getOllamaProvider();
-        const response = await fetch(ollama.url, {
-          method: 'POST',
-          headers: ollama.headers,
-          body: JSON.stringify({
-            model: ollama.defaultModel, messages, temperature, max_tokens: maxTokens, stream: false,
-          }),
-        });
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error?.message || `Ollama error: ${response.status}`);
+        try {
+          const ollama = getOllamaProvider();
+          const response = await fetch(ollama.url, {
+            method: 'POST',
+            headers: ollama.headers,
+            body: JSON.stringify({
+              model: ollama.defaultModel, messages, temperature, max_tokens: maxTokens, stream: false,
+            }),
+          });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Ollama error: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.choices?.[0]?.message?.content || null;
+        } catch (ollamaErr) {
+          console.warn('[useGroq] Ollama failed, trying WebLLM browser...', ollamaErr);
         }
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content || null;
+
+        // ── WebLLM browser fallback (dernier recours) ──
+        if (webLlmService.isReady()) {
+          return await webLlmService.complete(messages, { temperature, maxTokens });
+        }
+
+        // Tout a échoué
+        setError(`LLM indisponible. Options :\n• Lancez Ollama : ollama run ${getOllamaModel()}\n• Ou chargez le modèle WebLLM dans Paramètres`);
+        return null;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED')) {
-          setError(`Ollama n'est pas accessible. Lancez : ollama run ${getOllamaModel()}`);
-        } else {
-          setError(msg);
-        }
+        setError(msg);
         return null;
       } finally {
         setIsLoading(false);
