@@ -437,7 +437,7 @@ Routage:
 - "qu'est-ce que/c'est quoi/explique/définition/comment fonctionne" → knowledge_query
 - Référence implicite au contexte précédent → follow_up
 
-groupBy: "city"|"specialty"|"vingtile"|"vingtileBucket"|"loyaltyBucket"|"riskLevel"|"visitBucket"|"isKOL"
+groupBy: "city"|"specialty"|"practiceType"|"vingtile"|"vingtileBucket"|"loyaltyBucket"|"riskLevel"|"visitBucket"|"isKOL"|"city+specialty" (compound)
 chartType: "bar"|"pie"|"line"|"composed"|"radar"
 dataScope: "specific" (1 praticien), "filtered" (sous-ensemble), "aggregated" (stats), "full" (question ouverte), "knowledge" (base de connaissances métier)
 needsChart = true pour chart_create et chart_modify.
@@ -536,13 +536,17 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
    - "line" : évolutions temporelles, tendances
    - "radar" : profils multi-dimensionnels, comparaison de plusieurs métriques pour un ou quelques éléments (ex: profil d'un praticien sur plusieurs axes)
 
-3. **Pour les comparaisons KOLs vs Autres** → groupBy: "isKOL"
-4. **Pour les répartitions par spécialité** → groupBy: "specialty"
-5. **Pour les répartitions par ville** → groupBy: "city"
-6. **Pour les niveaux de risque** → groupBy: "riskLevel"
-7. **Pour les segments de potentiel** → groupBy: "vingtileBucket"
-8. **Pour les niveaux de fidélité** → groupBy: "loyaltyBucket"
-9. **Pour les anciennetés de visite** → groupBy: "visitBucket"
+3. **Valeurs EXACTES pour groupBy** (UTILISE UNIQUEMENT ces noms anglais) :
+   - "city" : par ville
+   - "specialty" : par spécialité médicale
+   - "practiceType" : par type d'exercice (ville/hospitalier/mixte)
+   - "isKOL" : KOLs vs Autres
+   - "riskLevel" : par niveau de risque
+   - "vingtileBucket" : par groupe de vingtile
+   - "loyaltyBucket" : par niveau de fidélité
+   - "visitBucket" : par ancienneté de visite
+
+4. **Pour croiser 2 dimensions** (ex: "par ville et spécialité") → groupBy: "city+specialty"
 
 ## Format de Sortie OBLIGATOIRE (JSON STRICT)
 \`\`\`json
@@ -553,7 +557,7 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
   "query": {
     "source": "practitioners",
     "filters": [{ "field": "...", "operator": "eq|ne|gt|gte|lt|lte|contains|in", "value": ... }],
-    "groupBy": "..." | null,
+    "groupBy": "city" | "specialty" | "practiceType" | "isKOL" | "riskLevel" | "vingtileBucket" | "loyaltyBucket" | "visitBucket" | "city+specialty" | null,
     "metrics": [{ "name": "Nom affiché", "field": "champ_source", "aggregation": "count|sum|avg|min|max", "format": "number|k|percent" }],
     "sortBy": "Nom affiché de la métrique",
     "sortOrder": "desc" | "asc",
@@ -572,10 +576,12 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
 | Demande | chartType | groupBy | metrics | filters |
 |---------|-----------|---------|---------|---------|
 | "Top 10 par volume" | bar | null | [sum(volumeL)/k] | [] | limit:10 |
-| "Répartition par ville" | bar/pie | city | [count, sum(volumeL)/k] | [] |
-| "Compare KOLs vs autres" | bar | isKOL | [sum(volumeL)/k, count] | [] |
-| "KOLs par spécialité" | pie | specialty | [count] | [isKOL=true] |
-| "Distribution par risque" | pie | riskLevel | [count, sum(volumeL)/k] | [] |
+| "Répartition par ville" | bar/pie | "city" | [count, sum(volumeL)/k] | [] |
+| "Par ville et spécialité" | bar | "city+specialty" | [count] | [] |
+| "Compare KOLs vs autres" | bar | "isKOL" | [sum(volumeL)/k, count] | [] |
+| "KOLs par spécialité" | pie | "specialty" | [count] | [isKOL=true] |
+| "Distribution par risque" | pie | "riskLevel" | [count, sum(volumeL)/k] | [] |
+| "Par type d'exercice" | pie | "practiceType" | [count] | [] |
 | "Fidélité vs volume top 15" | composed | null | [sum(volumeL)/k, avg(loyaltyScore)] | [] | limit:15 |
 | "Segments par vingtile" | bar | vingtileBucket | [count, sum(volumeL)/k] | [] |
 

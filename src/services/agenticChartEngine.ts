@@ -112,6 +112,7 @@ Champs disponibles :
 - firstName: string
 - lastName: string
 - specialty: string ("Pneumologue" | "Médecin généraliste")
+- practiceType: string ("ville" | "hospitalier" | "mixte")
 - city: string (ville d'exercice)
 - postalCode: string
 - volumeL: number (volume annuel en litres O2)
@@ -123,15 +124,19 @@ Champs disponibles :
 - publicationsCount: number
 - riskLevel: "low" | "medium" | "high" (calculé)
 
-### Agrégations possibles (groupBy)
+### Agrégations possibles (groupBy) — UTILISE UNIQUEMENT ces valeurs exactes
 - "city" : par ville
-- "specialty" : par spécialité médicale
+- "specialty" : par spécialité médicale ("Pneumologue" / "Médecin généraliste")
+- "practiceType" : par type d'exercice ("ville" / "hospitalier" / "mixte")
 - "vingtile" : par segment de potentiel (1-20)
 - "vingtileBucket" : par groupe de vingtile (V1-2 Top, V3-5 Haut, V6-10 Moyen, V11+ Bas)
 - "loyaltyBucket" : par niveau de fidélité (Très faible, Faible, Moyenne, Bonne, Excellente)
 - "riskLevel" : par niveau de risque (Faible, Moyen, Élevé)
 - "visitBucket" : par ancienneté de visite (<30j, 30-60j, 60-90j, >90j, Jamais)
 - "isKOL" : KOLs vs Autres
+
+IMPORTANT: "groupBy" n'accepte QU'UNE SEULE valeur parmi la liste ci-dessus.
+Pour croiser deux dimensions (ex: "par ville ET spécialité"), utilise le format combiné "city+specialty".
 
 ### Métriques calculables
 - count : nombre d'éléments
@@ -142,6 +147,7 @@ Champs disponibles :
 
 ### Filtres disponibles
 - specialty eq "Pneumologue"
+- practiceType eq "hospitalier"
 - isKOL eq true
 - vingtile lte 5
 - loyaltyScore gte 7
@@ -333,6 +339,77 @@ Insights: ${lastChart.insights.join(' | ')}
 `;
 }
 
+// Normaliser les noms de champs que le LLM pourrait utiliser en variantes
+const FIELD_ALIASES: Record<string, string> = {
+  'volume': 'volumeL',
+  'volume_l': 'volumeL',
+  'volumel': 'volumeL',
+  'volume_annuel': 'volumeL',
+  'loyalty': 'loyaltyScore',
+  'loyalty_score': 'loyaltyScore',
+  'loyaltyscore': 'loyaltyScore',
+  'fidélité': 'loyaltyScore',
+  'fidelite': 'loyaltyScore',
+  'fidelity': 'loyaltyScore',
+  'score_fidelite': 'loyaltyScore',
+  'spécialité': 'specialty',
+  'specialite': 'specialty',
+  'specialité': 'specialty',
+  'ville': 'city',
+  'villes': 'city',
+  'cities': 'city',
+  'kol': 'isKOL',
+  'is_kol': 'isKOL',
+  'iskol': 'isKOL',
+  'practice_type': 'practiceType',
+  'practicetype': 'practiceType',
+  'type_exercice': 'practiceType',
+  'publications': 'publicationsCount',
+  'publications_count': 'publicationsCount',
+  'risk': 'riskLevel',
+  'risque': 'riskLevel',
+  'risk_level': 'riskLevel',
+  'days_since_visit': 'daysSinceVisit',
+  'jours_depuis_visite': 'daysSinceVisit',
+};
+
+function normalizeFieldName(field: string): string {
+  const lower = field.toLowerCase().trim();
+  return FIELD_ALIASES[lower] || field;
+}
+
+// Résoudre la clé de groupement pour un item selon le nom du champ
+function getGroupKey(field: string, item: Record<string, unknown>): string {
+  switch (field) {
+    case 'vingtileBucket': {
+      const v = item.vingtile as number;
+      return v <= 2 ? 'V1-2 (Top)' : v <= 5 ? 'V3-5 (Haut)' : v <= 10 ? 'V6-10 (Moyen)' : 'V11+ (Bas)';
+    }
+    case 'loyaltyBucket': {
+      const l = item.loyaltyScore as number;
+      return l <= 2 ? 'Très faible' : l <= 4 ? 'Faible' : l <= 6 ? 'Moyenne' : l <= 8 ? 'Bonne' : 'Excellente';
+    }
+    case 'visitBucket': {
+      const d = item.daysSinceVisit as number;
+      return d < 30 ? '<30j' : d < 60 ? '30-60j' : d < 90 ? '60-90j' : d < 999 ? '>90j' : 'Jamais';
+    }
+    case 'riskLevel': {
+      const r = item.riskLevel as string;
+      return r === 'high' ? 'Élevé' : r === 'medium' ? 'Moyen' : 'Faible';
+    }
+    case 'isKOL': {
+      return item.isKOL ? 'KOLs' : 'Autres praticiens';
+    }
+    case 'practiceType': {
+      const pt = item.practiceType as string;
+      return pt === 'hospitalier' ? 'Hospitalier' : pt === 'mixte' ? 'Mixte' : pt === 'ville' ? 'Ville' : String(pt || 'Autre');
+    }
+    default: {
+      return String(item[field] || 'Autre');
+    }
+  }
+}
+
 // Exécuter une requête de données
 export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
   const practitioners = DataService.getAllPractitioners();
@@ -364,10 +441,17 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
     };
   });
 
+  // Normalize field names in filters and metrics before processing
+  const normalizedQuery = {
+    ...query,
+    filters: query.filters?.map(f => ({ ...f, field: normalizeFieldName(f.field) })),
+    metrics: query.metrics.map(m => ({ ...m, field: normalizeFieldName(m.field) })),
+  };
+
   // Appliquer les filtres
   let filteredData = enrichedData;
-  if (query.filters) {
-    for (const filter of query.filters) {
+  if (normalizedQuery.filters) {
+    for (const filter of normalizedQuery.filters) {
       filteredData = filteredData.filter(item => {
         const value = (item as Record<string, unknown>)[filter.field];
         switch (filter.operator) {
@@ -387,13 +471,52 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
 
   // Grouper les données si nécessaire
   if (query.groupBy) {
+    // ── Normalize groupBy: LLMs (especially reasoning models) may use French
+    // field names, compound keys, or aliases that don't match our data fields.
+    const GROUP_BY_ALIASES: Record<string, string> = {
+      'ville': 'city',
+      'villes': 'city',
+      'cities': 'city',
+      'spécialité': 'specialty',
+      'specialite': 'specialty',
+      'specialité': 'specialty',
+      'spécialite': 'specialty',
+      'specialties': 'specialty',
+      'type_exercice': 'practiceType',
+      'practice_type': 'practiceType',
+      'practicetype': 'practiceType',
+      'exercice': 'practiceType',
+      'kol': 'isKOL',
+      'is_kol': 'isKOL',
+      'iskol': 'isKOL',
+      'risque': 'riskLevel',
+      'risk': 'riskLevel',
+      'risklevel': 'riskLevel',
+      'risk_level': 'riskLevel',
+      'fidélité': 'loyaltyBucket',
+      'fidelite': 'loyaltyBucket',
+      'loyalty': 'loyaltyBucket',
+      'vingtile_bucket': 'vingtileBucket',
+      'visite': 'visitBucket',
+      'visit': 'visitBucket',
+    };
+
+    // Detect compound groupBy: "city_specialty", "city,specialty", "city+specialty", "city et specialty"
+    const compoundSeparators = /[_,+]|\s+et\s+|\s+and\s+/i;
+    const rawGroupBy = query.groupBy.trim();
+    const parts = rawGroupBy.split(compoundSeparators).map(s => s.trim().toLowerCase()).filter(Boolean);
+    const isCompound = parts.length >= 2;
+
+    // Resolve each part to its canonical field name
+    const resolvedParts = parts.map(p => GROUP_BY_ALIASES[p] || p);
+
     // Quand limit + groupBy sont combinés, appliquer le limit aux items INDIVIDUELS
     // AVANT le groupement. Ex: "top 15 praticiens par ville" → prendre les 15 meilleurs,
     // puis les grouper par ville (les comptes doivent sommer à 15).
     let dataToGroup = filteredData;
     if (query.limit && query.sortBy) {
       // Déterminer le champ de tri à partir des métriques
-      const sortMetric = query.metrics.find(m => m.name === query.sortBy);
+      const sortMetric = normalizedQuery.metrics.find(m => m.name === query.sortBy);
       if (sortMetric) {
         const sortField = sortMetric.field;
         const order = query.sortOrder === 'asc' ? 1 : -1;
@@ -411,33 +534,15 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
     for (const item of dataToGroup) {
       let key: string;
 
-      switch (query.groupBy) {
-        case 'vingtileBucket': {
-          const v = item.vingtile;
-          key = v <= 2 ? 'V1-2 (Top)' : v <= 5 ? 'V3-5 (Haut)' : v <= 10 ? 'V6-10 (Moyen)' : 'V11+ (Bas)';
-          break;
-        }
-        case 'loyaltyBucket': {
-          const l = item.loyaltyScore;
-          key = l <= 2 ? 'Très faible' : l <= 4 ? 'Faible' : l <= 6 ? 'Moyenne' : l <= 8 ? 'Bonne' : 'Excellente';
-          break;
-        }
-        case 'visitBucket': {
-          const d = item.daysSinceVisit;
-          key = d < 30 ? '<30j' : d < 60 ? '30-60j' : d < 90 ? '60-90j' : d < 999 ? '>90j' : 'Jamais';
-          break;
-        }
-        case 'riskLevel': {
-          key = item.riskLevel === 'high' ? 'Élevé' : item.riskLevel === 'medium' ? 'Moyen' : 'Faible';
-          break;
-        }
-        case 'isKOL': {
-          key = item.isKOL ? 'KOLs' : 'Autres praticiens';
-          break;
-        }
-        default: {
-          key = String((item as Record<string, unknown>)[query.groupBy] || 'Autre');
-        }
+      if (isCompound) {
+        // Compound groupBy: combine multiple fields into a single key
+        const keyParts = resolvedParts.map(field => {
+          return getGroupKey(field, item);
+        });
+        key = keyParts.join(' — ');
+      } else {
+        const normalizedGroupBy = resolvedParts[0];
+        key = getGroupKey(normalizedGroupBy, item);
       }
 
       if (!grouped.has(key)) grouped.set(key, []);
@@ -450,7 +555,7 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
     for (const [name, items] of grouped) {
       const point: ChartDataPoint = { name };
 
-      for (const metric of query.metrics) {
+      for (const metric of normalizedQuery.metrics) {
         let value: number;
 
         switch (metric.aggregation) {
@@ -504,7 +609,7 @@ export function executeDataQuery(query: DataQuery): ChartDataPoint[] {
       name: `${item.title} ${item.firstName} ${item.lastName}`.trim()
     };
 
-    for (const metric of query.metrics) {
+    for (const metric of normalizedQuery.metrics) {
       let value = (item as Record<string, unknown>)[metric.field] as number || 0;
       if (metric.format === 'k') value = Math.round(value / 1000);
       point[metric.name] = Math.round(value * 10) / 10;
