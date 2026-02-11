@@ -4,10 +4,11 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, Phone, Mail, MapPin, TrendingUp, Sparkles, Target,
   CheckCircle, Lightbulb, Swords, Calendar, Wand2, Newspaper, FileEdit,
-  MessageCircle, Mic, Building2, Home, Building
+  MessageCircle, Mic, Building2, Home, Building, Zap, AlertTriangle, Shield
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useUserDataStore } from '../stores/useUserDataStore';
+import { DataService } from '../services/dataService';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -88,6 +89,45 @@ export default function PractitionerProfile() {
           )}
         </div>
       </div>
+
+      {/* New Practitioner Alert Banner */}
+      {(() => {
+        const dbProfile = DataService.getPractitionerById(practitioner.id);
+        if (!dbProfile?.isNew) return null;
+        const detectedDaysAgo = dbProfile.detectedDate
+          ? Math.floor((Date.now() - new Date(dbProfile.detectedDate).getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-xl p-4 shadow-lg shadow-violet-500/20"
+          >
+            <div className="flex items-center gap-4 text-white">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold">Nouveau praticien — Contact prioritaire</p>
+                <p className="text-white/80 text-sm">
+                  Détecté il y a {detectedDaysAgo ?? '?'} jour(s)
+                  {dbProfile.previousProvider && ` • Ancien prestataire : ${dbProfile.previousProvider}`}
+                  . Aucune visite enregistrée — planifiez un premier contact rapidement.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}
+                className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30 flex-shrink-0"
+              >
+                <Wand2 className="w-4 h-4 mr-1" />
+                Préparer visite
+              </Button>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -274,6 +314,9 @@ export default function PractitionerProfile() {
 function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoints: string[] }) {
   const navigate = useNavigate();
 
+  // Get database profile for richer data
+  const dbProfile = useMemo(() => DataService.getPractitionerById(practitioner.id), [practitioner.id]);
+
   // Récupérer le résumé dynamique des comptes-rendus de visite
   const reportSummary = useMemo(() => getPractitionerReportSummary(practitioner.id), [practitioner.id]);
   const allVisitReports = useUserDataStore(state => state.visitReports);
@@ -284,14 +327,157 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
     [allVisitReports, practitioner.id]
   );
 
+  // AI-organized deductions from all visit reports
+  const aiDeductions = useMemo(() => {
+    if (visitReports.length === 0) return null;
+    const allProducts = new Set<string>();
+    const allCompetitors = new Set<string>();
+    const allObjections = new Set<string>();
+    const allOpportunities = new Set<string>();
+    const allActions: string[] = [];
+    let positiveCount = 0;
+    let neutralCount = 0;
+    let negativeCount = 0;
+
+    visitReports.forEach(r => {
+      r.extractedInfo.productsDiscussed.forEach(p => allProducts.add(p));
+      r.extractedInfo.competitorsMentioned.forEach(c => allCompetitors.add(c));
+      r.extractedInfo.objections.forEach(o => allObjections.add(o));
+      r.extractedInfo.opportunities.forEach(o => allOpportunities.add(o));
+      r.extractedInfo.nextActions.forEach(a => allActions.push(a));
+      if (r.extractedInfo.sentiment === 'positive') positiveCount++;
+      else if (r.extractedInfo.sentiment === 'negative') negativeCount++;
+      else neutralCount++;
+    });
+
+    return {
+      products: Array.from(allProducts),
+      competitors: Array.from(allCompetitors),
+      objections: Array.from(allObjections),
+      opportunities: Array.from(allOpportunities),
+      pendingActions: allActions.slice(0, 5),
+      sentimentTrend: positiveCount > negativeCount ? 'positive' as const
+        : negativeCount > positiveCount ? 'negative' as const : 'neutral' as const,
+      reportCount: visitReports.length,
+    };
+  }, [visitReports]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Visit Report Summary (dynamic data from CRM) */}
-      {reportSummary.totalReports > 0 && (
+      {/* AI-Organized Deductions from Visit Reports */}
+      {aiDeductions && aiDeductions.reportCount > 0 && (
+        <div className="glass-card p-6 bg-gradient-to-br from-violet-50 to-indigo-50 border-violet-100">
+          <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
+            <Sparkles className="w-5 h-5 text-violet-600" />
+            Analyse IA des comptes-rendus
+            <span className="text-xs font-normal text-violet-400 ml-1">({aiDeductions.reportCount} CR analysés)</span>
+          </h3>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="p-3 bg-white/70 rounded-lg">
+              <p className="text-xs text-slate-500 mb-1">Tendance relationnelle</p>
+              <p className={`text-sm font-semibold ${
+                aiDeductions.sentimentTrend === 'positive' ? 'text-green-600' :
+                aiDeductions.sentimentTrend === 'negative' ? 'text-red-600' : 'text-slate-600'
+              }`}>
+                {aiDeductions.sentimentTrend === 'positive' ? 'Relation en amélioration' :
+                 aiDeductions.sentimentTrend === 'negative' ? 'Points de vigilance' : 'Relation stable'}
+              </p>
+            </div>
+            <div className="p-3 bg-white/70 rounded-lg">
+              <p className="text-xs text-slate-500 mb-1">Dernier CR</p>
+              <p className="text-sm font-medium text-slate-700">
+                {reportSummary.lastReportDate ? new Date(reportSummary.lastReportDate).toLocaleDateString('fr-FR') : '-'}
+              </p>
+            </div>
+          </div>
+
+          {aiDeductions.products.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-slate-500 mb-1.5">Produits discutés (tous CR)</p>
+              <div className="flex flex-wrap gap-1.5">
+                {aiDeductions.products.map((p, i) => (
+                  <span key={i} className="px-2.5 py-1 bg-white/80 text-xs rounded-full text-violet-700 border border-violet-200">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {aiDeductions.competitors.length > 0 && (
+            <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-xs font-medium text-orange-700 mb-1 flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5" />
+                Concurrents mentionnés
+              </p>
+              <p className="text-sm text-orange-600">{aiDeductions.competitors.join(', ')}</p>
+            </div>
+          )}
+
+          {aiDeductions.objections.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                Objections / Freins identifiés
+              </p>
+              <ul className="space-y-1">
+                {aiDeductions.objections.slice(0, 4).map((o, i) => (
+                  <li key={i} className="text-sm text-slate-600 flex items-start gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                    {o}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {aiDeductions.opportunities.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                Opportunités détectées
+              </p>
+              <ul className="space-y-1">
+                {aiDeductions.opportunities.slice(0, 4).map((o, i) => (
+                  <li key={i} className="text-sm text-emerald-600 flex items-start gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+                    {o}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {aiDeductions.pendingActions.length > 0 && (
+            <div className="pt-3 border-t border-violet-100">
+              <p className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
+                <Target className="w-3.5 h-3.5 text-violet-500" />
+                Actions en attente
+              </p>
+              {aiDeductions.pendingActions.slice(0, 3).map((a, i) => (
+                <p key={i} className="text-sm text-slate-700 flex items-center gap-1.5 mb-0.5">
+                  <Target className="w-3 h-3 text-violet-500 flex-shrink-0" />
+                  {a}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Show latest report details */}
+          {visitReports.length > 0 && visitReports[0].extractedInfo.keyPoints.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-violet-100">
+              <p className="text-xs font-medium text-slate-500 mb-1">Dernier compte-rendu — Points clés</p>
+              <p className="text-sm text-slate-600">{visitReports[0].extractedInfo.keyPoints.slice(0, 3).join('. ')}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Visit Report Summary (simpler version if no AI deductions) */}
+      {!aiDeductions && reportSummary.totalReports > 0 && (
         <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
           <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
             <Mic className="w-5 h-5 text-indigo-600" />
@@ -336,13 +522,6 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
               ))}
             </div>
           )}
-          {/* Show latest report details */}
-          {visitReports.length > 0 && (
-            <div className="mt-3 pt-2 border-t border-indigo-100">
-              <p className="text-xs text-slate-500 mb-1">Dernier compte-rendu</p>
-              <p className="text-sm text-slate-600">{visitReports[0].extractedInfo.keyPoints.slice(0, 3).join('. ')}</p>
-            </div>
-          )}
         </div>
       )}
 
@@ -354,6 +533,41 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
         </h3>
         <p className="text-slate-600 leading-relaxed">{practitioner.aiSummary}</p>
       </div>
+
+      {/* Database Notes Overview (from static data) */}
+      {dbProfile && dbProfile.notes.length > 0 && (
+        <div className="glass-card p-6">
+          <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
+            <FileEdit className="w-5 h-5 text-al-blue-500" />
+            Dernières notes de visite
+          </h3>
+          <div className="space-y-3">
+            {dbProfile.notes.slice(0, 3).map((note, i) => (
+              <div key={note.id || i} className="p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString('fr-FR')}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    note.type === 'visit' ? 'bg-blue-100 text-blue-600' :
+                    note.type === 'phone' ? 'bg-green-100 text-green-600' :
+                    note.type === 'email' ? 'bg-purple-100 text-purple-600' :
+                    'bg-slate-100 text-slate-600'
+                  }`}>
+                    {note.type === 'visit' ? 'Visite' : note.type === 'phone' ? 'Téléphone' : note.type === 'email' ? 'Email' : 'Observation'}
+                  </span>
+                  <span className="text-xs text-slate-400">{note.author}</span>
+                </div>
+                <p className="text-sm text-slate-700">{note.content.length > 200 ? note.content.substring(0, 200) + '...' : note.content}</p>
+                {note.nextAction && (
+                  <p className="text-xs text-al-blue-600 mt-1 flex items-center gap-1">
+                    <Target className="w-3 h-3" />
+                    {note.nextAction}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Key Points */}
       <div className="glass-card p-6">

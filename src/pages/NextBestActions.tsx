@@ -37,6 +37,14 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 
 // Configuration des types d'actions
 const ACTION_CONFIG = {
+  new_practitioner: {
+    icon: Zap,
+    color: 'from-violet-600 to-fuchsia-500',
+    bg: 'bg-violet-50',
+    border: 'border-violet-200',
+    text: 'text-violet-700',
+    label: 'Nouveau praticien'
+  },
   visit_urgent: {
     icon: AlertTriangle,
     color: 'from-red-500 to-rose-500',
@@ -565,6 +573,7 @@ export default function NextBestActions() {
       high: active.filter(a => a.priority === 'high').length,
       completed: storedActions.filter(a => a.status === 'completed').length,
       byType: {
+        new_practitioner: active.filter(a => a.type === 'new_practitioner').length,
         visit_urgent: active.filter(a => a.type === 'visit_urgent').length,
         visit_kol: active.filter(a => a.type === 'visit_kol').length,
         opportunity: active.filter(a => a.type === 'opportunity').length,
@@ -602,6 +611,36 @@ export default function NextBestActions() {
         </p>
       </div>
 
+      {/* New Practitioners Alert Banner */}
+      {stats.byType.new_practitioner > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-xl p-4 shadow-lg shadow-violet-500/20"
+        >
+          <div className="flex items-center gap-4 text-white">
+            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Zap className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">
+                {stats.byType.new_practitioner} nouveau{stats.byType.new_practitioner > 1 ? 'x' : ''} praticien{stats.byType.new_practitioner > 1 ? 's' : ''} détecté{stats.byType.new_practitioner > 1 ? 's' : ''}
+              </p>
+              <p className="text-white/80 text-sm">
+                Contactez-les en priorité avant la concurrence pour établir la relation.
+                Chaque jour compte pour maximiser vos chances de captation.
+              </p>
+            </div>
+            <button
+              onClick={() => setFilter(filter === 'new_practitioner' ? null : 'new_practitioner')}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium text-sm transition-colors flex-shrink-0"
+            >
+              {filter === 'new_practitioner' ? 'Voir tout' : 'Voir les nouveaux'}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Stats Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <div className="glass-card p-4 text-center">
@@ -612,9 +651,9 @@ export default function NextBestActions() {
           <div className="text-3xl font-bold text-red-600">{stats.critical}</div>
           <div className="text-sm text-red-600">Critiques</div>
         </div>
-        <div className="glass-card p-4 text-center bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
-          <div className="text-3xl font-bold text-amber-600">{stats.byType.visit_kol}</div>
-          <div className="text-sm text-amber-600">KOL</div>
+        <div className="glass-card p-4 text-center bg-gradient-to-br from-violet-50 to-fuchsia-50 border-violet-200">
+          <div className="text-3xl font-bold text-violet-600">{stats.byType.new_practitioner}</div>
+          <div className="text-sm text-violet-600">Nouveaux</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
           <div className="text-3xl font-bold text-emerald-600">{stats.byType.opportunity}</div>
@@ -751,13 +790,15 @@ export default function NextBestActions() {
               <span className="text-xs font-normal text-purple-500">Mise à jour en temps réel</span>
             </p>
             <p className="text-sm text-purple-700 leading-relaxed">
-              {stats.critical > 0
-                ? `Attention : ${stats.critical} action(s) critique(s) nécessitent votre attention immédiate. Ces KOLs représentent une part significative de votre volume et n'ont pas été vus depuis longtemps. L'analyse des tendances montre un risque de perte de relation si aucune action n'est entreprise cette semaine.`
-                : stats.byType.risk > 0
-                  ? `${stats.byType.risk} praticien(s) à risque détecté(s). Leurs scores de fidélité ont baissé récemment. Une intervention rapide pourrait prévenir une attrition. Concentrez-vous sur la compréhension de leurs besoins et proposez des solutions personnalisées.`
-                  : stats.byType.opportunity > 0
-                    ? `${stats.byType.opportunity} opportunité(s) de croissance identifiée(s). Ces praticiens ont un excellent score de fidélité et un potentiel de développement significatif. Le moment est idéal pour proposer des services additionnels ou une montée en gamme.`
-                    : 'Votre portefeuille est en excellente santé ! Continuez à maintenir le contact régulier avec vos praticiens clés pour préserver cette dynamique positive.'}
+              {stats.byType.new_practitioner > 0
+                ? `${stats.byType.new_practitioner} nouveau(x) praticien(s) détecté(s) sur votre territoire ! Ces professionnels n'ont pas encore de prestataire Air Liquide attitré — c'est une fenêtre de captation unique. Les données montrent que le premier prestataire à établir le contact a 73% de chances de devenir le fournisseur principal. Priorisez ces contacts cette semaine.`
+                : stats.critical > 0
+                  ? `Attention : ${stats.critical} action(s) critique(s) nécessitent votre attention immédiate. Ces KOLs représentent une part significative de votre volume et n'ont pas été vus depuis longtemps. L'analyse des tendances montre un risque de perte de relation si aucune action n'est entreprise cette semaine.`
+                  : stats.byType.risk > 0
+                    ? `${stats.byType.risk} praticien(s) à risque détecté(s). Leurs scores de fidélité ont baissé récemment. Une intervention rapide pourrait prévenir une attrition. Concentrez-vous sur la compréhension de leurs besoins et proposez des solutions personnalisées.`
+                    : stats.byType.opportunity > 0
+                      ? `${stats.byType.opportunity} opportunité(s) de croissance identifiée(s). Ces praticiens ont un excellent score de fidélité et un potentiel de développement significatif. Le moment est idéal pour proposer des services additionnels ou une montée en gamme.`
+                      : 'Votre portefeuille est en excellente santé ! Continuez à maintenir le contact régulier avec vos praticiens clés pour préserver cette dynamique positive.'}
             </p>
           </div>
         </div>

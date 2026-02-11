@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { webLlmService } from '../services/webLlmService';
+import { getStoredApiKey } from '../services/apiKeyService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Multi-provider LLM Hook
@@ -205,24 +206,24 @@ export function useGroq(options: UseGroqOptions = {}) {
 
   const { temperature = 0.7, maxTokens = 2048 } = options;
 
-  const apiKey = import.meta.env.VITE_LLM_API_KEY;
-  const isApiKeyValid = apiKey && apiKey !== 'your_groq_api_key_here' && apiKey !== 'your_llm_api_key_here' && apiKey !== 'your_api_key_here' && apiKey.length > 10;
-
   // Streaming completion — with automatic Ollama fallback
   const streamCompletion = useCallback(
     async (messages: LLMMessage[], onChunk: (chunk: string) => void, onComplete?: () => void) => {
       setIsLoading(true);
       setError(null);
 
+      // Re-read key at call time (may have been updated in Settings)
+      const currentKey = getStoredApiKey();
+
       try {
-        if (isApiKeyValid) {
+        if (currentKey) {
           // ── External provider ──
-          const provider = getProviderConfig(apiKey);
+          const provider = getProviderConfig(currentKey);
           const model = options.model || provider.defaultModel;
 
           try {
             if (provider.type === 'gemini') {
-              const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens);
               const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
               if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -263,14 +264,19 @@ export function useGroq(options: UseGroqOptions = {}) {
         }
 
         // ── WebLLM browser fallback (dernier recours) ──
-        if (webLlmService.isReady()) {
-          await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
-          onComplete?.();
-          return;
+        if (webLlmService.isWebGPUSupported()) {
+          try {
+            await webLlmService.ensureLoaded();
+            await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
+            onComplete?.();
+            return;
+          } catch (webErr) {
+            console.warn('[useGroq] WebLLM failed:', webErr);
+          }
         }
 
         // Tout a échoué
-        setError(`LLM indisponible. Options :\n• Lancez Ollama : ollama run ${getOllamaModel()}\n• Ou chargez le modèle WebLLM dans Paramètres`);
+        setError('LLM indisponible. Vérifiez que WebGPU est supporté par votre navigateur (Chrome 113+).');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         setError(msg);
@@ -279,7 +285,7 @@ export function useGroq(options: UseGroqOptions = {}) {
         setIsLoading(false);
       }
     },
-    [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
+    [temperature, maxTokens, options.model]
   );
 
   // Non-streaming completion — with automatic Ollama fallback
@@ -288,15 +294,18 @@ export function useGroq(options: UseGroqOptions = {}) {
       setIsLoading(true);
       setError(null);
 
+      // Re-read key at call time (may have been updated in Settings)
+      const currentKey = getStoredApiKey();
+
       try {
-        if (isApiKeyValid) {
+        if (currentKey) {
           // ── External provider ──
-          const provider = getProviderConfig(apiKey);
+          const provider = getProviderConfig(currentKey);
           const model = options.model || provider.defaultModel;
 
           try {
             if (provider.type === 'gemini') {
-              const { url, body } = buildGeminiRequest(apiKey, model, messages, temperature, maxTokens);
+              const { url, body } = buildGeminiRequest(currentKey, model, messages, temperature, maxTokens);
               const response = await fetch(url, { method: 'POST', headers: provider.headers, body: JSON.stringify(body) });
               if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -352,12 +361,17 @@ export function useGroq(options: UseGroqOptions = {}) {
         }
 
         // ── WebLLM browser fallback (dernier recours) ──
-        if (webLlmService.isReady()) {
-          return await webLlmService.complete(messages, { temperature, maxTokens });
+        if (webLlmService.isWebGPUSupported()) {
+          try {
+            await webLlmService.ensureLoaded();
+            return await webLlmService.complete(messages, { temperature, maxTokens });
+          } catch (webErr) {
+            console.warn('[useGroq] WebLLM failed:', webErr);
+          }
         }
 
         // Tout a échoué
-        setError(`LLM indisponible. Options :\n• Lancez Ollama : ollama run ${getOllamaModel()}\n• Ou chargez le modèle WebLLM dans Paramètres`);
+        setError('LLM indisponible. Vérifiez que WebGPU est supporté par votre navigateur (Chrome 113+).');
         return null;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -367,7 +381,7 @@ export function useGroq(options: UseGroqOptions = {}) {
         setIsLoading(false);
       }
     },
-    [temperature, maxTokens, apiKey, isApiKeyValid, options.model]
+    [temperature, maxTokens, options.model]
   );
 
   return { streamCompletion, complete, isLoading, error };

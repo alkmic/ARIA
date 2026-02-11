@@ -14,6 +14,7 @@ import {
   type InitProgressReport,
   type MLCEngineInterface,
 } from '@mlc-ai/web-llm';
+import { hasApiKey } from './apiKeyService';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -77,6 +78,16 @@ export const WEBLLM_MODELS: WebLLMModelInfo[] = [
 ];
 
 export const DEFAULT_WEBLLM_MODEL = 'Qwen3-1.7B-q4f16_1-MLC';
+
+const STORAGE_KEY = 'aria_webllm_model';
+
+function getSavedModelId(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY) || DEFAULT_WEBLLM_MODEL;
+  } catch {
+    return DEFAULT_WEBLLM_MODEL;
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SINGLETON SERVICE
@@ -152,6 +163,21 @@ class WebLLMService {
   // ── Model Loading ──────────────────────────────────────────────────────
 
   /**
+   * Ensure the model is loaded. If not loaded yet, triggers loading and waits.
+   * If already loading, waits for the current load to complete.
+   * This is the main entry point used by the LLM fallback chain.
+   */
+  async ensureLoaded(modelId?: string): Promise<void> {
+    const id = modelId || getSavedModelId();
+    if (this.isReady() && this.currentModelId === id) return;
+    if (this.loadPromise && this.loadingModelId === id) return this.loadPromise;
+    return this.loadModel(id);
+  }
+
+  /** Track which model is currently being loaded (before loadPromise completes) */
+  private loadingModelId: string | null = null;
+
+  /**
    * Load a model into the browser. Downloads weights on first use (~1-3 Go),
    * then cached in browser storage for instant loads.
    */
@@ -161,8 +187,8 @@ class WebLLMService {
       return;
     }
 
-    // Already loading — wait for it
-    if (this.loadPromise && this.currentModelId === modelId) {
+    // Already loading this model — wait for it
+    if (this.loadPromise && this.loadingModelId === modelId) {
       return this.loadPromise;
     }
 
@@ -182,6 +208,7 @@ class WebLLMService {
 
     this.setStatus('loading');
     this.lastError = null;
+    this.loadingModelId = modelId;
 
     this.loadPromise = (async () => {
       try {
@@ -204,19 +231,39 @@ class WebLLMService {
         this.setStatus('ready');
         console.log(`[WebLLM] Model loaded: ${modelId}`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.lastError = msg;
+        const rawMsg = err instanceof Error ? err.message : String(err);
+        // Provide a user-friendly message for common network errors
+        let userMsg: string;
+        if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError') || rawMsg.includes('net::ERR_')) {
+          userMsg = 'Impossible de télécharger les poids du modèle. Vérifiez votre connexion internet. '
+            + 'Les fichiers sont hébergés sur HuggingFace (~1-3 Go au premier chargement). '
+            + 'Si le problème persiste, configurez une clé API externe dans les paramètres ci-dessus.';
+        } else if (rawMsg.includes('WebGPU') || rawMsg.includes('GPU')) {
+          userMsg = 'Erreur GPU : votre carte graphique ne supporte peut-être pas ce modèle. '
+            + 'Essayez un modèle plus léger (Qwen3 0.6B) ou utilisez une clé API externe.';
+        } else if (rawMsg.includes('out of memory') || rawMsg.includes('OOM')) {
+          userMsg = 'Mémoire GPU insuffisante pour ce modèle. '
+            + 'Essayez Qwen3 0.6B (plus léger) ou fermez d\'autres onglets utilisant le GPU.';
+        } else {
+          userMsg = rawMsg;
+        }
+        this.lastError = userMsg;
         this.setStatus('error');
         this.engine = null;
         this.currentModelId = null;
-        console.error('[WebLLM] Load failed:', msg);
-        throw err;
+        console.error('[WebLLM] Load failed:', rawMsg);
+        throw new Error(userMsg);
       } finally {
         this.loadPromise = null;
+        this.loadingModelId = null;
       }
     })();
 
     return this.loadPromise;
+  }
+
+  isLoading(): boolean {
+    return this.status === 'loading';
   }
 
   // ── Unload ─────────────────────────────────────────────────────────────
@@ -309,3 +356,27 @@ class WebLLMService {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const webLlmService = new WebLLMService();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTO-PRELOAD : charge le modèle automatiquement au démarrage
+// si aucune clé API externe n'est configurée et que WebGPU est disponible
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function autoPreload() {
+  // Skip in SSR / non-browser environments
+  if (typeof window === 'undefined') return;
+  // Skip if WebGPU is not supported
+  if (!webLlmService.isWebGPUSupported()) return;
+
+  // Only auto-preload when no external API key — WebLLM is the primary LLM
+  if (!hasApiKey()) {
+    const modelId = getSavedModelId();
+    console.log(`[WebLLM] Auto-preloading ${modelId} (no external API key detected)`);
+    webLlmService.loadModel(modelId).catch((err) => {
+      console.warn('[WebLLM] Auto-preload failed:', err);
+    });
+  }
+}
+
+// Defer auto-preload to avoid blocking initial render
+setTimeout(autoPreload, 1000);

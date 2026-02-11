@@ -83,6 +83,11 @@ export interface PractitionerProfile {
   news: PractitionerNews[];
   visitHistory: VisitRecord[];
 
+  // Nouveau praticien détecté
+  isNew?: boolean;               // Praticien récemment détecté, jamais visité
+  detectedDate?: string;         // Date de détection (YYYY-MM-DD)
+  previousProvider?: string;     // Ancien prestataire si connu (ex: Vivisol, Linde)
+
   // Métadonnées
   createdAt: string;
   lastVisitDate?: string;
