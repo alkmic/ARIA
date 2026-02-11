@@ -54,7 +54,7 @@ export default function VoiceVisitReport() {
   const { upcomingVisits } = useAppStore();
 
   // State
-  const [step, setStep] = useState<'select' | 'record' | 'review' | 'saved'>('select');
+  const [step, setStep] = useState<'select' | 'record' | 'review' | 'ai_deductions' | 'saved'>('select');
   const [selectedPractitioner, setSelectedPractitioner] = useState<PractitionerProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -63,6 +63,16 @@ export default function VoiceVisitReport() {
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
   const [editedNotes, setEditedNotes] = useState('');
   const [_isSaved, setIsSaved] = useState(false);
+
+  // AI deductions for profile enrichment
+  interface AIDeduction {
+    id: string;
+    category: 'preference' | 'objection' | 'competitor' | 'opportunity' | 'relationship' | 'product_interest';
+    label: string;
+    detail: string;
+    accepted: boolean;
+  }
+  const [aiDeductions, setAiDeductions] = useState<AIDeduction[]>([]);
 
   const recognitionRef = useRef<any>(null);
   const interimTranscriptRef = useRef('');
@@ -265,8 +275,90 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
   // Get store methods
   const { addVisitReport, addUserNote } = useUserDataStore();
 
-  // Save report - persist to store
-  const saveReport = () => {
+  // Generate AI deductions for profile enrichment (before saving)
+  const generateDeductions = () => {
+    if (!selectedPractitioner || !extractedInfo) return;
+
+    const deductions: AIDeduction[] = [];
+    let id = 0;
+
+    // Analyze extracted info to generate profile deductions
+    extractedInfo.productsDiscussed.forEach(product => {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'product_interest',
+        label: `Intérêt pour ${product}`,
+        detail: `Le praticien a discuté de ${product} lors de cette visite. Ajouter à ses centres d'intérêt produits.`,
+        accepted: true,
+      });
+    });
+
+    extractedInfo.competitorsMentioned.forEach(competitor => {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'competitor',
+        label: `${competitor} mentionné`,
+        detail: `Le praticien utilise ou a mentionné ${competitor}. Veille concurrentielle activée.`,
+        accepted: true,
+      });
+    });
+
+    extractedInfo.objections.forEach(objection => {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'objection',
+        label: 'Frein identifié',
+        detail: objection,
+        accepted: true,
+      });
+    });
+
+    extractedInfo.opportunities.forEach(opportunity => {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'opportunity',
+        label: 'Opportunité détectée',
+        detail: opportunity,
+        accepted: true,
+      });
+    });
+
+    // Sentiment-based deduction
+    if (extractedInfo.sentiment === 'positive') {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'relationship',
+        label: 'Relation positive',
+        detail: `Le sentiment global est positif. Le praticien est réceptif — bon moment pour proposer des services additionnels ou une montée en gamme.`,
+        accepted: true,
+      });
+    } else if (extractedInfo.sentiment === 'negative') {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'relationship',
+        label: 'Alerte insatisfaction',
+        detail: `Le sentiment global est négatif. Mettre en place un suivi renforcé et identifier les causes d'insatisfaction. Risque de churn potentiel.`,
+        accepted: true,
+      });
+    }
+
+    // Action-based deductions
+    if (extractedInfo.nextActions.length > 0) {
+      deductions.push({
+        id: `d-${id++}`,
+        category: 'preference',
+        label: `${extractedInfo.nextActions.length} action(s) à planifier`,
+        detail: `Actions identifiées : ${extractedInfo.nextActions.join(' | ')}. Ces actions seront ajoutées au suivi du praticien.`,
+        accepted: true,
+      });
+    }
+
+    setAiDeductions(deductions);
+    setStep('ai_deductions');
+  };
+
+  // Final save with validated deductions
+  const saveReportWithDeductions = () => {
     if (!selectedPractitioner || !extractedInfo) return;
 
     // Save the visit report to the persistent store
@@ -288,7 +380,10 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       }
     });
 
-    // If there are key points, save them as strategic notes
+    // Filter only accepted deductions
+    const accepted = aiDeductions.filter(d => d.accepted);
+
+    // Save key points as observation notes
     if (extractedInfo.keyPoints.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
@@ -297,25 +392,37 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       });
     }
 
-    // If there are opportunities, save them as strategy notes
-    if (extractedInfo.opportunities.length > 0) {
+    // Save accepted opportunity deductions
+    const acceptedOpportunities = accepted.filter(d => d.category === 'opportunity');
+    if (acceptedOpportunities.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Opportunités détectées le ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.opportunities.map(o => `• ${o}`).join('\n')}`,
+        content: `Opportunités validées le ${new Date().toLocaleDateString('fr-FR')}:\n${acceptedOpportunities.map(o => `• ${o.detail}`).join('\n')}`,
         type: 'strategy'
       });
     }
 
-    // If competitors were mentioned, save as competitive intelligence
-    if (extractedInfo.competitorsMentioned.length > 0) {
+    // Save accepted competitor intelligence
+    const acceptedCompetitors = accepted.filter(d => d.category === 'competitor');
+    if (acceptedCompetitors.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\nConcurrents mentionnés: ${extractedInfo.competitorsMentioned.join(', ')}`,
+        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\n${acceptedCompetitors.map(c => `• ${c.detail}`).join('\n')}`,
         type: 'competitive'
       });
     }
 
-    console.log('Saved report to store:', savedReport.id);
+    // Save relationship alerts
+    const relationshipAlerts = accepted.filter(d => d.category === 'relationship' && d.label.includes('Alerte'));
+    if (relationshipAlerts.length > 0) {
+      addUserNote({
+        practitionerId: selectedPractitioner.id,
+        content: `Alerte relationnelle du ${new Date().toLocaleDateString('fr-FR')}:\n${relationshipAlerts.map(r => `• ${r.detail}`).join('\n')}`,
+        type: 'observation'
+      });
+    }
+
+    console.log('Saved report to store:', savedReport.id, `(${accepted.length} deductions accepted)`);
     setIsSaved(true);
     setStep('saved');
   };
@@ -341,8 +448,8 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {['Sélectionner', 'Enregistrer', 'Vérifier', 'Terminé'].map((label, i) => {
-            const stepIndex = ['select', 'record', 'review', 'saved'].indexOf(step);
+          {['Sélectionner', 'Enregistrer', 'Vérifier', 'Déductions IA', 'Terminé'].map((label, i) => {
+            const stepIndex = ['select', 'record', 'review', 'ai_deductions', 'saved'].indexOf(step);
             const isActive = i === stepIndex;
             const isCompleted = i < stepIndex;
 
@@ -362,7 +469,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 }`}>
                   {label}
                 </span>
-                {i < 3 && (
+                {i < 4 && (
                   <div className={`flex-1 h-1 mx-2 rounded ${
                     isCompleted ? 'bg-emerald-500' : 'bg-slate-200'
                   }`} />
@@ -777,17 +884,136 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 Retour
               </button>
               <button
-                onClick={saveReport}
+                onClick={generateDeductions}
                 className="btn-primary flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
               >
-                <Check className="w-4 h-4 mr-2" />
-                Valider et sauvegarder
+                <Sparkles className="w-4 h-4 mr-2" />
+                Analyser et enrichir la fiche
               </button>
             </div>
           </motion.div>
         )}
 
-        {/* Step 4: Saved */}
+        {/* Step 4: AI Deductions — User validates what gets saved to the profile */}
+        {step === 'ai_deductions' && selectedPractitioner && extractedInfo && (
+          <motion.div
+            key="ai_deductions"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            {/* AI Deductions Header */}
+            <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-violet-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-violet-800">Déductions IA — Enrichissement du profil</p>
+                  <p className="text-sm text-violet-700 mt-1">
+                    L'IA a analysé votre compte-rendu et propose les informations suivantes pour enrichir la fiche de{' '}
+                    <strong>{selectedPractitioner.title} {selectedPractitioner.lastName}</strong>.
+                    Validez ou refusez chaque déduction avant l'enregistrement.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Deductions List */}
+            {aiDeductions.length > 0 ? (
+              <div className="space-y-3">
+                {aiDeductions.map((deduction) => {
+                  const categoryConfig = {
+                    product_interest: { icon: <Tag className="w-4 h-4 text-blue-500" />, bg: 'bg-blue-50', border: 'border-blue-200', label: 'Intérêt produit' },
+                    competitor: { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, bg: 'bg-orange-50', border: 'border-orange-200', label: 'Concurrence' },
+                    objection: { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, bg: 'bg-red-50', border: 'border-red-200', label: 'Objection' },
+                    opportunity: { icon: <TrendingUp className="w-4 h-4 text-emerald-500" />, bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Opportunité' },
+                    relationship: { icon: <MessageSquare className="w-4 h-4 text-purple-500" />, bg: 'bg-purple-50', border: 'border-purple-200', label: 'Relation' },
+                    preference: { icon: <Target className="w-4 h-4 text-indigo-500" />, bg: 'bg-indigo-50', border: 'border-indigo-200', label: 'Préférence' },
+                  };
+                  const config = categoryConfig[deduction.category];
+
+                  return (
+                    <motion.div
+                      key={deduction.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`glass-card p-4 ${config.border} ${deduction.accepted ? config.bg : 'bg-slate-50 opacity-60'} transition-all`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">{config.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-white/70 text-slate-600">{config.label}</span>
+                            <span className="font-medium text-sm text-slate-800">{deduction.label}</span>
+                          </div>
+                          <p className="text-sm text-slate-600">{deduction.detail}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setAiDeductions(prev => prev.map(d =>
+                              d.id === deduction.id ? { ...d, accepted: !d.accepted } : d
+                            ));
+                          }}
+                          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            deduction.accepted
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'bg-slate-200 text-slate-400 hover:bg-slate-300'
+                          }`}
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="glass-card p-6 text-center text-slate-500">
+                Aucune déduction IA disponible pour ce compte-rendu.
+              </div>
+            )}
+
+            {/* Summary of what will be saved */}
+            <div className="glass-card p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+              <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2">
+                <Check className="w-4 h-4" />
+                Résumé des enrichissements validés
+              </h4>
+              <p className="text-sm text-emerald-700">
+                {aiDeductions.filter(d => d.accepted).length} déduction(s) sur {aiDeductions.length} seront intégrées à la fiche de{' '}
+                {selectedPractitioner.title} {selectedPractitioner.lastName}.
+                Le compte-rendu complet et les notes IA seront également sauvegardés.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setStep('review')}
+                className="btn-secondary flex-1"
+              >
+                Retour
+              </button>
+              <button
+                onClick={() => {
+                  setAiDeductions(prev => prev.map(d => ({ ...d, accepted: true })));
+                }}
+                className="btn-secondary"
+              >
+                Tout accepter
+              </button>
+              <button
+                onClick={saveReportWithDeductions}
+                className="btn-primary flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Valider et sauvegarder ({aiDeductions.filter(d => d.accepted).length})
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 5: Saved */}
         {step === 'saved' && selectedPractitioner && (
           <motion.div
             key="saved"

@@ -162,6 +162,12 @@ function calculateScores(
       impact = 60;
       probability = 70;
       break;
+
+    case 'new_practitioner':
+      urgency = 90;
+      impact = context.volumePercentile + 20;
+      probability = 65;
+      break;
   }
 
   // Normalisation
@@ -390,50 +396,97 @@ export function generateIntelligentActions(
   practitioners.forEach(p => {
     const context = analyzePractitionerContext(p);
 
-    // 0. NOUVEAU PRATICIEN DÉTECTÉ — Jamais visité → visite de découverte urgente
-    if (context.daysSinceVisit === 999) {
-      const type: AIAction['type'] = 'visit_urgent';
-      if (!processedForType.has('new_discovery')) processedForType.set('new_discovery', new Set());
-      if (!processedForType.get('new_discovery')!.has(p.id)) {
-        processedForType.get('new_discovery')!.add(p.id);
+    // 0. NOUVEAU PRATICIEN DÉTECTÉ — Praticien explicitement nouveau OU jamais visité
+    const isNewPractitioner = p.isNew || context.daysSinceVisit === 999;
+    if (isNewPractitioner) {
+      const type: AIAction['type'] = 'new_practitioner';
+      if (!processedForType.has(type)) processedForType.set(type, new Set());
+      if (!processedForType.get(type)!.has(p.id)) {
+        processedForType.get(type)!.add(p.id);
+
+        // New practitioners with isNew flag get even higher urgency
+        const isExplicitlyNew = !!p.isNew;
+        const detectedDaysAgo = p.detectedDate
+          ? Math.floor((today.getTime() - new Date(p.detectedDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
 
         const scores: ActionScore = {
-          urgency: p.metrics.vingtile <= 5 ? 95 : p.metrics.vingtile <= 10 ? 80 : 65,
-          impact: p.metrics.vingtile <= 5 ? 90 : p.metrics.vingtile <= 10 ? 70 : 50,
-          probability: 60,
+          urgency: isExplicitlyNew
+            ? (detectedDaysAgo <= 7 ? 98 : detectedDaysAgo <= 14 ? 92 : 85)
+            : (p.metrics.vingtile <= 5 ? 95 : p.metrics.vingtile <= 10 ? 80 : 65),
+          impact: p.metrics.vingtile <= 5 ? 95 : p.metrics.vingtile <= 10 ? 75 : 55,
+          probability: isExplicitlyNew ? 70 : 60,
           overall: 0,
         };
         scores.overall = Math.round(scores.urgency * 0.35 + scores.impact * 0.40 + scores.probability * 0.25);
-        const priority = p.metrics.vingtile <= 5 ? 'critical' as const : p.metrics.vingtile <= 10 ? 'high' as const : 'medium' as const;
+
+        // New practitioners detected within 7 days are always critical
+        const priority = (isExplicitlyNew && detectedDaysAgo <= 7) || p.metrics.vingtile <= 3
+          ? 'critical' as const
+          : p.metrics.vingtile <= 8
+            ? 'high' as const
+            : 'medium' as const;
+
+        // Build richer context for new practitioners
+        const recentNews = p.news?.slice(0, 2) || [];
+        const newsContext = recentNews.length > 0
+          ? recentNews.map(n => `• ${n.title}${n.relevance ? ` — ${n.relevance}` : ''}`).join('\n')
+          : '';
+
+        const previousProviderInfo = p.previousProvider
+          ? `Ancien prestataire connu : ${p.previousProvider}. Opportunité de reprise.`
+          : 'Aucun prestataire identifié — territoire vierge.';
 
         actions.push({
           type,
           priority,
           practitionerId: p.id,
-          title: `🆕 Nouveau praticien — Visite de découverte`,
-          reason: `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`,
+          title: isExplicitlyNew
+            ? `🆕 Nouveau praticien détecté — Contact prioritaire`
+            : `🆕 Nouveau praticien — Visite de découverte`,
+          reason: isExplicitlyNew
+            ? `Détecté il y a ${detectedDaysAgo}j • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`
+            : `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`,
           aiJustification: {
-            summary: `${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté sur le territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). Aucune visite enregistrée — une première prise de contact est essentielle pour établir la relation.`,
+            summary: isExplicitlyNew
+              ? `${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté il y a ${detectedDaysAgo} jour(s) sur le territoire de ${p.address.city}. ${p.specialty}${p.subSpecialty ? ` spécialisé(e) en ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an. ${previousProviderInfo} L'IA recommande un contact dans les 48h pour maximiser les chances de captation avant la concurrence.`
+              : `${p.title} ${p.firstName} ${p.lastName} est un praticien non visité sur le territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). Une première prise de contact est essentielle.`,
             metrics: [
               `Volume estimé: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
               `Vingtile ${p.metrics.vingtile}/20 (Top ${p.metrics.vingtile * 5}%)`,
               `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`,
               `Potentiel de croissance: +${p.metrics.potentialGrowth}%`,
-              `Aucune visite précédente enregistrée`,
+              isExplicitlyNew ? `Détecté il y a ${detectedDaysAgo} jour(s)` : `Aucune visite enregistrée`,
+              ...(p.previousProvider ? [`Ancien prestataire: ${p.previousProvider}`] : []),
             ],
             risks: [
-              `Risque d'être capté en premier par un concurrent (Vivisol, Linde)`,
+              isExplicitlyNew
+                ? `URGENT : Chaque jour de retard augmente le risque de captation par un concurrent`
+                : `Risque d'être capté en premier par un concurrent (Vivisol, Linde)`,
               `Pas de relation établie — aucun levier de fidélisation en place`,
               `Volume potentiel non capté: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
+              ...(p.previousProvider
+                ? [`${p.previousProvider} pourrait tenter de le reconquérir rapidement`]
+                : [`Les concurrents locaux pourraient aussi l'avoir identifié`]),
             ],
             opportunities: [
-              `Être le premier prestataire à prendre contact — avantage compétitif`,
+              `Être le premier prestataire à prendre contact — avantage compétitif décisif`,
+              p.metrics.isKOL
+                ? `KOL identifié — fort potentiel d'influence sur ${p.address.city} et sa zone`
+                : `Développer un nouveau prescripteur stratégique sur le territoire`,
               `Présenter la gamme complète Air Liquide Santé dès la première visite`,
-              p.metrics.isKOL ? `KOL identifié — fort potentiel d'influence réseau` : `Développer un nouveau prescripteur sur le territoire`,
+              ...(recentNews.length > 0 ? [`Actualité récente : utiliser comme point d'accroche`] : []),
               `Proposer un kit de bienvenue avec documentation et démonstration produits`,
             ],
-            suggestedApproach: `Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`,
-            competitorAlert: `⚠️ Nouveau praticien non affilié — les concurrents pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`,
+            suggestedApproach: isExplicitlyNew && recentNews.length > 0
+              ? `Contact urgent dans les 48h. Préparez une visite de découverte personnalisée en utilisant l'actualité récente du praticien comme accroche. ${newsContext ? `\n\nActualités du praticien :\n${newsContext}` : ''}\n\nApportez le kit de démonstration complet adapté à ${p.specialty === 'Pneumologue' ? 'un pneumologue' : 'un médecin généraliste'}, la documentation LPPR, et si possible un cas patient anonymisé montrant les bénéfices du télésuivi. L'objectif est d'établir Air Liquide comme partenaire de référence AVANT la concurrence.`
+              : `Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`,
+            competitorAlert: p.previousProvider
+              ? `⚠️ Ancien prestataire : ${p.previousProvider}. Préparez des arguments différenciants spécifiques. Le praticien connaît déjà l'offre concurrente — focalisez sur nos avantages uniques.`
+              : `⚠️ Nouveau praticien non affilié — les concurrents pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`,
+            contextualNews: recentNews.length > 0
+              ? `📰 Actualité récente : ${recentNews[0].title}. ${recentNews[0].relevance || ''}`
+              : undefined,
           },
           scores,
           suggestedDate: priority === 'critical' ? 'Cette semaine' : 'Sous 2 semaines',

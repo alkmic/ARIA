@@ -31,7 +31,7 @@ export interface VisitReportData {
 // Types pour les actions IA
 export interface AIAction {
   id: string;
-  type: 'visit_urgent' | 'visit_kol' | 'opportunity' | 'risk' | 'followup' | 'upsell' | 'competitor' | 'publication';
+  type: 'visit_urgent' | 'visit_kol' | 'opportunity' | 'risk' | 'followup' | 'upsell' | 'competitor' | 'publication' | 'new_practitioner';
   priority: 'critical' | 'high' | 'medium' | 'low';
   practitionerId: string;
   title: string;

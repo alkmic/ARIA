@@ -814,12 +814,282 @@ export function generatePractitioner(index: number): PractitionerProfile {
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+// NOUVEAUX PRATICIENS DÉTECTÉS (jamais visités, urgence haute)
+// Ces praticiens simulent des détections récentes par le système
+// ═══════════════════════════════════════════════════════════
+
+interface NewPractitionerTemplate {
+  firstName: string;
+  lastName: string;
+  isMale: boolean;
+  specialty: 'Pneumologue' | 'Médecin généraliste';
+  city: typeof CITIES_RHONE_ALPES[number];
+  vingtile: number;
+  isKOL: boolean;
+  subSpecialty?: string;
+  practiceType: PracticeType;
+  detectedDaysAgo: number;
+  previousProvider?: string;
+  newsOverrides: PractitionerNews[];
+}
+
+const NEW_PRACTITIONERS: NewPractitionerTemplate[] = [
+  {
+    firstName: 'Alexandre',
+    lastName: 'Delorme',
+    isMale: true,
+    specialty: 'Pneumologue',
+    city: CITIES_RHONE_ALPES[0], // Lyon
+    vingtile: 2,
+    isKOL: true,
+    subSpecialty: 'Réhabilitation respiratoire',
+    practiceType: 'hospitalier',
+    detectedDaysAgo: 5,
+    previousProvider: 'Vivisol',
+    newsOverrides: [
+      {
+        id: 'news-delorme-1',
+        date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Nomination comme chef de service pneumologie au CHU Lyon-Sud",
+        content: "Nommé chef du service de pneumologie au CHU Lyon-Sud, succédant au Pr Étienne qui part en retraite. Prend en charge un service de 45 lits avec une unité de soins intensifs respiratoires.",
+        type: 'event',
+        relevance: "Opportunité majeure : nouveau chef de service = nouvelles décisions d'approvisionnement. Être le premier à le rencontrer.",
+      },
+      {
+        id: 'news-delorme-2',
+        date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Publication dans The Lancet Respiratory Medicine",
+        content: "Co-auteur principal d'une étude randomisée sur l'impact du télésuivi SpO2 continu sur la réduction des hospitalisations chez les patients BPCO sévères. Résultats : -42% de réhospitalisations à 6 mois.",
+        type: 'publication',
+        relevance: "Sa publication porte EXACTEMENT sur le télésuivi O2 — notre produit phare. Levier de discussion idéal.",
+        source: 'PubMed',
+      },
+    ],
+  },
+  {
+    firstName: 'Émilie',
+    lastName: 'Beaumont',
+    isMale: false,
+    specialty: 'Pneumologue',
+    city: CITIES_RHONE_ALPES[2], // Grenoble
+    vingtile: 4,
+    isKOL: false,
+    subSpecialty: 'Sommeil et ventilation',
+    practiceType: 'mixte',
+    detectedDaysAgo: 8,
+    previousProvider: 'Linde Healthcare',
+    newsOverrides: [
+      {
+        id: 'news-beaumont-1',
+        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Ouverture d'un cabinet de pneumologie à Grenoble Europole",
+        content: "Installation récente dans le quartier Europole de Grenoble, spécialisée en pathologies du sommeil et ventilation non invasive. Patientèle en construction, réfère actuellement au CHU de Grenoble.",
+        type: 'event',
+        relevance: "Nouvelle installation = recherche active de prestataire. Fenêtre de captation très courte avant que la concurrence ne s'installe.",
+      },
+      {
+        id: 'news-beaumont-2',
+        date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "DIU Sommeil et Ventilation obtenu à Paris-Descartes",
+        content: "Obtention du DIU de pathologies du sommeil et ventilation, formation reconnue comme référence en France. Spécialisation en SAHOS et overlap syndrome.",
+        type: 'certification',
+        relevance: "Certification récente = praticienne à jour, réceptive aux innovations. Proposer notre gamme PPC/VNI complète.",
+      },
+    ],
+  },
+  {
+    firstName: 'Raphaël',
+    lastName: 'Fontanelli',
+    isMale: true,
+    specialty: 'Médecin généraliste',
+    city: CITIES_RHONE_ALPES[4], // Annecy
+    vingtile: 3,
+    isKOL: false,
+    practiceType: 'ville',
+    detectedDaysAgo: 12,
+    newsOverrides: [
+      {
+        id: 'news-fontanelli-1',
+        date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Création d'une maison de santé pluriprofessionnelle à Annecy-le-Vieux",
+        content: "Cofondateur de la MSP des Aravis avec 4 MG, 2 IDE, 1 kiné et 1 pharmacien. Structure orientée parcours de soins chroniques avec un accent sur les pathologies respiratoires (zone de montagne).",
+        type: 'event',
+        relevance: "MSP = fort volume potentiel (4 MG prescripteurs). Si on capte la MSP, on capte tous les médecins. Priorité absolue.",
+      },
+    ],
+  },
+  {
+    firstName: 'Nadia',
+    lastName: 'Khelifi',
+    isMale: false,
+    specialty: 'Pneumologue',
+    city: CITIES_RHONE_ALPES[3], // Saint-Étienne
+    vingtile: 5,
+    isKOL: false,
+    subSpecialty: 'Oncologie thoracique',
+    practiceType: 'hospitalier',
+    detectedDaysAgo: 3,
+    previousProvider: 'SOS Oxygène',
+    newsOverrides: [
+      {
+        id: 'news-khelifi-1',
+        date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Recrutement au CHU de Saint-Étienne — Service pneumo-oncologie",
+        content: "Nouvellement recrutée comme PH en pneumo-oncologie au CHU de Saint-Étienne. Arrive du CHU de Toulouse où elle était assistante. Spécialisation dans la prise en charge palliative des cancers bronchiques avec oxygénothérapie.",
+        type: 'event',
+        relevance: "Venue d'un autre CHU = pas de prestataire local attitré. Fenêtre de premier contact cruciale cette semaine.",
+      },
+      {
+        id: 'news-khelifi-2',
+        date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Communication orale au Congrès de Pneumologie de Langue Française 2025",
+        content: "Présentation sur l'optimisation de l'oxygénothérapie palliative chez les patients atteints de cancer bronchique non à petites cellules. Focus sur la qualité de vie et le maintien à domicile.",
+        type: 'conference',
+        relevance: "Sujet directement lié à nos solutions de maintien à domicile. Point d'accroche parfait pour une première visite.",
+      },
+    ],
+  },
+  {
+    firstName: 'Marc',
+    lastName: 'Joubert',
+    isMale: true,
+    specialty: 'Médecin généraliste',
+    city: CITIES_RHONE_ALPES[6], // Valence
+    vingtile: 6,
+    isKOL: false,
+    practiceType: 'ville',
+    detectedDaysAgo: 15,
+    previousProvider: 'Bastide Médical',
+    newsOverrides: [
+      {
+        id: 'news-joubert-1',
+        date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Reprise du cabinet du Dr Maurin à Valence (départ en retraite)",
+        content: "Reprend le cabinet du Dr Maurin qui comptait 15 patients sous oxygénothérapie suivis par Bastide Médical. Le Dr Joubert souhaite réévaluer les contrats fournisseurs et moderniser les équipements.",
+        type: 'event',
+        relevance: "15 patients sous O2 à récupérer ! Le Dr Joubert est ouvert au changement de prestataire. Visite de captation prioritaire.",
+      },
+    ],
+  },
+  {
+    firstName: 'Camille',
+    lastName: 'Ravier',
+    isMale: false,
+    specialty: 'Pneumologue',
+    city: CITIES_RHONE_ALPES[5], // Chambéry
+    vingtile: 3,
+    isKOL: true,
+    subSpecialty: 'Allergologie respiratoire',
+    practiceType: 'ville',
+    detectedDaysAgo: 7,
+    newsOverrides: [
+      {
+        id: 'news-ravier-1',
+        date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Lancement du réseau Respir'Alpes (réseau sentinelle BPCO)",
+        content: "Initiatrice et coordinatrice du réseau Respir'Alpes, premier réseau sentinelle de dépistage et suivi BPCO en Savoie. 12 MG et 3 pneumologues impliqués. Objectif : 500 spirométries de dépistage en 2026.",
+        type: 'event',
+        relevance: "Réseau de 12 MG + 3 pneumo = multiplicateur d'impact. Si Air Liquide devient partenaire du réseau, accès à tous les prescripteurs impliqués.",
+      },
+      {
+        id: 'news-ravier-2',
+        date: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        title: "Étude dans la Revue des Maladies Respiratoires",
+        content: "Publication sur le sous-diagnostic de la BPCO en zones rurales et de montagne. Données sur 800 patients en Savoie montrant un retard diagnostique moyen de 5 ans. Plaidoyer pour le dépistage systématique en médecine de ville.",
+        type: 'publication',
+        relevance: "Publication très alignée avec notre mission de dépistage. Proposer un partenariat de dépistage spirométrique avec notre matériel.",
+        source: 'PubMed',
+      },
+    ],
+  },
+];
+
+function generateNewPractitioner(template: NewPractitionerTemplate, baseIndex: number): PractitionerProfile {
+  const rng = seededRandom((baseIndex + 200) * 7919 + 42);
+
+  const city = template.city;
+  const streetNumber = randomInt(1, 150, rng);
+  const streetName = randomChoice(STREET_NAMES, rng);
+
+  const emailDomain = randomChoice(['gmail.com', 'orange.fr', 'outlook.fr', 'medecin.fr'], rng);
+  const cleanFirst = template.firstName.toLowerCase().replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a').replace(/[ùû]/g, 'u').replace(/ç/g, 'c').replace(/[ïî]/g, 'i');
+  const cleanLast = template.lastName.toLowerCase().replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a');
+  const email = `${cleanFirst}.${cleanLast}@${emailDomain}`;
+  const phone = `04 ${randomInt(70, 79, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)}`;
+
+  const volumeL = generateRealisticVolume(template.vingtile, template.specialty, template.isKOL, rng);
+  const loyaltyScore = 5; // Unknown loyalty for new practitioners
+
+  const detectedDate = new Date();
+  detectedDate.setDate(detectedDate.getDate() - template.detectedDaysAgo);
+
+  const practTitle = template.isKOL ? 'Pr' : 'Dr';
+
+  return {
+    id: `pract-new-${String(baseIndex + 1).padStart(2, '0')}`,
+    title: practTitle,
+    firstName: template.firstName,
+    lastName: template.lastName,
+    specialty: template.specialty,
+    practiceType: template.practiceType,
+    subSpecialty: template.subSpecialty,
+    avatarUrl: `https://i.pravatar.cc/150?img=${baseIndex + 130}`,
+
+    address: {
+      street: `${streetNumber} ${streetName}`,
+      city: city.name,
+      postalCode: city.postalCode,
+      country: 'France',
+      coords: {
+        lat: city.coords.lat + (rng() - 0.5) * 0.02,
+        lng: city.coords.lng + (rng() - 0.5) * 0.02,
+      },
+    },
+
+    contact: {
+      email,
+      phone,
+      mobile: `06 ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)} ${randomInt(10, 99, rng)}`,
+    },
+
+    metrics: {
+      volumeL,
+      volumeMonthly: Math.round(volumeL / 12),
+      loyaltyScore,
+      vingtile: template.vingtile,
+      isKOL: template.isKOL,
+      potentialGrowth: randomInt(25, 50, rng),
+      churnRisk: 'medium' as const,
+    },
+
+    // New practitioners have no visit history or notes (never visited)
+    notes: [],
+    news: template.newsOverrides,
+    visitHistory: [],
+
+    // New practitioner fields
+    isNew: true,
+    detectedDate: detectedDate.toISOString().split('T')[0],
+    previousProvider: template.previousProvider,
+
+    createdAt: detectedDate.toISOString(),
+    lastVisitDate: undefined,
+    nextScheduledVisit: undefined,
+  };
+}
+
 export function generateDatabase(count: number = 120): PractitionerProfile[] {
   const practitioners: PractitionerProfile[] = [];
 
   for (let i = 0; i < count; i++) {
     practitioners.push(generatePractitioner(i));
   }
+
+  // Add explicitly new practitioners (recently detected, never visited)
+  NEW_PRACTITIONERS.forEach((template, i) => {
+    practitioners.push(generateNewPractitioner(template, i));
+  });
 
   return practitioners.sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
 }
