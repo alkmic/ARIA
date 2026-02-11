@@ -142,6 +142,7 @@ function parseAnthropicResponse(data: Record<string, unknown>): string | null {
 // ── Simulate streaming for non-streaming providers ──────────────────────────
 
 async function simulateStream(text: string, onChunk: (chunk: string) => void) {
+  if (!text) return;
   const words = text.split(' ');
   for (const word of words) {
     onChunk(word + ' ');
@@ -261,10 +262,27 @@ export function useGroq(options: UseGroqOptions = {}) {
           } catch (externalErr) {
             // External API failed — fallback to WebLLM
             console.warn(`[useGroq] ${provider.name} failed, falling back to WebLLM:`, externalErr);
+
+            // ── WebLLM browser fallback ──
+            if (webLlmService.isWebGPUSupported()) {
+              try {
+                await webLlmService.ensureLoaded();
+                await webLlmService.streamComplete(messages, onChunk, { temperature, maxTokens });
+                onComplete?.();
+                return;
+              } catch (webErr) {
+                console.warn('[useGroq] WebLLM failed:', webErr);
+              }
+            }
+
+            // Neither external API nor WebLLM worked — propagate error to caller
+            const errMsg = externalErr instanceof Error ? externalErr.message : 'Erreur LLM';
+            setError(errMsg);
+            throw new Error(errMsg);
           }
         }
 
-        // ── WebLLM browser fallback ──
+        // No API key available — try WebLLM directly
         if (webLlmService.isWebGPUSupported()) {
           try {
             await webLlmService.ensureLoaded();
@@ -351,10 +369,24 @@ export function useGroq(options: UseGroqOptions = {}) {
           } catch (externalErr) {
             // External API failed — fallback to WebLLM
             console.warn(`[useGroq] External API failed, falling back to WebLLM:`, externalErr);
+
+            if (webLlmService.isWebGPUSupported()) {
+              try {
+                await webLlmService.ensureLoaded();
+                return await webLlmService.complete(messages, { temperature, maxTokens });
+              } catch (webErr) {
+                console.warn('[useGroq] WebLLM failed:', webErr);
+              }
+            }
+
+            // Neither worked — propagate error
+            const errMsg = externalErr instanceof Error ? externalErr.message : 'Erreur LLM';
+            setError(errMsg);
+            return null;
           }
         }
 
-        // ── WebLLM browser fallback ──
+        // No API key — try WebLLM directly
         if (webLlmService.isWebGPUSupported()) {
           try {
             await webLlmService.ensureLoaded();

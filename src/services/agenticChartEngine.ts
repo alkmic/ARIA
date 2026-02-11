@@ -1156,8 +1156,18 @@ export function generateChartLocally(question: string): ChartResult {
   return generateChartFromSpec(spec);
 }
 
-// Couleurs par défaut pour les graphiques
+// Palette professionnelle alignée Air Liquide — alternance chaud/froid pour contraste maximal
 export const DEFAULT_CHART_COLORS = [
-  '#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444',
-  '#06B6D4', '#EC4899', '#6366F1', '#14B8A6', '#F97316'
+  '#0066B3', // Air Liquide Blue (primary brand)
+  '#00B5AD', // Air Liquide Teal
+  '#8B5CF6', // Violet
+  '#F59E0B', // Amber / Gold
+  '#EC4899', // Pink
+  '#059669', // Emerald
+  '#F97316', // Orange
+  '#6366F1', // Indigo
+  '#00A3E0', // Air Liquide Sky
+  '#E11D48', // Rose
+  '#14B8A6', // Teal
+  '#A855F7', // Purple
 ];

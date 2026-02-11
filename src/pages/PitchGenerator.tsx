@@ -182,12 +182,9 @@ export function PitchGenerator() {
     setStep('preview');
   };
 
-  // Parser le texte streame en sections
+  // Parser le texte streame en sections — compatible multi-LLM
+  // Gère: [TAG], ## TAG, **TAG**, **[TAG]**, # TAG, TAG:, etc.
   const parsePitchSections = (text: string): PitchSection[] => {
-    const sectionRegex = /\[([A-Z_]+)\]\s*\n([\s\S]*?)(?=\n\[|$)/g;
-    const parsed: PitchSection[] = [];
-    let match;
-
     const sectionMap: Record<string, { id: PitchSection['id']; title: string; icon: string }> = {
       ACCROCHE: { id: 'hook', title: 'Accroche', icon: '1' },
       PROPOSITION: { id: 'proposition', title: 'Proposition de valeur', icon: '2' },
@@ -198,18 +195,61 @@ export function PitchGenerator() {
       FOLLOW_UP: { id: 'follow_up', title: 'Plan de suivi', icon: '7' },
     };
 
-    while ((match = sectionRegex.exec(text)) !== null) {
-      const [, key, content] = match;
-      const section = sectionMap[key];
-      if (section) {
-        parsed.push({
-          ...section,
-          content: content.trim(),
-        });
-      }
-    }
+    // Aliases for fuzzy matching (LLMs sometimes use alternative names)
+    const ALIASES: Record<string, string> = {
+      'ACCROCHE': 'ACCROCHE', 'HOOK': 'ACCROCHE', 'OUVERTURE': 'ACCROCHE', 'INTRODUCTION': 'ACCROCHE',
+      'PROPOSITION': 'PROPOSITION', 'PROPOSITION_DE_VALEUR': 'PROPOSITION', 'VALEUR': 'PROPOSITION', 'VALUE_PROPOSITION': 'PROPOSITION',
+      'CONCURRENCE': 'CONCURRENCE', 'DIFFERENCIATION': 'CONCURRENCE', 'COMPETITION': 'CONCURRENCE', 'DIFFERENTIATION': 'CONCURRENCE', 'COMPETITIVE': 'CONCURRENCE',
+      'CALL_TO_ACTION': 'CALL_TO_ACTION', 'CTA': 'CALL_TO_ACTION', 'CALLTOACTION': 'CALL_TO_ACTION', 'CALL TO ACTION': 'CALL_TO_ACTION', 'APPEL_A_L_ACTION': 'CALL_TO_ACTION',
+      'OBJECTIONS': 'OBJECTIONS', 'GESTION_DES_OBJECTIONS': 'OBJECTIONS', 'OBJECTION': 'OBJECTIONS',
+      'TALKING_POINTS': 'TALKING_POINTS', 'TALKINGPOINTS': 'TALKING_POINTS', 'POINTS_DE_DISCUSSION': 'TALKING_POINTS', 'POINTS_CLES': 'TALKING_POINTS', 'TALKING POINTS': 'TALKING_POINTS',
+      'FOLLOW_UP': 'FOLLOW_UP', 'FOLLOWUP': 'FOLLOW_UP', 'SUIVI': 'FOLLOW_UP', 'PLAN_DE_SUIVI': 'FOLLOW_UP', 'FOLLOW UP': 'FOLLOW_UP',
+    };
 
-    return parsed;
+    const resolveKey = (raw: string): string | null => {
+      const normalized = raw.trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/['']/g, '_');
+      return ALIASES[normalized] || ALIASES[normalized.replace(/_/g, '')] || null;
+    };
+
+    const extractWithRegex = (regex: RegExp): PitchSection[] => {
+      const results: PitchSection[] = [];
+      let m;
+      while ((m = regex.exec(text)) !== null) {
+        const rawKey = m[1];
+        const content = m[2];
+        const resolvedKey = resolveKey(rawKey);
+        if (resolvedKey && sectionMap[resolvedKey]) {
+          const section = sectionMap[resolvedKey];
+          const trimmed = content.trim();
+          if (trimmed.length > 0) {
+            results.push({ ...section, content: trimmed });
+          }
+        }
+      }
+      return results;
+    };
+
+    // Pattern 1: [TAG]\n — strict original format (o4-mini, GPT)
+    let parsed = extractWithRegex(/\[([A-Z_]+)\]\s*\n([\s\S]*?)(?=\n\[[A-Z]|$)/g);
+    if (parsed.length >= 2) return parsed;
+
+    // Pattern 2: [Tag] — case-insensitive (some models use mixed case)
+    parsed = extractWithRegex(/\[([A-Za-zÀ-ü_ ]+)\]\s*\n([\s\S]*?)(?=\n\[[A-Za-zÀ-ü]|$)/gi);
+    if (parsed.length >= 2) return parsed;
+
+    // Pattern 3: ## TAG or # TAG — markdown headers (Llama/Groq common output)
+    parsed = extractWithRegex(/#{1,3}\s*\*{0,2}\[?([A-Za-zÀ-ü_ ]+?)\]?\*{0,2}\s*\n([\s\S]*?)(?=\n#{1,3}\s|$)/gi);
+    if (parsed.length >= 2) return parsed;
+
+    // Pattern 4: **TAG** or **[TAG]** — bold markers (Llama common)
+    parsed = extractWithRegex(/\*{2}\s*\[?([A-Za-zÀ-ü_ ]+?)\]?\s*\*{2}:?\s*\n([\s\S]*?)(?=\n\*{2}\s*\[?[A-Za-zÀ-ü]|$)/gi);
+    if (parsed.length >= 2) return parsed;
+
+    // Pattern 5: Numbered sections like "1. ACCROCHE" or "1) Accroche"
+    parsed = extractWithRegex(/\d+[.)]\s*\*{0,2}\[?([A-Za-zÀ-ü_ ]+?)\]?\*{0,2}:?\s*\n([\s\S]*?)(?=\n\d+[.)]\s|$)/gi);
+    if (parsed.length >= 2) return parsed;
+
+    return [];
   };
 
   // Simulate streaming for local pitch (word-by-word reveal)
@@ -245,6 +285,8 @@ export function PitchGenerator() {
         const systemPrompt = buildEnhancedSystemPrompt(config, selectedPractitioner);
         const userPrompt = buildEnhancedUserPrompt(selectedPractitioner, config);
         let receivedChunks = false;
+        let accumulatedText = ''; // local ref avoids React batching delay
+        let sectionsFound = false;
 
         await streamCompletion(
           [
@@ -253,11 +295,13 @@ export function PitchGenerator() {
           ],
           (chunk) => {
             receivedChunks = true;
+            accumulatedText += chunk;
             setStreamedText((prev) => {
               const newText = prev + chunk;
               const parsed = parsePitchSections(newText);
               if (parsed.length > 0) {
                 setSections(parsed);
+                sectionsFound = true;
               }
               return newText;
             });
@@ -266,6 +310,31 @@ export function PitchGenerator() {
             // Success callback — streaming complete
           }
         );
+
+        // Post-stream validation: if chunks received but no sections parsed,
+        // do a final parse attempt on the complete text
+        if (receivedChunks && !sectionsFound) {
+          const finalParsed = parsePitchSections(accumulatedText);
+          if (finalParsed.length > 0) {
+            setSections(finalParsed);
+            setStreamedText(accumulatedText);
+          } else if (accumulatedText.trim().length > 50) {
+            // Raw text received but no section structure detected:
+            // wrap the entire LLM output as a single "Pitch" section
+            setSections([{
+              id: 'hook',
+              title: 'Pitch complet',
+              icon: '1',
+              content: accumulatedText.trim(),
+            }]);
+            setStreamedText(accumulatedText);
+          } else {
+            // Very short or empty output — fall back to local
+            setIsDemo(true);
+            const localPitch = generateLocalPitch(selectedPractitioner, config);
+            await simulateLocalStream(localPitch);
+          }
+        }
 
         // If LLM returned an error or produced no output, fallback to local
         if (!receivedChunks) {

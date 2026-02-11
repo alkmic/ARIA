@@ -412,6 +412,17 @@ ${config.includeObjections ? `
 [FOLLOW_UP]
 Plan de suivi post-visite en 3 étapes (J+1, J+7, J+30) avec actions concrètes personnalisées.
 
+FORMAT DE SORTIE OBLIGATOIRE:
+- Chaque section DOIT commencer par son tag entre crochets sur une ligne seule: [TAG]
+- Tags exacts à utiliser: ${sections.join(', ')}
+- NE PAS utiliser de headers markdown (##), NE PAS utiliser de format bold (**TAG**), NE PAS numéroter les sections
+- Exemple de format attendu:
+[ACCROCHE]
+Contenu de l'accroche ici...
+
+[PROPOSITION]
+Contenu de la proposition ici...
+
 Génère le pitch complet en suivant cette structure exacte.`;
 }
 

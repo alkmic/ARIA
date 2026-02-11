@@ -98,6 +98,40 @@ interface Message {
 // Couleurs pour les graphiques
 const CHART_COLORS = DEFAULT_CHART_COLORS;
 
+// Palette dégradée pour barres — chaque couleur a un stop clair et foncé
+const CHART_GRADIENTS = CHART_COLORS.map((color, i) => ({
+  id: `chartGrad${i}`,
+  from: color,
+  to: adjustColor(color, -25),
+}));
+
+// Ajuster la luminosité d'une couleur hex
+function adjustColor(hex: string, amount: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, Math.max(0, ((num >> 16) & 0xFF) + amount));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xFF) + amount));
+  const b = Math.min(255, Math.max(0, (num & 0xFF) + amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+// Style commun des tooltips
+const TOOLTIP_STYLE = {
+  backgroundColor: 'rgba(255, 255, 255, 0.96)',
+  backdropFilter: 'blur(8px)',
+  borderRadius: '12px',
+  border: '1px solid rgba(0, 102, 179, 0.12)',
+  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 102, 179, 0.06)',
+  padding: '10px 14px',
+  fontSize: '13px',
+};
+
+// Formateur de valeurs numériques
+function formatChartValue(value: number): string {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return value.toFixed(value % 1 === 0 ? 0 : 1);
+}
+
 export default function AICoach() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -757,28 +791,32 @@ export default function AICoach() {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-slate-200"
+                      className="mt-4 bg-gradient-to-br from-white via-white to-slate-50/50 rounded-2xl p-5 shadow-md border border-slate-200/80"
                     >
                       {/* En-tête avec indicateur agentique */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {message.agenticChart.spec.chartType === 'pie' ? (
-                            <PieChartIcon className="w-5 h-5 text-purple-500" />
-                          ) : message.agenticChart.spec.chartType === 'line' ? (
-                            <TrendingUp className="w-5 h-5 text-green-500" />
-                          ) : message.agenticChart.spec.chartType === 'composed' ? (
-                            <BarChart3 className="w-5 h-5 text-indigo-500" />
-                          ) : message.agenticChart.spec.chartType === 'radar' ? (
-                            <BarChart3 className="w-5 h-5 text-violet-500" />
-                          ) : (
-                            <BarChart3 className="w-5 h-5 text-blue-500" />
-                          )}
-                          <h4 className="font-semibold text-slate-800">{message.agenticChart.spec.title}</h4>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${
+                            message.agenticChart.spec.chartType === 'pie' ? 'bg-gradient-to-br from-violet-500 to-purple-600' :
+                            message.agenticChart.spec.chartType === 'line' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
+                            message.agenticChart.spec.chartType === 'composed' ? 'bg-gradient-to-br from-indigo-500 to-blue-600' :
+                            message.agenticChart.spec.chartType === 'radar' ? 'bg-gradient-to-br from-violet-500 to-indigo-600' :
+                            'bg-gradient-to-br from-al-blue-500 to-al-blue-700'
+                          }`}>
+                            {message.agenticChart.spec.chartType === 'pie' ? (
+                              <PieChartIcon className="w-4 h-4 text-white" />
+                            ) : message.agenticChart.spec.chartType === 'line' ? (
+                              <TrendingUp className="w-4 h-4 text-white" />
+                            ) : (
+                              <BarChart3 className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+                          <h4 className="font-semibold text-slate-800 text-[15px]">{message.agenticChart.spec.title}</h4>
                         </div>
                         {message.agenticChart.generatedByLLM && (
-                          <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 rounded-full">
+                          <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-600 rounded-full border border-purple-100/50 font-medium">
                             <Code2 className="w-3 h-3" />
-                            Généré par IA
+                            IA
                           </span>
                         )}
                       </div>
@@ -796,49 +834,80 @@ export default function AICoach() {
                             if (chart.spec.chartType === 'pie') {
                               return (
                                 <PieChart>
+                                  <defs>
+                                    {CHART_GRADIENTS.map((g) => (
+                                      <linearGradient key={g.id} id={g.id} x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stopColor={g.from} stopOpacity={0.95} />
+                                        <stop offset="100%" stopColor={g.to} stopOpacity={1} />
+                                      </linearGradient>
+                                    ))}
+                                  </defs>
                                   <Pie
                                     data={data}
                                     cx="50%"
                                     cy="50%"
-                                    labelLine={false}
+                                    innerRadius={50}
+                                    outerRadius={95}
+                                    paddingAngle={2}
+                                    labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                                     label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
-                                    outerRadius={90}
                                     fill="#8884d8"
                                     dataKey={primaryMetric}
+                                    strokeWidth={0}
                                   >
                                     {data.map((_, index) => (
-                                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                      <Cell key={`cell-${index}`} fill={`url(#${CHART_GRADIENTS[index % CHART_GRADIENTS.length].id})`} />
                                     ))}
                                   </Pie>
-                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                                  <Legend />
+                                  <Tooltip
+                                    contentStyle={TOOLTIP_STYLE}
+                                    formatter={(value: number) => [formatChartValue(value), primaryMetric]}
+                                  />
+                                  <Legend
+                                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+                                    iconType="circle"
+                                    iconSize={8}
+                                  />
                                 </PieChart>
                               );
                             }
 
                             if (chart.spec.chartType === 'line') {
                               return (
-                                <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
-                                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                                  <Legend />
+                                <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                  <defs>
+                                    <linearGradient id="lineGradPrimary" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.15} />
+                                      <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="lineGradSecondary" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.1} />
+                                      <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
+                                    </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" angle={-45} textAnchor="end" height={60} />
+                                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />
+                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} iconType="plainline" />
                                   <Line
                                     type="monotone"
                                     dataKey={primaryMetric}
-                                    stroke="#8B5CF6"
-                                    strokeWidth={2}
-                                    dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
+                                    stroke={CHART_COLORS[0]}
+                                    strokeWidth={2.5}
+                                    dot={{ fill: '#fff', stroke: CHART_COLORS[0], strokeWidth: 2, r: 4 }}
+                                    activeDot={{ fill: CHART_COLORS[0], stroke: '#fff', strokeWidth: 2, r: 6 }}
                                     name={primaryMetric}
                                   />
                                   {secondaryMetric && (
                                     <Line
                                       type="monotone"
                                       dataKey={secondaryMetric}
-                                      stroke="#10B981"
-                                      strokeWidth={2}
-                                      dot={{ fill: '#10B981', strokeWidth: 2 }}
+                                      stroke={CHART_COLORS[1]}
+                                      strokeWidth={2.5}
+                                      strokeDasharray="6 3"
+                                      dot={{ fill: '#fff', stroke: CHART_COLORS[1], strokeWidth: 2, r: 4 }}
+                                      activeDot={{ fill: CHART_COLORS[1], stroke: '#fff', strokeWidth: 2, r: 6 }}
                                       name={secondaryMetric}
                                     />
                                   )}
@@ -848,19 +917,36 @@ export default function AICoach() {
 
                             if (chart.spec.chartType === 'composed') {
                               return (
-                                <ComposedChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
-                                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                                  <Legend />
-                                  <Bar dataKey={primaryMetric} fill="#3B82F6" radius={[4, 4, 0, 0]} name={primaryMetric}>
+                                <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                  <defs>
+                                    {CHART_GRADIENTS.map((g) => (
+                                      <linearGradient key={g.id} id={g.id} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor={g.from} stopOpacity={0.9} />
+                                        <stop offset="100%" stopColor={g.to} stopOpacity={1} />
+                                      </linearGradient>
+                                    ))}
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" angle={-45} textAnchor="end" height={60} />
+                                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />
+                                  {secondaryMetric && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />}
+                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
+                                  <Bar dataKey={primaryMetric} yAxisId="left" radius={[6, 6, 0, 0]} name={primaryMetric} barSize={32}>
                                     {data.map((_, index) => (
-                                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                      <Cell key={`cell-${index}`} fill={`url(#${CHART_GRADIENTS[index % CHART_GRADIENTS.length].id})`} />
                                     ))}
                                   </Bar>
                                   {secondaryMetric && (
-                                    <Line type="monotone" dataKey={secondaryMetric} stroke="#EF4444" strokeWidth={2} name={secondaryMetric} />
+                                    <Line
+                                      type="monotone"
+                                      dataKey={secondaryMetric}
+                                      yAxisId={secondaryMetric ? 'right' : 'left'}
+                                      stroke={CHART_COLORS[3]}
+                                      strokeWidth={2.5}
+                                      dot={{ fill: '#fff', stroke: CHART_COLORS[3], strokeWidth: 2, r: 4 }}
+                                      name={secondaryMetric}
+                                    />
                                   )}
                                 </ComposedChart>
                               );
@@ -869,25 +955,42 @@ export default function AICoach() {
                             if (chart.spec.chartType === 'radar') {
                               return (
                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-                                  <PolarGrid stroke="#e2e8f0" />
-                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v} />
-                                  <PolarRadiusAxis tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                                  <Legend />
+                                  <defs>
+                                    <linearGradient id="radarGradPrimary" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.4} />
+                                      <stop offset="100%" stopColor={CHART_COLORS[2]} stopOpacity={0.1} />
+                                    </linearGradient>
+                                    <linearGradient id="radarGradSecondary" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
+                                      <stop offset="100%" stopColor={CHART_COLORS[1]} stopOpacity={0.05} />
+                                    </linearGradient>
+                                  </defs>
+                                  <PolarGrid stroke="#e2e8f0" strokeOpacity={0.8} />
+                                  <PolarAngleAxis
+                                    dataKey="name"
+                                    tick={{ fontSize: 10, fill: '#64748b' }}
+                                    stroke="#cbd5e1"
+                                    tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v}
+                                  />
+                                  <PolarRadiusAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#e2e8f0" />
+                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
                                   <Radar
                                     name={primaryMetric}
                                     dataKey={primaryMetric}
-                                    stroke="#8B5CF6"
-                                    fill="#8B5CF6"
-                                    fillOpacity={0.3}
+                                    stroke={CHART_COLORS[0]}
+                                    strokeWidth={2}
+                                    fill="url(#radarGradPrimary)"
+                                    fillOpacity={1}
                                   />
                                   {secondaryMetric && (
                                     <Radar
                                       name={secondaryMetric}
                                       dataKey={secondaryMetric}
-                                      stroke="#10B981"
-                                      fill="#10B981"
-                                      fillOpacity={0.2}
+                                      stroke={CHART_COLORS[1]}
+                                      strokeWidth={2}
+                                      fill="url(#radarGradSecondary)"
+                                      fillOpacity={1}
                                     />
                                   )}
                                 </RadarChart>
@@ -896,19 +999,27 @@ export default function AICoach() {
 
                             // Default: Bar chart
                             return (
-                              <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={60} />
-                                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                                <Legend />
-                                <Bar dataKey={primaryMetric} fill="#3B82F6" radius={[4, 4, 0, 0]} name={primaryMetric}>
+                              <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                <defs>
+                                  {CHART_GRADIENTS.map((g) => (
+                                    <linearGradient key={g.id} id={g.id} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={g.from} stopOpacity={0.9} />
+                                      <stop offset="100%" stopColor={g.to} stopOpacity={1} />
+                                    </linearGradient>
+                                  ))}
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
+                                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" angle={-45} textAnchor="end" height={60} />
+                                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />
+                                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
+                                <Bar dataKey={primaryMetric} radius={[6, 6, 0, 0]} name={primaryMetric} barSize={32}>
                                   {data.map((_, index) => (
-                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                    <Cell key={`cell-${index}`} fill={`url(#${CHART_GRADIENTS[index % CHART_GRADIENTS.length].id})`} />
                                   ))}
                                 </Bar>
                                 {secondaryMetric && (
-                                  <Bar dataKey={secondaryMetric} fill="#10B981" radius={[4, 4, 0, 0]} name={secondaryMetric} />
+                                  <Bar dataKey={secondaryMetric} fill={CHART_COLORS[1]} radius={[6, 6, 0, 0]} name={secondaryMetric} barSize={32} fillOpacity={0.8} />
                                 )}
                               </BarChart>
                             );
@@ -916,9 +1027,14 @@ export default function AICoach() {
                         </ResponsiveContainer>
                       </div>
 
+                      {/* Description du graphique */}
+                      {message.agenticChart.spec.description && (
+                        <p className="text-xs text-slate-500 mt-2 px-1 italic">{message.agenticChart.spec.description}</p>
+                      )}
+
                       {/* Insights générés */}
                       {message.agenticChart.insights.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
+                        <div className="mt-3 pt-3 border-t border-slate-100/80 space-y-1.5">
                           {message.agenticChart.insights.map((insight, i) => (
                             <div key={i} className="flex items-start gap-2 text-sm text-slate-600">
                               <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -930,14 +1046,14 @@ export default function AICoach() {
 
                       {/* Suggestions de suivi */}
                       {message.suggestions && message.suggestions.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-100">
-                          <p className="text-xs text-slate-500 mb-2">Pour approfondir :</p>
+                        <div className="mt-3 pt-3 border-t border-slate-100/80">
+                          <p className="text-xs text-slate-500 mb-2 font-medium">Pour approfondir :</p>
                           <div className="flex flex-wrap gap-2">
                             {message.suggestions.map((suggestion, i) => (
                               <button
                                 key={i}
                                 onClick={() => setInput(suggestion)}
-                                className="px-2 py-1 text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors border border-slate-200"
+                                className="px-2.5 py-1.5 text-xs bg-gradient-to-r from-slate-50 to-white hover:from-al-blue-50 hover:to-blue-50 text-slate-600 hover:text-al-blue-700 rounded-lg transition-all border border-slate-200 hover:border-al-blue-200 font-medium"
                               >
                                 {suggestion}
                               </button>
