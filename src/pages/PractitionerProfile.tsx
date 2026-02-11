@@ -353,7 +353,8 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
 function HistoryTab({ conversations, timePeriod, periodLabel }: { conversations: any[]; timePeriod: string; periodLabel: string }) {
   // Filtrer les conversations selon la période
   const now = new Date();
-  const filteredConversations = conversations.filter(conv => {
+  const safeConversations = conversations || [];
+  const filteredConversations = safeConversations.filter(conv => {
     const convDate = new Date(conv.date);
     if (timePeriod === 'month') {
       const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
@@ -377,9 +378,9 @@ function HistoryTab({ conversations, timePeriod, periodLabel }: { conversations:
       <div className="glass-card p-3 bg-al-blue-50 border-al-blue-100">
         <p className="text-sm text-slate-600">
           Affichage des visites : <span className="font-semibold text-slate-800">{periodLabel}</span>
-          {filteredConversations.length !== conversations.length && (
+          {filteredConversations.length !== safeConversations.length && (
             <span className="ml-2 text-slate-500">
-              ({filteredConversations.length} sur {conversations.length})
+              ({filteredConversations.length} sur {safeConversations.length})
             </span>
           )}
         </p>
