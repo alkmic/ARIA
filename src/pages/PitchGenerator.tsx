@@ -123,7 +123,7 @@ export function PitchGenerator() {
   const [, setPractitionerSummary] = useState<string>('');
 
   // Hooks IA et Speech
-  const { streamCompletion, complete, isLoading: groqLoading, error: llmError } = useGroq({
+  const { streamCompletion, complete, isLoading: groqLoading } = useGroq({
     temperature: 0.8,
     maxTokens: 4096,
   });

@@ -662,7 +662,6 @@ export function generateLocalPitch(practitioner: Practitioner, config: PitchConf
   const conferences = profile?.news?.filter(n => n.type === 'conference') || [];
   const awards = profile?.news?.filter(n => n.type === 'award') || [];
   const notes = profile?.notes || [];
-  const visits = profile?.visitHistory || [];
   const topProducts = profile ? getProductFrequency(profile).slice(0, 3) : [];
 
   const daysSinceLastVisit = profile?.lastVisitDate
