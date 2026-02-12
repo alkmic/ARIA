@@ -83,7 +83,26 @@ export default function VoiceVisitReport() {
   const recognitionRef = useRef<any>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const isRecordingRef = useRef(false);
+  const transcriptRef = useRef<HTMLTextAreaElement>(null);
+  const editedNotesRef = useRef<HTMLTextAreaElement>(null);
   const voiceCaps = useMemo(() => getVoiceCapabilities(), []);
+
+  // Auto-resize des textareas
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 300) + 'px';
+    }
+  }, [transcript]);
+
+  useEffect(() => {
+    const el = editedNotesRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 400) + 'px';
+    }
+  }, [editedNotes]);
 
   // Auto-select from URL param or today's visit
   useEffect(() => {
@@ -686,12 +705,14 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 {/* Text Option */}
                 <div className="p-4 border-2 border-slate-200 rounded-xl">
                   <textarea
+                    ref={transcriptRef}
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
                     placeholder="Ou tapez directement votre compte-rendu ici...
 
 Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a mentionné avoir 3 patients candidats. Prochaine étape: envoyer la documentation technique."
-                    className="w-full h-32 p-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                    className="w-full p-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none overflow-hidden"
+                    style={{ minHeight: '128px', maxHeight: '300px' }}
                     disabled={isRecording}
                   />
                 </div>
@@ -901,10 +922,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 Transcription (modifiable)
               </label>
               <textarea
+                ref={editedNotesRef}
                 value={editedNotes}
                 onChange={(e) => setEditedNotes(e.target.value)}
                 rows={4}
-                className="input-field w-full resize-none"
+                className="input-field w-full resize-none overflow-hidden"
+                style={{ minHeight: '100px', maxHeight: '400px' }}
               />
             </div>
 

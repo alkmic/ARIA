@@ -160,6 +160,7 @@ export default function AICoach() {
   const autoSentRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // Conversation history for the engine (role + content, no UI metadata)
   const conversationHistoryRef = useRef<ConversationMessage[]>([]);
   // RAG Knowledge Base stats
@@ -188,6 +189,15 @@ export default function AICoach() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-resize du textarea d'entrée
+  useEffect(() => {
+    const el = inputRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+    }
+  }, [input]);
 
   // Audio recorder ref pour Whisper STT
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
@@ -1241,20 +1251,27 @@ export default function AICoach() {
 
         {/* Input */}
         <div className="p-3 sm:p-4 border-t border-slate-200 bg-white/80 backdrop-blur-sm rounded-b-2xl">
-          <div className="flex gap-2 sm:gap-3">
-            <input
-              type="text"
+          <div className="flex items-end gap-2 sm:gap-3">
+            <textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend(input)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(input);
+                }
+              }}
               placeholder="Question sur vos praticiens, la BPCO, l'oxygénothérapie, la concurrence..."
-              className="input-field flex-1 text-sm sm:text-base"
+              className="input-field flex-1 text-sm sm:text-base resize-none overflow-hidden"
+              style={{ minHeight: '42px', maxHeight: '150px' }}
+              rows={1}
               disabled={isTyping}
             />
             <button
               onClick={toggleListening}
               disabled={isTyping}
-              className={`p-2 sm:px-4 sm:py-2 rounded-lg transition-all flex items-center gap-2 ${
+              className={`p-2 sm:px-4 sm:py-2 rounded-lg transition-all flex items-center gap-2 shrink-0 ${
                 isListening
                   ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
                   : 'btn-secondary'
@@ -1266,7 +1283,7 @@ export default function AICoach() {
             <button
               onClick={() => handleSend(input)}
               disabled={!input.trim() || isTyping}
-              className="btn-primary px-4 sm:px-6 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-al-blue-500 to-purple-500 hover:from-al-blue-600 hover:to-purple-600 shadow-lg shadow-purple-500/20"
+              className="btn-primary px-4 sm:px-6 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-al-blue-500 to-purple-500 hover:from-al-blue-600 hover:to-purple-600 shadow-lg shadow-purple-500/20 shrink-0"
             >
               <Send className="w-5 h-5" />
             </button>
