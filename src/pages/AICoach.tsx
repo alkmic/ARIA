@@ -189,24 +189,30 @@ export default function AICoach() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialiser Web Speech API
   // Audio recorder ref pour Whisper STT
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const interimRef = useRef('');
   const finalTranscriptRef = useRef('');
+  const isListeningRef = useRef(false);
 
   // Capacités vocales du provider
   const voiceCaps = useMemo(() => getVoiceCapabilities(), []);
 
+  // Synchroniser la ref avec le state pour que onend puisse lire la valeur courante
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  // Initialiser Web Speech API — UNE SEULE FOIS (pas de dépendance sur isListening)
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'fr-FR';
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'fr-FR';
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognition.onresult = (event: any) => {
         let finalText = '';
         let interimText = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -228,18 +234,20 @@ export default function AICoach() {
         }
       };
 
-      recognitionRef.current.onerror = (event: any) => {
+      recognition.onerror = (event: any) => {
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
           setIsListening(false);
         }
       };
 
-      recognitionRef.current.onend = () => {
+      recognition.onend = () => {
         // Auto-restart si encore en écoute (le navigateur coupe après ~60s)
-        if (isListening && recognitionRef.current) {
+        if (isListeningRef.current && recognitionRef.current) {
           try { recognitionRef.current.start(); } catch { /* ignore */ }
         }
       };
+
+      recognitionRef.current = recognition;
     }
 
     return () => {
@@ -247,7 +255,7 @@ export default function AICoach() {
         try { recognitionRef.current.stop(); } catch { /* ignore */ }
       }
     };
-  }, [isListening]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleListening = async () => {
     if (!recognitionRef.current) {
@@ -559,11 +567,20 @@ export default function AICoach() {
             {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             Lecture auto {autoSpeak ? 'ON' : 'OFF'}
           </button>
-          {voiceCaps.tts === 'openai-tts' && (
-            <span className="text-[10px] px-2 py-1 bg-purple-50 text-purple-600 rounded-full font-medium border border-purple-100">
-              Voix IA ({voiceCaps.providerName})
-            </span>
-          )}
+          <span className={`text-[10px] px-2 py-1 rounded-full font-medium border ${
+            voiceCaps.tts === 'openai-tts'
+              ? 'bg-purple-50 text-purple-600 border-purple-100'
+              : 'bg-slate-50 text-slate-500 border-slate-200'
+          }`}>
+            🔊 {voiceCaps.tts === 'openai-tts' ? `Voix IA (${voiceCaps.providerName})` : 'Voix navigateur'}
+          </span>
+          <span className={`text-[10px] px-2 py-1 rounded-full font-medium border ${
+            voiceCaps.stt === 'whisper'
+              ? 'bg-blue-50 text-blue-600 border-blue-100'
+              : 'bg-slate-50 text-slate-500 border-slate-200'
+          }`}>
+            🎤 {voiceCaps.stt === 'whisper' ? `Whisper (${voiceCaps.providerName})` : voiceCaps.stt === 'browser' ? 'Micro navigateur' : 'Non disponible'}
+          </span>
 
           {isSpeaking && (
             <button

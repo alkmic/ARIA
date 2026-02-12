@@ -64,6 +64,7 @@ export default function VoiceVisitReport() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [interimText, setInterimText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
   const [editedNotes, setEditedNotes] = useState('');
@@ -80,8 +81,8 @@ export default function VoiceVisitReport() {
   const [aiDeductions, setAiDeductions] = useState<AIDeduction[]>([]);
 
   const recognitionRef = useRef<any>(null);
-  const interimTranscriptRef = useRef('');
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const isRecordingRef = useRef(false);
   const voiceCaps = useMemo(() => getVoiceCapabilities(), []);
 
   // Auto-select from URL param or today's visit
@@ -108,59 +109,64 @@ export default function VoiceVisitReport() {
     return quickSearch(searchQuery, 8);
   }, [searchQuery]);
 
-  // Initialize speech recognition
+  // Synchroniser la ref avec le state
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
+
+  // Initialize speech recognition — UNE SEULE FOIS
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'fr-FR';
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'fr-FR';
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognition.onresult = (event: any) => {
         let finalTranscript = '';
         let interimTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
+          const t = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
+            finalTranscript += t + ' ';
           } else {
-            interimTranscript += transcript;
+            interimTranscript += t;
           }
         }
 
         if (finalTranscript) {
           setTranscript(prev => prev + finalTranscript);
+          setInterimText(''); // Effacer l'interim quand on a du texte final
         }
-        interimTranscriptRef.current = interimTranscript;
+        if (interimTranscript) {
+          setInterimText(interimTranscript);
+        }
       };
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech') {
+      recognition.onerror = (event: any) => {
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
           setIsRecording(false);
         }
       };
 
-      recognitionRef.current.onend = () => {
+      recognition.onend = () => {
         // Auto-restart if still recording
-        if (isRecording && recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {
-            // Ignore
-          }
+        if (isRecordingRef.current && recognitionRef.current) {
+          try { recognitionRef.current.start(); } catch { /* ignore */ }
         }
       };
+
+      recognitionRef.current = recognition;
     }
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
       }
     };
-  }, [isRecording]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleRecording = async () => {
     if (!recognitionRef.current) {
@@ -171,6 +177,7 @@ export default function VoiceVisitReport() {
     if (isRecording) {
       recognitionRef.current.stop();
       setIsRecording(false);
+      setInterimText('');
 
       // Raffiner avec Whisper si disponible
       if (voiceCaps.stt === 'whisper' && audioRecorderRef.current?.isRecording()) {
@@ -189,6 +196,7 @@ export default function VoiceVisitReport() {
       audioRecorderRef.current = null;
     } else {
       setTranscript('');
+      setInterimText('');
 
       // Lancer l'enregistrement audio en parallèle si Whisper disponible
       if (voiceCaps.stt === 'whisper') {
@@ -702,10 +710,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                     )}
                   </label>
                   <div className="bg-slate-50 rounded-xl p-4 max-h-48 overflow-y-auto min-h-[80px]">
-                    <p className="text-slate-700 whitespace-pre-wrap">{transcript}</p>
-                    {isRecording && interimTranscriptRef.current && (
-                      <span className="text-slate-400 italic">{interimTranscriptRef.current}</span>
-                    )}
+                    <p className="text-slate-700 whitespace-pre-wrap">
+                      {transcript}
+                      {isRecording && interimText && (
+                        <span className="text-slate-400 italic">{interimText}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
               )}
