@@ -17,7 +17,7 @@ export const NationalStats: React.FC = () => {
     total: 67491,
     patientsOxygene: 150000,              // Estimation 2024 (base 2010: 100K, croissance +3-5%/an)
     volumeMoyenPatient: 760,              // Litres LOX/patient/an (2 L/min, 16h/j ≈ 815 L LOX/an)
-    percentageKOL: 0.24
+    percentageKOL: 24                    // ~24% des pneumologues sont KOL
   };
 
   // Territory stats (our current data subset)

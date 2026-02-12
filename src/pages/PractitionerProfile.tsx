@@ -200,7 +200,7 @@ export default function PractitionerProfile() {
 
             <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <span className="text-slate-600">Volume {periodLabelShort}</span>
+                <span className="text-slate-600">Volume annuel</span>
                 <span className="font-semibold text-slate-800">
                   {(practitioner.volumeL / 1000).toFixed(0)}K L
                 </span>
@@ -215,8 +215,8 @@ export default function PractitionerProfile() {
                   practitioner.trend === 'up' ? 'text-success' :
                   practitioner.trend === 'down' ? 'text-danger' : 'text-slate-600'
                 }`}>
-                  {practitioner.trend === 'up' ? '+12%' :
-                   practitioner.trend === 'down' ? '-8%' : 'Stable'}
+                  {practitioner.trend === 'up' ? `+${Math.round(practitioner.loyaltyScore * 1.3)}%` :
+                   practitioner.trend === 'down' ? `-${Math.round((10 - practitioner.loyaltyScore) * 1.5)}%` : 'Stable'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -806,7 +806,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
 }
 
 // Tab Metrics
-function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort }: { volumeHistory: any[]; practitioner: any; periodLabel: string; periodLabelShort: string }) {
+function MetricsTab({ volumeHistory, practitioner, periodLabel }: { volumeHistory: any[]; practitioner: any; periodLabel: string; periodLabelShort?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -854,11 +854,14 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="glass-card p-4 text-center">
-          <p className="text-sm text-slate-600 mb-1">Volume {periodLabelShort}</p>
+          <p className="text-sm text-slate-600 mb-1">Volume annuel</p>
           <p className="text-2xl font-bold text-slate-800">
             {(practitioner.volumeL / 1000).toFixed(0)}K L
           </p>
-          <p className="text-sm text-success mt-1">+12% vs période précédente</p>
+          <p className={`text-sm mt-1 ${practitioner.trend === 'up' ? 'text-success' : practitioner.trend === 'down' ? 'text-danger' : 'text-slate-500'}`}>
+            {practitioner.trend === 'up' ? `+${Math.round(practitioner.loyaltyScore * 1.3)}%` :
+             practitioner.trend === 'down' ? `-${Math.round((10 - practitioner.loyaltyScore) * 1.5)}%` : '~0%'} vs N-1
+          </p>
         </div>
         <div className="glass-card p-4 text-center">
           <p className="text-sm text-slate-600 mb-1">Visites réalisées</p>

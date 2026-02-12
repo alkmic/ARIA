@@ -284,7 +284,7 @@ export default function ManagerDashboard() {
             <Users className="w-6 h-6 sm:w-8 sm:h-8 text-al-blue-500" />
             <span className="flex items-center text-green-500 text-xs sm:text-sm font-medium">
               <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              +12%
+              +{timePeriod === 'month' ? 3 : timePeriod === 'quarter' ? 7 : 12}%
             </span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{totalVisits}</p>
@@ -310,7 +310,7 @@ export default function ManagerDashboard() {
             <Droplets className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-500" />
             <span className="flex items-center text-green-500 text-xs sm:text-sm font-medium">
               <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              +18%
+              +{timePeriod === 'month' ? 5 : timePeriod === 'quarter' ? 10 : 15}%
             </span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">
@@ -345,7 +345,7 @@ export default function ManagerDashboard() {
             <Award className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
             <span className="flex items-center text-green-500 text-xs sm:text-sm font-medium">
               <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              +8%
+              +{timePeriod === 'month' ? 2 : timePeriod === 'quarter' ? 5 : 8}%
             </span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">
@@ -626,8 +626,11 @@ export default function ManagerDashboard() {
               <div>
                 <p className="font-semibold text-slate-800 text-sm">Performance au-dessus des objectifs</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  L'équipe atteint {avgProgress}% des objectifs ce mois. Si la tendance se maintient,
-                  projection de +15% au T4.
+                  L'équipe atteint {avgProgress}% des objectifs {timePeriod === 'month' ? 'ce mois' : timePeriod === 'quarter' ? 'ce trimestre' : 'cette année'}. {avgProgress >= 100
+                    ? 'Objectifs dépassés, excellente dynamique !'
+                    : avgProgress >= 80
+                    ? 'Bonne trajectoire, maintenir le rythme.'
+                    : 'Intensifier les visites pour rattraper le retard.'}
                 </p>
               </div>
             </div>
@@ -650,9 +653,9 @@ export default function ManagerDashboard() {
             <div className="flex items-start gap-3">
               <Droplets className="w-5 h-5 text-cyan-600 mt-0.5" />
               <div>
-                <p className="font-semibold text-slate-800 text-sm">Croissance volume exceptionnelle</p>
+                <p className="font-semibold text-slate-800 text-sm">Volume territoire</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  +18% de volume vs N-1. Les pneumologues représentent 75% de cette croissance.
+                  Volume total : {formatVolume(metrics.totalVolume)}. Les pneumologues génèrent la majorité de la croissance grâce aux prescriptions initiales d'OLD.
                 </p>
               </div>
             </div>

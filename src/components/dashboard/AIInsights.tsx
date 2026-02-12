@@ -68,7 +68,7 @@ export const AIInsights: React.FC = () => {
 
     // 3. Find churn risks
     const atRisk = allPractitioners.filter(p =>
-      (p.metrics.churnRisk === 'high' || p.metrics.loyaltyScore < 5) && p.metrics.volumeL > 50000
+      (p.metrics.churnRisk === 'high' || p.metrics.loyaltyScore < 5) && p.metrics.volumeL > 5000
     ).sort((a, b) => b.metrics.volumeL - a.metrics.volumeL);
 
     if (atRisk.length > 0) {
@@ -78,7 +78,7 @@ export const AIInsights: React.FC = () => {
         type: 'alert',
         title: 'Risque de perte identifié',
         message: `${mostAtRisk.title} ${mostAtRisk.lastName} (${(mostAtRisk.metrics.volumeL / 1000).toFixed(0)}K L/an) montre des signes d'attrition. Fidélité: ${mostAtRisk.metrics.loyaltyScore}/10. Action recommandée.`,
-        priority: mostAtRisk.metrics.volumeL > 100000 ? 'high' : 'medium',
+        priority: mostAtRisk.metrics.volumeL > 40000 ? 'high' : 'medium',
         actionLabel: 'Voir le profil',
         practitionerId: mostAtRisk.id
       });

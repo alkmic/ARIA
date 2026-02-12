@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAppStore } from '../../stores/useAppStore';
+import { formatVolume } from '../../utils/helpers';
 import { Stethoscope, Users2, Home, Building2, Building } from 'lucide-react';
 
 export const SpecialtyBreakdown: React.FC = () => {
@@ -141,18 +142,18 @@ export const SpecialtyBreakdown: React.FC = () => {
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                   fontSize: '12px'
                 }}
-                formatter={(value: number | undefined) => value ? `${(value / 1000000).toFixed(2)}M L` : '0M L'}
+                formatter={(value: number | undefined) => value ? formatVolume(value) : '0 L'}
               />
             </PieChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-4 mt-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-al-blue-500"></div>
-              <span className="text-xs text-slate-600">Pneumo ({(pneumoVolume / 1000000).toFixed(1)}M L)</span>
+              <span className="text-xs text-slate-600">Pneumo ({formatVolume(pneumoVolume)})</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-al-teal"></div>
-              <span className="text-xs text-slate-600">Généralistes ({(genVolume / 1000000).toFixed(1)}M L)</span>
+              <span className="text-xs text-slate-600">Généralistes ({formatVolume(genVolume)})</span>
             </div>
           </div>
         </div>
@@ -185,7 +186,7 @@ export const SpecialtyBreakdown: React.FC = () => {
                 </span>
               </td>
               <td className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-al-blue-600">
-                {(pneumoVolume / 1000000).toFixed(2)}M L
+                {formatVolume(pneumoVolume)}
               </td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-600">
                 {pneumologues.length > 0 ? (pneumoVolume / pneumologues.length / 1000).toFixed(0) : '0'}K
@@ -205,7 +206,7 @@ export const SpecialtyBreakdown: React.FC = () => {
                 </span>
               </td>
               <td className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-al-teal">
-                {(genVolume / 1000000).toFixed(2)}M L
+                {formatVolume(genVolume)}
               </td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-600">
                 {generalistes.length > 0 ? (genVolume / generalistes.length / 1000).toFixed(0) : '0'}K

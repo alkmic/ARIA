@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, UserPlus, Star, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../../stores/useAppStore';
 
 interface Win {
   icon: React.ReactNode;
@@ -11,16 +13,61 @@ interface Win {
 
 export function WeeklyWins() {
   const navigate = useNavigate();
+  const { upcomingVisits, practitioners } = useAppStore();
+
+  const weeklyData = useMemo(() => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Count visits this week
+    const thisWeekVisits = upcomingVisits.filter(v => {
+      const vDate = new Date(v.date);
+      return vDate >= startOfWeek && vDate <= endOfWeek;
+    });
+
+    // KOL visits this week
+    const kolVisits = thisWeekVisits.filter(v => {
+      const pract = practitioners.find(p => p.id === v.practitionerId);
+      return pract?.isKOL;
+    });
+
+    // High-loyalty practitioners visited (loyalty >= 8) — "fidélisés"
+    const highLoyaltyVisits = thisWeekVisits.filter(v => {
+      const pract = practitioners.find(p => p.id === v.practitionerId);
+      return pract && pract.loyaltyScore >= 8;
+    });
+
+    // Pending visits (future dates this week)
+    const pendingVisits = thisWeekVisits.filter(v => new Date(v.date) > today);
+
+    // At-risk practitioners needing follow-up
+    const atRiskCount = practitioners.filter(p =>
+      p.loyaltyScore < 5 && p.volumeL > 5000
+    ).length;
+
+    return {
+      visitsCount: thisWeekVisits.length,
+      kolVisitsCount: kolVisits.length,
+      highLoyaltyCount: highLoyaltyVisits.length,
+      pendingCount: pendingVisits.length,
+      relancesCount: Math.min(atRiskCount, 10),
+    };
+  }, [upcomingVisits, practitioners]);
 
   const wins: Win[] = [
-    { icon: <CheckCircle className="w-5 h-5" />, label: 'Visites réalisées', value: '8', color: 'text-green-600 bg-green-100' },
-    { icon: <UserPlus className="w-5 h-5" />, label: 'Nouveaux prescripteurs', value: '2', color: 'text-blue-600 bg-blue-100' },
-    { icon: <Star className="w-5 h-5" />, label: 'KOL reconquis', value: '1', color: 'text-amber-600 bg-amber-100' },
+    { icon: <CheckCircle className="w-5 h-5" />, label: 'Visites cette semaine', value: String(weeklyData.visitsCount), color: 'text-green-600 bg-green-100' },
+    { icon: <Star className="w-5 h-5" />, label: 'Visites KOL', value: String(weeklyData.kolVisitsCount), color: 'text-amber-600 bg-amber-100' },
+    { icon: <UserPlus className="w-5 h-5" />, label: 'Praticiens fidélisés vus', value: String(weeklyData.highLoyaltyCount), color: 'text-blue-600 bg-blue-100' },
   ];
 
   const pending = [
-    { label: 'Propositions en attente de réponse', value: '3' },
-    { label: 'Relances à effectuer', value: '5' },
+    { label: 'Visites restantes cette semaine', value: String(weeklyData.pendingCount) },
+    { label: 'Relances à effectuer', value: String(weeklyData.relancesCount) },
   ];
 
   return (
