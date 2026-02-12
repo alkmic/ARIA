@@ -125,8 +125,9 @@ const TOOLTIP_STYLE = {
   fontSize: '13px',
 };
 
-// Formateur de valeurs numériques
-function formatChartValue(value: number): string {
+// Formateur de valeurs numériques (accepte undefined pour compatibilité Recharts Formatter)
+function formatChartValue(value: number | undefined): string {
+  if (value == null) return '—';
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
   return value.toFixed(value % 1 === 0 ? 0 : 1);
@@ -861,7 +862,7 @@ export default function AICoach() {
                                   </Pie>
                                   <Tooltip
                                     contentStyle={TOOLTIP_STYLE}
-                                    formatter={(value: number) => [formatChartValue(value), primaryMetric]}
+                                    formatter={(value: number | undefined) => [formatChartValue(value), primaryMetric]}
                                   />
                                   <Legend
                                     wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
@@ -887,8 +888,8 @@ export default function AICoach() {
                                   </defs>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
                                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" angle={-45} textAnchor="end" height={60} />
-                                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />
-                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v) => formatChartValue(v)} />
+                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number | undefined) => formatChartValue(value)} />
                                   <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} iconType="plainline" />
                                   <Line
                                     type="monotone"
@@ -928,9 +929,9 @@ export default function AICoach() {
                                   </defs>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
                                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" angle={-45} textAnchor="end" height={60} />
-                                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />
-                                  {secondaryMetric && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />}
-                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v) => formatChartValue(v)} />
+                                  {secondaryMetric && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v) => formatChartValue(v)} />}
+                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number | undefined) => formatChartValue(value)} />
                                   <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
                                   <Bar dataKey={primaryMetric} yAxisId="left" radius={[6, 6, 0, 0]} name={primaryMetric} barSize={32}>
                                     {data.map((_, index) => (
@@ -973,7 +974,7 @@ export default function AICoach() {
                                     tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v}
                                   />
                                   <PolarRadiusAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#e2e8f0" />
-                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number | undefined) => formatChartValue(value)} />
                                   <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
                                   <Radar
                                     name={primaryMetric}
@@ -1010,8 +1011,8 @@ export default function AICoach() {
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
                                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" angle={-45} textAnchor="end" height={60} />
-                                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v: number) => formatChartValue(v)} />
-                                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => formatChartValue(value)} />
+                                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" tickFormatter={(v) => formatChartValue(v)} />
+                                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number | undefined) => formatChartValue(value)} />
                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
                                 <Bar dataKey={primaryMetric} radius={[6, 6, 0, 0]} name={primaryMetric} barSize={32}>
                                   {data.map((_, index) => (
