@@ -25,6 +25,11 @@ import {
   FileText
 } from 'lucide-react';
 import { useGroq } from '../hooks/useGroq';
+import {
+  getVoiceCapabilities,
+  AudioRecorder,
+  transcribeWithWhisper,
+} from '../services/voiceService';
 import { quickSearch } from '../services/universalSearch';
 import { DataService } from '../services/dataService';
 import { useAppStore } from '../stores/useAppStore';
@@ -76,6 +81,8 @@ export default function VoiceVisitReport() {
 
   const recognitionRef = useRef<any>(null);
   const interimTranscriptRef = useRef('');
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const voiceCaps = useMemo(() => getVoiceCapabilities(), []);
 
   // Auto-select from URL param or today's visit
   useEffect(() => {
@@ -155,7 +162,7 @@ export default function VoiceVisitReport() {
     };
   }, [isRecording]);
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (!recognitionRef.current) {
       alert('La reconnaissance vocale n\'est pas supportée. Utilisez Chrome ou Edge.');
       return;
@@ -164,8 +171,35 @@ export default function VoiceVisitReport() {
     if (isRecording) {
       recognitionRef.current.stop();
       setIsRecording(false);
+
+      // Raffiner avec Whisper si disponible
+      if (voiceCaps.stt === 'whisper' && audioRecorderRef.current?.isRecording()) {
+        try {
+          const audioBlob = await audioRecorderRef.current.stop();
+          if (audioBlob.size > 1000) {
+            const whisperText = await transcribeWithWhisper(audioBlob);
+            if (whisperText && whisperText.length > 10) {
+              setTranscript(whisperText);
+            }
+          }
+        } catch (err) {
+          console.warn('[VoiceVisitReport] Whisper refinement failed:', err);
+        }
+      }
+      audioRecorderRef.current = null;
     } else {
       setTranscript('');
+
+      // Lancer l'enregistrement audio en parallèle si Whisper disponible
+      if (voiceCaps.stt === 'whisper') {
+        try {
+          audioRecorderRef.current = new AudioRecorder();
+          await audioRecorderRef.current.start();
+        } catch (err) {
+          console.warn('[VoiceVisitReport] Audio recording failed:', err);
+        }
+      }
+
       recognitionRef.current.start();
       setIsRecording(true);
     }
@@ -661,6 +695,11 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                   <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
                     {isRecording && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
                     {isRecording ? 'Transcription en cours...' : 'Votre compte-rendu'}
+                    {isRecording && voiceCaps.stt === 'whisper' && (
+                      <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full font-medium border border-purple-100 ml-auto">
+                        Whisper + Live
+                      </span>
+                    )}
                   </label>
                   <div className="bg-slate-50 rounded-xl p-4 max-h-48 overflow-y-auto min-h-[80px]">
                     <p className="text-slate-700 whitespace-pre-wrap">{transcript}</p>

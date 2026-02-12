@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -70,6 +70,16 @@ import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { useUserDataStore } from '../stores/useUserDataStore';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
+
+import {
+  getVoiceCapabilities,
+  synthesizeWithOpenAI,
+  playAudioBlob,
+  stopAudioPlayback,
+  isAudioPlaying,
+  AudioRecorder,
+  transcribeWithWhisper,
+} from '../services/voiceService';
 
 // Types pour les graphiques agentiques
 interface AgenticChartData {
@@ -180,70 +190,150 @@ export default function AICoach() {
   }, [messages]);
 
   // Initialiser Web Speech API
+  // Audio recorder ref pour Whisper STT
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const interimRef = useRef('');
+  const finalTranscriptRef = useRef('');
+
+  // Capacités vocales du provider
+  const voiceCaps = useMemo(() => getVoiceCapabilities(), []);
+
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'fr-FR';
 
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setIsListening(false);
+        let finalText = '';
+        let interimText = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalText += t + ' ';
+          } else {
+            interimText += t;
+          }
+        }
+        if (finalText) {
+          finalTranscriptRef.current += finalText;
+          setInput(finalTranscriptRef.current.trim());
+        }
+        interimRef.current = interimText;
+        // Afficher le texte progressif (final + interim)
+        if (interimText) {
+          setInput((finalTranscriptRef.current + interimText).trim());
+        }
       };
 
-      recognitionRef.current.onerror = () => {
-        setIsListening(false);
+      recognitionRef.current.onerror = (event: any) => {
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          setIsListening(false);
+        }
       };
 
       recognitionRef.current.onend = () => {
-        setIsListening(false);
+        // Auto-restart si encore en écoute (le navigateur coupe après ~60s)
+        if (isListening && recognitionRef.current) {
+          try { recognitionRef.current.start(); } catch { /* ignore */ }
+        }
       };
     }
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
       }
     };
-  }, []);
+  }, [isListening]);
 
-  const toggleListening = () => {
+  const toggleListening = async () => {
     if (!recognitionRef.current) {
       alert('La reconnaissance vocale n\'est pas supportée par votre navigateur. Essayez Chrome ou Edge.');
       return;
     }
 
     if (isListening) {
+      // Arrêter l'écoute
       recognitionRef.current.stop();
       setIsListening(false);
+
+      // Si Whisper est disponible, raffiner la transcription avec l'audio enregistré
+      if (voiceCaps.stt === 'whisper' && audioRecorderRef.current?.isRecording()) {
+        try {
+          const audioBlob = await audioRecorderRef.current.stop();
+          if (audioBlob.size > 1000) { // Ignorer les enregistrements trop courts
+            const whisperText = await transcribeWithWhisper(audioBlob);
+            if (whisperText && whisperText.length > 5) {
+              setInput(whisperText);
+              finalTranscriptRef.current = whisperText;
+            }
+          }
+        } catch (err) {
+          console.warn('[Coach IA] Whisper refinement failed, keeping browser transcript:', err);
+        }
+      }
+      audioRecorderRef.current = null;
     } else {
+      // Démarrer l'écoute
+      finalTranscriptRef.current = '';
+      interimRef.current = '';
+      setInput('');
+
+      // Lancer l'enregistrement audio en parallèle si Whisper est disponible
+      if (voiceCaps.stt === 'whisper') {
+        try {
+          audioRecorderRef.current = new AudioRecorder();
+          await audioRecorderRef.current.start();
+        } catch (err) {
+          console.warn('[Coach IA] Audio recording failed:', err);
+        }
+      }
+
       recognitionRef.current.start();
       setIsListening(true);
     }
   };
 
-  const speak = (text: string) => {
-    if (!('speechSynthesis' in window)) {
-      return;
+  const speak = async (text: string) => {
+    if (!text.trim()) return;
+
+    // Essayer OpenAI TTS d'abord pour une voix plus naturelle
+    if (voiceCaps.tts === 'openai-tts') {
+      try {
+        setIsSpeaking(true);
+        const audioBlob = await synthesizeWithOpenAI(text, 'nova', 1.0);
+        await playAudioBlob(audioBlob);
+        setIsSpeaking(false);
+        return;
+      } catch (err) {
+        console.warn('[Coach IA] OpenAI TTS failed, falling back to browser:', err);
+        setIsSpeaking(false);
+      }
     }
 
-    // Remove markdown for speech
-    const cleanText = text
-      .replace(/\*\*/g, '')
-      .replace(/\*/g, '')
-      .replace(/_/g, '')
-      .replace(/`/g, '');
+    // Fallback: Web SpeechSynthesis
+    if (!('speechSynthesis' in window)) return;
 
-    // Arrêter toute synthèse en cours
+    const cleanText = text
+      .replace(/\*\*/g, '').replace(/\*/g, '')
+      .replace(/_/g, '').replace(/`/g, '')
+      .replace(/#{1,6}\s/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'fr-FR';
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
+
+    // Sélectionner une voix française de qualité
+    const voices = window.speechSynthesis.getVoices();
+    const frVoice = voices.find(v => v.lang.startsWith('fr') && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural')))
+      || voices.find(v => v.lang.startsWith('fr'));
+    if (frVoice) utterance.voice = frVoice;
 
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
@@ -253,10 +343,15 @@ export default function AICoach() {
   };
 
   const stopSpeaking = () => {
+    // Arrêter OpenAI TTS
+    if (isAudioPlaying()) {
+      stopAudioPlayback();
+    }
+    // Arrêter browser TTS
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
     }
+    setIsSpeaking(false);
   };
 
   const toggleAutoSpeak = () => {
@@ -464,6 +559,11 @@ export default function AICoach() {
             {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             Lecture auto {autoSpeak ? 'ON' : 'OFF'}
           </button>
+          {voiceCaps.tts === 'openai-tts' && (
+            <span className="text-[10px] px-2 py-1 bg-purple-50 text-purple-600 rounded-full font-medium border border-purple-100">
+              Voix IA ({voiceCaps.providerName})
+            </span>
+          )}
 
           {isSpeaking && (
             <button
@@ -1156,10 +1256,17 @@ export default function AICoach() {
           </div>
 
           {isListening && (
-            <p className="text-xs text-red-600 mt-2 animate-pulse font-medium flex items-center gap-2">
-              <Mic className="w-3 h-3" />
-              Écoute en cours... Parlez maintenant
-            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-xs text-red-600 animate-pulse font-medium flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                Écoute en cours... Parlez maintenant
+              </p>
+              {voiceCaps.stt === 'whisper' && (
+                <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full font-medium border border-purple-100">
+                  Whisper + Live
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
