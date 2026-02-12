@@ -65,10 +65,7 @@ export function getVoiceCapabilities(): VoiceCapabilities {
  * Construit l'URL Whisper en fonction du provider
  */
 function getWhisperEndpoint(config: LLMConfig): { url: string; headers: Record<string, string> } {
-  const resolved = resolveProvider(config);
-
   if (config.provider === 'azure') {
-    // Azure: {endpoint}/openai/deployments/whisper-1/audio/transcriptions?api-version=2024-12-01-preview
     const baseUrl = config.baseUrl?.replace(/\/+$/, '') || '';
     const apiVersion = config.apiVersion || '2024-12-01-preview';
     return {
@@ -85,6 +82,7 @@ function getWhisperEndpoint(config: LLMConfig): { url: string; headers: Record<s
   }
 
   // OpenAI (direct or custom)
+  const resolved = resolveProvider(config);
   const baseUrl = resolved.baseUrl || 'https://api.openai.com/v1';
   return {
     url: `${baseUrl}/audio/transcriptions`,

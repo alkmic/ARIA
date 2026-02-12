@@ -24,33 +24,35 @@ export function useSpeech() {
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isCancelledRef = useRef(false);
 
-  // Vérifier le support et charger les voix
+  // Vérifier le support et charger les voix (toujours charger le fallback navigateur)
   useEffect(() => {
     const caps = getVoiceCapabilities();
     setTtsSource(caps.tts === 'openai-tts' ? 'openai-tts' : 'browser');
 
+    // Toujours charger les voix du navigateur comme fallback, même si OpenAI TTS est disponible
+    const hasBrowserTTS = typeof window !== 'undefined' && 'speechSynthesis' in window;
+
     if (caps.tts === 'openai-tts') {
       setIsSupported(true);
-      return;
-    }
-
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    } else if (!hasBrowserTTS) {
       setIsSupported(false);
       return;
     }
 
-    const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      voicesRef.current = availableVoices;
-    };
+    if (hasBrowserTTS) {
+      const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        voicesRef.current = availableVoices;
+      };
 
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
 
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
-      window.speechSynthesis.cancel();
-    };
+      return () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        window.speechSynthesis.cancel();
+      };
+    }
   }, []);
 
   const speak = useCallback(async (text: string, options?: SpeechOptions) => {
