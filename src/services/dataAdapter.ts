@@ -60,7 +60,7 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     address: profile.address.street,
     postalCode: profile.address.postalCode,
     department: profile.address.postalCode.substring(0, 2),
-    patientCount: Math.round(profile.metrics.volumeL / 50000), // Estimation: ~50L/patient/an
+    patientCount: Math.max(1, Math.round(profile.metrics.volumeL / 760)), // ~760 L LOX/patient/an (moy. nationale OLD)
     conventionSector: profile.metrics.vingtile <= 5 ? 2 : 1, // Top praticiens en secteur 2
     activityType: profile.practiceType === 'ville' ? 'Libéral intégral' as const
       : profile.practiceType === 'mixte' ? 'Mixte' as const

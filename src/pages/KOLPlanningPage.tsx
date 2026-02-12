@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, AlertTriangle, Star, TrendingUp, MapPin, Clock, CheckCircle, Sparkles, ArrowLeft, Users, Droplets, FileText, Target, Shield } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
+import { formatVolume } from '../utils/helpers';
 import type { Practitioner } from '../types';
 
 export const KOLPlanningPage: React.FC = () => {
@@ -166,7 +167,7 @@ export const KOLPlanningPage: React.FC = () => {
               ancienneté de la dernière visite, volume de prescription, influence régionale, engagement historique,
               potentiel de croissance, risque concurrentiel et opportunités de collaboration.
               Le modèle estime une <strong className="text-purple-600">probabilité de 87%</strong> d'augmentation
-              du volume prescrit de <strong>+{(kolsAnalysis.reduce((s, k) => s + k.volumeL, 0) / 1000000 * 0.15).toFixed(1)}M litres/an</strong> si
+              du volume prescrit de <strong>+{formatVolume(Math.round(kolsAnalysis.reduce((s, k) => s + k.volumeL, 0) * 0.15))}/an</strong> si
               ces visites sont réalisées dans les 14 prochains jours.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -248,7 +249,7 @@ export const KOLPlanningPage: React.FC = () => {
                       <Droplets className="w-4 h-4 text-blue-500" />
                       <div>
                         <div className="text-xs text-slate-500">Volume annuel</div>
-                        <div className="text-sm font-bold text-blue-700">{(kol.volumeL / 1000000).toFixed(1)}M L</div>
+                        <div className="text-sm font-bold text-blue-700">{formatVolume(kol.volumeL)}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">

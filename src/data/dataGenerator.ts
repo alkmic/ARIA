@@ -563,17 +563,24 @@ function generateRealisticVolume(vingtile: number, specialty: string, isKOL: boo
   let baseVolume: number;
 
   if (specialty === 'Pneumologue') {
-    if (vingtile <= 2) baseVolume = randomInt(200000, 300000, rng);
-    else if (vingtile <= 5) baseVolume = randomInt(120000, 200000, rng);
-    else if (vingtile <= 10) baseVolume = randomInt(60000, 120000, rng);
-    else if (vingtile <= 15) baseVolume = randomInt(30000, 60000, rng);
-    else baseVolume = randomInt(10000, 30000, rng);
+    // Pneumologue: volume annuel LOX (litres) attribué via les prescriptions Air Liquide
+    // V1-2: chef de service CHU, 230-370 patients O2 → 175K-280K L LOX/an
+    // V16-20: pneumo avec peu de patients O2 (orientation onco, sommeil...) → 5K-15K L
+    if (vingtile <= 2) baseVolume = randomInt(175000, 280000, rng);
+    else if (vingtile <= 5) baseVolume = randomInt(95000, 175000, rng);
+    else if (vingtile <= 10) baseVolume = randomInt(40000, 95000, rng);
+    else if (vingtile <= 15) baseVolume = randomInt(15000, 40000, rng);
+    else baseVolume = randomInt(5000, 15000, rng);
   } else {
-    if (vingtile <= 2) baseVolume = randomInt(50000, 80000, rng);
-    else if (vingtile <= 5) baseVolume = randomInt(30000, 50000, rng);
-    else if (vingtile <= 10) baseVolume = randomInt(15000, 30000, rng);
-    else if (vingtile <= 15) baseVolume = randomInt(8000, 15000, rng);
-    else baseVolume = randomInt(3000, 8000, rng);
+    // Médecin généraliste: renouvellement d'ordonnances OLD uniquement
+    // (ne peut PAS initier d'OLD, seulement renouveler — prescription initiale par pneumologue)
+    // V1-2: MG très actif en respiratoire, 10-20 patients O2 en renouvellement → 8K-15K L
+    // V16-20: MG avec 0-1 patient O2 → 200-800 L
+    if (vingtile <= 2) baseVolume = randomInt(8000, 15000, rng);
+    else if (vingtile <= 5) baseVolume = randomInt(4000, 8000, rng);
+    else if (vingtile <= 10) baseVolume = randomInt(2000, 4000, rng);
+    else if (vingtile <= 15) baseVolume = randomInt(800, 2000, rng);
+    else baseVolume = randomInt(200, 800, rng);
   }
 
   if (isKOL) {

@@ -10,13 +10,13 @@ export const NationalStats: React.FC = () => {
   const pneumologues = practitioners.filter(p => p.specialty === 'Pneumologue');
   const medecinsGeneralistes = practitioners.filter(p => p.specialty === 'Médecin généraliste');
 
-  // National statistics (from user's data)
+  // Statistiques nationales France (sources: DREES 2022, Santé publique France 2024, SNDS)
   const nationalStats = {
-    medecinsGeneralistes: 64291,
-    pneumologues: 2008,
-    total: 66299,
-    patientsOxygene: 100000,
-    volumeMoyenPatient: 760, // litres par an
+    medecinsGeneralistes: 64291,          // DREES 2022 — libéraux + mixtes
+    pneumologues: 3200,                   // DREES 2022 — total (libéraux + hospitaliers + mixtes)
+    total: 67491,
+    patientsOxygene: 150000,              // Estimation 2024 (base 2010: 100K, croissance +3-5%/an)
+    volumeMoyenPatient: 760,              // Litres LOX/patient/an (2 L/min, 16h/j ≈ 815 L LOX/an)
     percentageKOL: 0.24
   };
 

@@ -171,7 +171,7 @@ export function calculatePeriodMetrics(
 
   // Praticiens à risque (fidélité faible + volume significatif)
   const atRiskPractitioners = practitioners.filter(p =>
-    (p.loyaltyScore < 6 && p.volumeL > 30000) || (p.isKOL && p.loyaltyScore < 7)
+    (p.loyaltyScore < 6 && p.volumeL > 5000) || (p.isKOL && p.loyaltyScore < 7)
   ).length;
 
   // Croissance simulée (réaliste et cohérente)

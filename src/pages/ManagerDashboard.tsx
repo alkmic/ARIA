@@ -13,6 +13,7 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
+import { formatVolume } from '../utils/helpers';
 
 // Mock team data - in real app would come from backend
 const teamMembers = [
@@ -23,13 +24,15 @@ const teamMembers = [
   { id: '5', name: 'Emma Leroy', territory: 'Lyon', objective: 55 },
 ];
 
+// Performance mensuelle équipe (5 délégués, territoire ARA)
+// Visites = total équipe, volume = total en milliers de L LOX
 const monthlyPerformance = [
-  { month: 'Jan', actual: 180, objective: 200, previousYear: 165, volume: 2.4 },
-  { month: 'Fév', actual: 195, objective: 200, previousYear: 170, volume: 2.6 },
-  { month: 'Mar', actual: 210, objective: 200, previousYear: 185, volume: 2.8 },
-  { month: 'Avr', actual: 188, objective: 200, previousYear: 175, volume: 2.5 },
-  { month: 'Mai', actual: 220, objective: 210, previousYear: 190, volume: 2.9 },
-  { month: 'Jun', actual: 205, objective: 210, previousYear: 180, volume: 2.7 },
+  { month: 'Jan', actual: 180, objective: 200, previousYear: 165, volume: 0.82 },
+  { month: 'Fév', actual: 195, objective: 200, previousYear: 170, volume: 0.87 },
+  { month: 'Mar', actual: 210, objective: 200, previousYear: 185, volume: 0.93 },
+  { month: 'Avr', actual: 188, objective: 200, previousYear: 175, volume: 0.85 },
+  { month: 'Mai', actual: 220, objective: 210, previousYear: 190, volume: 0.96 },
+  { month: 'Jun', actual: 205, objective: 210, previousYear: 180, volume: 0.91 },
 ];
 
 const projectionData = [
@@ -75,7 +78,7 @@ export default function ManagerDashboard() {
 
     // High-risk practitioners (low loyalty + high volume or KOL)
     const atRisk = practitioners.filter(p =>
-      (p.loyaltyScore < 6 && p.volumeL > 100000) || (p.isKOL && p.loyaltyScore < 7)
+      (p.loyaltyScore < 6 && p.volumeL > 5000) || (p.isKOL && p.loyaltyScore < 7)
     ).length;
 
     // Undervisited KOLs
@@ -164,7 +167,7 @@ export default function ManagerDashboard() {
       .slice(0, 5)
       .map(([name, stats]) => ({
         name,
-        volume: stats.volume / 1000000,
+        volume: stats.volume / 1000, // en milliers de L (K)
         practitioners: stats.count,
         kols: stats.kols,
       }));
@@ -311,9 +314,9 @@ export default function ManagerDashboard() {
             </span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">
-            {(metrics.totalVolume / 1000000).toFixed(1)}M
+            {formatVolume(metrics.totalVolume)}
           </p>
-          <p className="text-slate-500 text-xs sm:text-sm">Volume total (L)</p>
+          <p className="text-slate-500 text-xs sm:text-sm">Volume total (L LOX)</p>
         </motion.div>
 
         <motion.div
@@ -498,7 +501,7 @@ export default function ManagerDashboard() {
             <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="volume" fill="#0066B3" name="Volume (M L)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="volume" fill="#0066B3" name="Volume (K L)" radius={[8, 8, 0, 0]} />
             <Bar dataKey="practitioners" fill="#00B5AD" name="Praticiens" radius={[8, 8, 0, 0]} />
             <Bar dataKey="kols" fill="#F59E0B" name="KOLs" radius={[8, 8, 0, 0]} />
           </BarChart>
@@ -569,7 +572,7 @@ export default function ManagerDashboard() {
                       </td>
                       <td className="text-center py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm">
                         <span className="font-semibold text-cyan-600">
-                          {(member.volume / 1000000).toFixed(1)}M
+                          {formatVolume(member.volume)}
                         </span>
                       </td>
                       <td className="py-3 sm:py-4 px-2 sm:px-4">

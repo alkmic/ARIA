@@ -104,7 +104,7 @@ export const KNOWLEDGE_SOURCES: KnowledgeSource[] = [
     name: 'Rapport oxygénothérapie HAS',
     url: 'https://www.has-sante.fr/upload/docs/application/pdf/2013-01/rapport_oxygenotherapie.pdf',
     category: 'oxygenotherapie',
-    description: 'Évaluation complète : sources O2, LPPR, dispositifs, ~100 000 patients OLD en 2010',
+    description: 'Évaluation complète : sources O2, LPPR, dispositifs, ~150 000 patients OLD en France (estimation 2024)',
     priority: 1,
     downloadable: true,
   },
@@ -1162,7 +1162,7 @@ Ce constat est un argument fort pour les délégués : chaque prescripteur peut 
     title: 'HAS — Rapport complet sur l\'oxygénothérapie',
     content: `Rapport d'évaluation de la HAS sur l'oxygénothérapie (source complète) :
 
-**Patients sous OLD en France :** Environ 100 000 patients sous oxygénothérapie de longue durée (estimation 2010, en augmentation constante).
+**Patients sous OLD en France :** Environ 150 000 patients sous oxygénothérapie de longue durée (estimation 2024, base ~100 000 en 2010, croissance +3-5%/an). Dont ~50 000-60 000 sous oxygène liquide (LOX).
 
 **Sources d'oxygène évaluées :**
 1. Oxygène gazeux en bouteilles (200 bar) : usage historique, secours, déambulation courte
@@ -1253,7 +1253,7 @@ Triple thérapie (LABA+LAMA+CSI) :
 - PaO2 ≤ 55 mmHg : indication formelle
 - PaO2 55-60 mmHg avec signes d'hypoxie chronique : indication
 - Minimum 15h/j, idéalement en continu
-- ~100 000 patients sous OLD en France`,
+- ~150 000 patients sous OLD en France (2024)`,
     category: 'bpco_clinique',
     tags: ['bpco', 'oxygenotherapie'],
     source: 'RecoMédicales BPCO 2025',
@@ -1632,7 +1632,8 @@ L'oxygène médicinal est un médicament à part entière, différent de l'oxyg�
 - 75% sous-diagnostiquées (seuls ~30% des cas sont identifiés)
 - Prévalence > 6% chez les 45-65 ans
 - ~19 000 décès par an liés à la BPCO (2013)
-- ~100 000 patients sous oxygénothérapie longue durée (OLD)
+- ~150 000 patients sous oxygénothérapie longue durée (OLD, estimation 2024)
+- Dont 50 000-60 000 sous oxygène liquide (LOX)
 - Tabagisme = cause de 90% des cas de BPCO
 - 1 seul indicateur qualité sur 7 dépasse 70% en ville (HAS 2022)
 - Coût direct : ~3,5 milliards d'euros par an
@@ -1665,14 +1666,16 @@ L'oxygène médicinal est un médicament à part entière, différent de l'oxyg�
     content: `Données clés sur l'oxygénothérapie en France :
 
 **Patients sous oxygénothérapie :**
-- ~100 000 patients sous OLD (Oxygénothérapie de Longue Durée) en France
-- Nombre en croissance constante (+3-5% par an)
+- ~150 000 patients sous OLD (Oxygénothérapie de Longue Durée) en France (estimation 2024)
+- Dont ~50 000-60 000 sous oxygène liquide (LOX)
+- Croissance constante (+3-5% par an depuis 2006)
 - Principales pathologies : BPCO (50-60%), fibrose pulmonaire (15-20%), insuffisance cardiaque (10%), autres (10-15%)
 
 **Marché de l'oxygénothérapie à domicile :**
-- Marché estimé à environ 800 millions d'euros en France
-- Dominé par Air Liquide (Orkyn') en parts de marché
-- Concurrents principaux : Vivisol/France Oxygène, SOS Oxygène, LVL Médical
+- Marché estimé à environ 800 millions d'euros en France (forfaits OLD+OCT+ODYSP)
+- Air Liquide (~40M€ CA O2 pur, ~55% de part de marché O2, couvrant ~80 000 patients OLD)
+- ~3 200 pneumologues en France (60% hospitaliers, 25% libéraux, 15% mixtes)
+- Concurrents principaux : Vivisol/France Oxygène (~7%), SOS Oxygène (~7%), Isis/Elivie (~10%), Linde (~4%)
 - Croissance tirée par le vieillissement et l'augmentation de la BPCO
 
 **Tendances :**

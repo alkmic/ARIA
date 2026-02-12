@@ -381,7 +381,7 @@ export function generateIntelligentActions(
     kolCriticalDays = 90,
     topPrescriberVisitDays = 45,
     churnLoyaltyThreshold = 5,
-    churnVolumeThreshold = 50000,
+    churnVolumeThreshold = 5000, // Seuil: MG ≥ 7 patients O2 ou pneumo significatif
     opportunityLoyalty = 7,
     maxActions = 15, // Par défaut, top 15 actions
   } = config;
@@ -526,7 +526,7 @@ export function generateIntelligentActions(
         processedForType.get(type)!.add(p.id);
 
         const scores = calculateScores(type, p, context);
-        const priority = p.metrics.volumeL > 100000 ? 'high' : determinePriority(scores, type);
+        const priority = p.metrics.volumeL > 40000 ? 'high' : determinePriority(scores, type);
 
         actions.push({
           type,
