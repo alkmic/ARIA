@@ -50,42 +50,50 @@ const SECTION_STYLES: Record<string, { gradient: string; bg: string; icon: strin
   follow_up: { gradient: 'from-teal-500 to-cyan-500', bg: 'bg-teal-50', icon: '7', borderColor: 'border-teal-200' },
 };
 
-// Produits Air Liquide disponibles
-const PRODUCTS = [
-  { id: 'vitalaire', name: 'VitalAire Confort+', description: 'Concentrateur haut de gamme' },
-  { id: 'freestyle', name: 'FreeStyle Comfort', description: 'Portable 2,1kg, autonomie 8h' },
-  { id: 'telesuivi', name: 'Telesuivi O2', description: 'Suivi a distance connecte' },
-  { id: 'extracteur', name: 'Station extracteur', description: 'Solution fixe performante' },
-  { id: 'portable', name: 'O2 liquide portable', description: 'Mobilite maximale' },
-  { id: 'vni', name: 'DreamStation BiLevel VNI', description: 'VNI BPCO hypercapnique' },
-  { id: 'ppc', name: 'ResMed AirSense 11 PPC', description: 'PPC connectee derniere gen.' },
-  { id: 'service247', name: 'Service 24/7', description: 'Assistance permanente' },
-  { id: 'formation', name: 'Formation patients', description: 'Education therapeutique' },
-];
+// Produits Air Liquide disponibles (descriptions are translated inside the component)
+const PRODUCT_IDS = ['vitalaire', 'freestyle', 'telesuivi', 'extracteur', 'portable', 'vni', 'ppc', 'service247', 'formation'] as const;
+const PRODUCT_NAMES: Record<string, string> = {
+  vitalaire: 'VitalAire Confort+',
+  freestyle: 'FreeStyle Comfort',
+  telesuivi: 'Telesuivi O2',
+  extracteur: 'Station extracteur',
+  portable: 'O2 liquide portable',
+  vni: 'DreamStation BiLevel VNI',
+  ppc: 'ResMed AirSense 11 PPC',
+  service247: 'Service 24/7',
+  formation: 'Formation patients',
+};
 
-// Concurrents identifiés
-const COMPETITORS = [
-  { id: 'vivisol', name: 'Vivisol' },
-  { id: 'linde', name: 'Linde Healthcare' },
-  { id: 'sos', name: 'SOS Oxygene' },
-  { id: 'bastide', name: 'Bastide Medical' },
-  { id: 'other', name: 'Autres' },
-];
-
-// Options de focus
-const FOCUS_OPTIONS = [
-  { id: 'general', label: 'General', icon: Target, description: 'Approche equilibree' },
-  { id: 'service', label: 'Service', icon: Shield, description: 'Qualite et disponibilite' },
-  { id: 'innovation', label: 'Innovation', icon: Zap, description: 'Solutions connectees' },
-  { id: 'price', label: 'Prix', icon: TrendingDown, description: 'Rapport qualite-prix' },
-  { id: 'loyalty', label: 'Fidelite', icon: Award, description: 'Partenariat long terme' },
-];
+// Concurrents identifiés (names stay as-is)
+const COMPETITOR_IDS = ['vivisol', 'linde', 'sos', 'bastide', 'other'] as const;
 
 export function PitchGenerator() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const practitioners = useAppStore((state) => state.practitioners);
   const { t } = useTranslation();
+
+  // Translated product descriptions
+  const PRODUCTS = PRODUCT_IDS.map(id => ({
+    id,
+    name: PRODUCT_NAMES[id],
+    description: t(`pitch.products.${id === 'vitalaire' ? 'vitalaire' : id === 'freestyle' ? 'freestyle' : id === 'telesuivi' ? 'telesuivi' : id === 'extracteur' ? 'station' : id === 'portable' ? 'o2liquid' : id === 'vni' ? 'dreamstation' : id === 'ppc' ? 'resmed' : id === 'service247' ? 'service247' : 'training'}`),
+  }));
+
+  // Translated competitor names
+  const COMPETITORS = COMPETITOR_IDS.map(id => ({
+    id,
+    name: t(`pitch.competitors.${id === 'vivisol' ? 'vivisol' : id === 'linde' ? 'linde' : id === 'sos' ? 'sos' : id === 'bastide' ? 'bastide' : 'others'}`),
+  }));
+
+  // Translated focus options
+  const FOCUS_OPTIONS = [
+    { id: 'general', label: t('pitch.focus.general'), icon: Target, description: t('pitch.focus.generalDesc') },
+    { id: 'service', label: t('pitch.focus.service'), icon: Shield, description: t('pitch.focus.serviceDesc') },
+    { id: 'innovation', label: t('pitch.focus.innovation'), icon: Zap, description: t('pitch.focus.innovationDesc') },
+    { id: 'price', label: t('pitch.focus.price'), icon: TrendingDown, description: t('pitch.focus.priceDesc') },
+    { id: 'loyalty', label: t('pitch.focus.loyalty'), icon: Award, description: t('pitch.focus.loyaltyDesc') },
+  ];
 
   const practitionerId = searchParams.get('practitionerId');
   const practitioner = practitioners.find((p) => p.id === practitionerId);

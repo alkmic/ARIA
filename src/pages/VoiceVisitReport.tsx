@@ -602,7 +602,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onClick={() => { setSelectedPractitioner(null); setStep('select'); }}
                 className="text-sm text-al-blue-600 hover:text-al-blue-700"
               >
-                Changer
+                {t('voiceReport.changePractitioner')}
               </button>
             </div>
 
@@ -648,9 +648,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                   <textarea
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
-                    placeholder="Ou tapez directement votre compte-rendu ici...
-
-Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a mentionné avoir 3 patients candidats. Prochaine étape: envoyer la documentation technique."
+                    placeholder={t('voiceReport.textPlaceholder')}
                     className="w-full h-32 p-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                     disabled={isRecording}
                   />
@@ -691,7 +689,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyse...
+                      {t('voiceReport.analyzing')}
                     </>
                   ) : (
                     <>
@@ -850,7 +848,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             <div className="glass-card p-4">
               <label className="block font-medium text-slate-700 mb-2 flex items-center gap-2">
                 <Edit3 className="w-4 h-4" />
-                Transcription (modifiable)
+                {t('voiceReport.editableTranscript')}
               </label>
               <textarea
                 value={editedNotes}
@@ -867,12 +865,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 {t('voiceReport.integrationPreview', { name: `${selectedPractitioner.title} ${selectedPractitioner.lastName}` })}
               </h4>
               <ul className="text-sm text-emerald-700 space-y-1">
-                <li>• Compte-rendu de visite avec transcription complète</li>
-                {extractedInfo.keyPoints.length > 0 && <li>• {extractedInfo.keyPoints.length} point(s) clé(s) → Note d'observation</li>}
-                {extractedInfo.opportunities.length > 0 && <li>• {extractedInfo.opportunities.length} opportunité(s) → Note stratégique</li>}
-                {extractedInfo.competitorsMentioned.length > 0 && <li>• Intelligence concurrentielle ({extractedInfo.competitorsMentioned.join(', ')}) → Note concurrence</li>}
-                {extractedInfo.nextActions.length > 0 && <li>• {extractedInfo.nextActions.length} action(s) à suivre</li>}
-                <li>• Données accessibles par le Coach IA pour répondre à vos questions</li>
+                <li>• {t('voiceReport.visitReportItem')}</li>
+                {extractedInfo.keyPoints.length > 0 && <li>• {t('voiceReport.keyPointsNote', { count: String(extractedInfo.keyPoints.length) })}</li>}
+                {extractedInfo.opportunities.length > 0 && <li>• {t('voiceReport.opportunitiesNote', { count: String(extractedInfo.opportunities.length) })}</li>}
+                {extractedInfo.competitorsMentioned.length > 0 && <li>• {t('voiceReport.competitorIntel', { names: extractedInfo.competitorsMentioned.join(', ') })}</li>}
+                {extractedInfo.nextActions.length > 0 && <li>• {t('voiceReport.actionsToFollow', { count: String(extractedInfo.nextActions.length) })}</li>}
+                <li>• {t('voiceReport.dataAccessible')}</li>
               </ul>
             </div>
 
@@ -922,12 +920,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               <div className="space-y-3">
                 {aiDeductions.map((deduction) => {
                   const categoryConfig = {
-                    product_interest: { icon: <Tag className="w-4 h-4 text-blue-500" />, bg: 'bg-blue-50', border: 'border-blue-200', label: 'Intérêt produit' },
-                    competitor: { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, bg: 'bg-orange-50', border: 'border-orange-200', label: 'Concurrence' },
-                    objection: { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, bg: 'bg-red-50', border: 'border-red-200', label: 'Objection' },
-                    opportunity: { icon: <TrendingUp className="w-4 h-4 text-emerald-500" />, bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Opportunité' },
-                    relationship: { icon: <MessageSquare className="w-4 h-4 text-purple-500" />, bg: 'bg-purple-50', border: 'border-purple-200', label: 'Relation' },
-                    preference: { icon: <Target className="w-4 h-4 text-indigo-500" />, bg: 'bg-indigo-50', border: 'border-indigo-200', label: 'Préférence' },
+                    product_interest: { icon: <Tag className="w-4 h-4 text-blue-500" />, bg: 'bg-blue-50', border: 'border-blue-200', label: t('voiceReport.categoryLabels.productInterest') },
+                    competitor: { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, bg: 'bg-orange-50', border: 'border-orange-200', label: t('voiceReport.categoryLabels.competitor') },
+                    objection: { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, bg: 'bg-red-50', border: 'border-red-200', label: t('voiceReport.categoryLabels.objection') },
+                    opportunity: { icon: <TrendingUp className="w-4 h-4 text-emerald-500" />, bg: 'bg-emerald-50', border: 'border-emerald-200', label: t('voiceReport.categoryLabels.opportunity') },
+                    relationship: { icon: <MessageSquare className="w-4 h-4 text-purple-500" />, bg: 'bg-purple-50', border: 'border-purple-200', label: t('voiceReport.categoryLabels.relationship') },
+                    preference: { icon: <Target className="w-4 h-4 text-indigo-500" />, bg: 'bg-indigo-50', border: 'border-indigo-200', label: t('voiceReport.categoryLabels.preference') },
                   };
                   const config = categoryConfig[deduction.category];
 
@@ -968,7 +966,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               </div>
             ) : (
               <div className="glass-card p-6 text-center text-slate-500">
-                Aucune déduction IA disponible pour ce compte-rendu.
+                {t('voiceReport.noDeductions')}
               </div>
             )}
 

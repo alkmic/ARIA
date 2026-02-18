@@ -233,17 +233,17 @@ const ActionCard = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${config.bg} ${config.text}`}>
-                {config.label}
+                {t(`nextActions.actionTypes.${action.type}`)}
               </span>
               {action.priority === 'critical' && (
                 <span className="text-xs font-bold text-white bg-red-500 px-2.5 py-1 rounded-full animate-pulse flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  CRITIQUE
+                  {t('common.priority.critical').toUpperCase()}
                 </span>
               )}
               {action.priority === 'high' && (
                 <span className="text-xs font-medium text-orange-700 bg-orange-100 px-2.5 py-1 rounded-full">
-                  Priorité haute
+                  {t('nextActions.priorityHigh')}
                 </span>
               )}
             </div>
@@ -291,21 +291,21 @@ const ActionCard = ({
             <button
               onClick={() => setShowCompleteForm(!showCompleteForm)}
               className="p-2.5 hover:bg-green-100 rounded-lg transition-colors text-green-600"
-              title="Marquer comme fait"
+              title={t('nextActions.markAsDone')}
             >
               <CheckCircle2 className="w-5 h-5" />
             </button>
             <button
               onClick={() => onSnooze(action.id)}
               className="p-2.5 hover:bg-amber-100 rounded-lg transition-colors text-amber-600"
-              title="Reporter"
+              title={t('nextActions.postpone')}
             >
               <Timer className="w-5 h-5" />
             </button>
             <button
               onClick={() => onDismiss(action.id)}
               className="p-2.5 hover:bg-red-100 rounded-lg transition-colors text-red-400"
-              title="Ignorer"
+              title={t('nextActions.ignore')}
             >
               <XCircle className="w-5 h-5" />
             </button>
@@ -653,23 +653,23 @@ export default function NextBestActions() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <div className="glass-card p-4 text-center">
           <div className="text-3xl font-bold text-slate-800">{stats.total}</div>
-          <div className="text-sm text-slate-500">Actions</div>
+          <div className="text-sm text-slate-500">{t('nextActions.actions')}</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-red-50 to-orange-50 border-red-200">
           <div className="text-3xl font-bold text-red-600">{stats.critical}</div>
-          <div className="text-sm text-red-600">Critiques</div>
+          <div className="text-sm text-red-600">{t('nextActions.critical')}</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-violet-50 to-fuchsia-50 border-violet-200">
           <div className="text-3xl font-bold text-violet-600">{stats.byType.new_practitioner}</div>
-          <div className="text-sm text-violet-600">Nouveaux</div>
+          <div className="text-sm text-violet-600">{t('nextActions.newOnes')}</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
           <div className="text-3xl font-bold text-emerald-600">{stats.byType.opportunity}</div>
-          <div className="text-sm text-emerald-600">Opportunités</div>
+          <div className="text-sm text-emerald-600">{t('nextActions.filterOpportunity')}</div>
         </div>
         <div className="glass-card p-4 text-center bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
           <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
-          <div className="text-sm text-green-600">Complétées</div>
+          <div className="text-sm text-green-600">{t('nextActions.completed')}</div>
         </div>
       </div>
 
@@ -728,7 +728,7 @@ export default function NextBestActions() {
                     : `${config.bg} ${config.text} hover:opacity-80`
                 }`}
               >
-                {config.label} ({count})
+                {t(`nextActions.actionTypes.${type}`)} ({count})
               </button>
             );
           })}

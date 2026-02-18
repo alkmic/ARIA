@@ -179,7 +179,7 @@ export default function AICoach() {
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('La reconnaissance vocale n\'est pas supportée par votre navigateur. Essayez Chrome ou Edge.');
+      alert(t('coach.voiceNotSupported'));
       return;
     }
 
@@ -314,7 +314,7 @@ export default function AICoach() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Désolé, une erreur inattendue est survenue. Veuillez réessayer.',
+        content: t('coach.errorOccurred'),
         timestamp: new Date(),
         isMarkdown: false,
         source: 'local'
@@ -337,7 +337,7 @@ export default function AICoach() {
   }, [searchParams, handleSend, llmConfigured, setSearchParams]);
 
   const clearConversation = () => {
-    if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
+    if (confirm(t('coach.clearConfirm'))) {
       setMessages([]);
       clearChartHistory();
       conversationHistoryRef.current = [];
@@ -347,7 +347,7 @@ export default function AICoach() {
 
   const exportConversation = () => {
     const text = messages
-      .map(m => `[${m.timestamp.toLocaleTimeString('fr-FR')}] ${m.role === 'user' ? 'Vous' : 'Coach IA'}: ${m.content}`)
+      .map(m => `[${m.timestamp.toLocaleTimeString('fr-FR')}] ${m.role === 'user' ? t('coach.you') : t('coach.title')}: ${m.content}`)
       .join('\n\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -568,7 +568,7 @@ export default function AICoach() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors flex-shrink-0"
-                          title={src.downloadable ? 'Télécharger / Consulter' : 'Consulter la source'}
+                          title={src.downloadable ? t('coach.downloadConsult') : t('coach.consultSource')}
                         >
                           {src.downloadable ? (
                             <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -672,7 +672,7 @@ export default function AICoach() {
                             {/* RAG Sources */}
                             {message.ragSources && message.ragSources.length > 0 && (
                               <div className="mt-2 space-y-1">
-                                <p className="text-[11px] text-slate-400 font-medium">Sources :</p>
+                                <p className="text-[11px] text-slate-400 font-medium">{t('coach.sources')} :</p>
                                 {message.ragSources.slice(0, 3).map((src, i) => (
                                   <a
                                     key={i}
@@ -742,7 +742,7 @@ export default function AICoach() {
                           <div className="flex gap-1 flex-shrink-0">
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/pitch?practitionerId=${p.id}`); }}
-                              title="Générer un pitch"
+                              title={t('coach.generatePitch')}
                               className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
                             >
                               <Sparkles className="w-3.5 h-3.5" />
@@ -780,7 +780,7 @@ export default function AICoach() {
                         {message.agenticChart.generatedByLLM && (
                           <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 rounded-full">
                             <Code2 className="w-3 h-3" />
-                            Généré par IA
+                            {t('coach.generatedByAI')}
                           </span>
                         )}
                       </div>
@@ -933,7 +933,7 @@ export default function AICoach() {
                       {/* Suggestions de suivi */}
                       {message.suggestions && message.suggestions.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-100">
-                          <p className="text-xs text-slate-500 mb-2">Pour approfondir :</p>
+                          <p className="text-xs text-slate-500 mb-2">{t('coach.deeperDive')}</p>
                           <div className="flex flex-wrap gap-2">
                             {message.suggestions.map((suggestion, i) => (
                               <button
@@ -998,7 +998,7 @@ export default function AICoach() {
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="ml-2 text-xs text-slate-400">Analyse en cours...</span>
+                  <span className="ml-2 text-xs text-slate-400">{t('coach.analyzing')}</span>
                 </div>
               </div>
             </motion.div>

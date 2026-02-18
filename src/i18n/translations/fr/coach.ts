@@ -35,6 +35,9 @@ export const coach = {
   consultSource: 'Consulter la source',
   generatePitch: 'Générer un pitch',
   generatedByAI: 'Généré par IA',
+  you: 'Vous',
+  analyzing: 'Analyse en cours...',
+  deeperDive: 'Pour approfondir :',
 
   // Suggestions
   suggestions: {
