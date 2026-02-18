@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Zap, Brain, TrendingUp, MapPin, Users, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../i18n';
 
 export function Landing() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="h-screen bg-gradient-to-br from-airLiquide-primary via-airLiquide-darkBlue to-airLiquide-navy relative overflow-hidden flex flex-col">
@@ -48,7 +50,7 @@ export function Landing() {
           </h1>
           <div className="flex items-center justify-center gap-2 text-airLiquide-teal text-sm sm:text-base font-medium mt-1">
             <Sparkles className="w-4 h-4" />
-            <span>Assistant Intelligent pour Représentants</span>
+            <span>{t('welcome.landingSubtitle')}</span>
             <Sparkles className="w-4 h-4" />
           </div>
         </motion.div>
@@ -60,8 +62,7 @@ export function Landing() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-white/70 text-sm sm:text-base text-center max-w-lg mb-6 leading-relaxed"
         >
-          Optimisez vos visites terrain, générez des pitchs personnalisés et
-          maximisez l'impact de vos actions commerciales.
+          {t('welcome.landingDescription')}
         </motion.p>
 
         {/* Features - 2 rows, more compact */}
@@ -72,12 +73,12 @@ export function Landing() {
           className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 mb-6 max-w-3xl"
         >
           {[
-            { icon: Brain, label: 'Coach IA', color: 'text-airLiquide-teal' },
-            { icon: Zap, label: 'Pitch IA', color: 'text-airLiquide-lightBlue' },
-            { icon: TrendingUp, label: 'Analytics', color: 'text-airLiquide-teal' },
-            { icon: Users, label: 'CRM Pro', color: 'text-airLiquide-lightBlue' },
-            { icon: MapPin, label: 'Territoire', color: 'text-airLiquide-teal' },
-            { icon: Target, label: 'Objectifs', color: 'text-airLiquide-lightBlue' },
+            { icon: Brain, label: t('welcome.landingFeatures.coachIA'), color: 'text-airLiquide-teal' },
+            { icon: Zap, label: t('welcome.landingFeatures.pitchIA'), color: 'text-airLiquide-lightBlue' },
+            { icon: TrendingUp, label: t('welcome.landingFeatures.analytics'), color: 'text-airLiquide-teal' },
+            { icon: Users, label: t('welcome.landingFeatures.crmPro'), color: 'text-airLiquide-lightBlue' },
+            { icon: MapPin, label: t('welcome.landingFeatures.territory'), color: 'text-airLiquide-teal' },
+            { icon: Target, label: t('welcome.landingFeatures.objectives'), color: 'text-airLiquide-lightBlue' },
           ].map((feature, i) => (
             <div key={i} className="flex flex-col items-center text-center group">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-1.5 group-hover:bg-white/20 transition-colors">
@@ -100,7 +101,7 @@ export function Landing() {
         >
           <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
           <div className="relative flex items-center gap-2">
-            <span>Accéder au dashboard</span>
+            <span>{t('welcome.accessDashboard')}</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
           </div>
         </motion.button>
@@ -114,7 +115,7 @@ export function Landing() {
         className="relative z-10 pb-4 text-center"
       >
         <span className="text-white/30 text-xs">
-          v1.0 · Propulsé par IA multi-fournisseurs
+          {t('welcome.versionPowered')}
         </span>
       </motion.div>
     </div>

@@ -1,0 +1,19 @@
+export const visits = {
+  title: 'Mes Visites',
+  subtitle: 'Gérez et planifiez vos visites médicales',
+  filters: {
+    all: 'Toutes',
+    today: "Aujourd'hui",
+    thisWeek: 'Cette semaine',
+    thisMonth: 'Ce mois',
+  },
+  noVisits: 'Aucune visite planifiée',
+  startPlanning: 'Commencez par planifier vos premières visites',
+  seePractitioners: 'Voir les praticiens',
+  visitCount: 'visite',
+  visitCountPlural: 'visites',
+  plannedVisit: 'Visite planifiée',
+  plannedVisitPlural: 'Visites planifiées',
+  differentPractitioners: 'Praticiens différents',
+  kolVisits: 'Visites KOL',
+};

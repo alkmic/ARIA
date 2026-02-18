@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Target, Zap, Calendar } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface ObjectiveProgressProps {
   current: number;
@@ -9,6 +10,7 @@ interface ObjectiveProgressProps {
 }
 
 export function ObjectiveProgress({ current, target, daysRemaining, periodLabel = 'du mois' }: ObjectiveProgressProps) {
+  const { t } = useTranslation();
   const percentage = Math.round((current / target) * 100);
   const remaining = target - current;
   const visitsPerDay = remaining > 0 && daysRemaining > 0 ? (remaining / daysRemaining).toFixed(1) : '0.0';
@@ -30,7 +32,7 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
       const quarter = Math.floor(now.getMonth() / 3) + 1;
       return `T${quarter} ${now.getFullYear()}`;
     } else {
-      return `Année ${now.getFullYear()}`;
+      return `${now.getFullYear()}`;
     }
   };
 
@@ -42,14 +44,14 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
             <Target className="w-4 h-4 text-al-blue-600" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-al-navy">Objectif {periodLabel}</h2>
+            <h2 className="text-base font-bold text-al-navy">{t('dashboard.objective', { period: periodLabel })}</h2>
             <p className="text-xs text-slate-500">{getSubtitle()}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 text-xs">
           <Calendar className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-600">{daysRemaining}j restants</span>
+          <span className="text-slate-600">{daysRemaining}{t('dashboard.daysRemaining')}</span>
         </div>
       </div>
 
@@ -78,7 +80,7 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
           <div className="h-3 w-px bg-slate-200" />
           <div>
             <span className="font-bold text-al-navy text-sm">{remaining}</span>
-            <span className="text-slate-500"> restantes</span>
+            <span className="text-slate-500"> {t('dashboard.visitsRemaining')}</span>
           </div>
         </div>
 
@@ -86,7 +88,7 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
           <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-md">
             <Zap className="w-3 h-3 text-amber-600" />
             <span className="text-amber-700 font-medium text-xs">
-              {visitsPerDay}/jour requis
+              {visitsPerDay}{t('dashboard.perDayRequired')}
             </span>
           </div>
         )}

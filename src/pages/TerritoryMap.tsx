@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { filterPractitionersByPeriod } from '../services/metricsCalculator';
+import { useTranslation } from '../i18n';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -90,6 +91,7 @@ const createCustomIcon = (vingtile: number, isKOL: boolean) => {
 };
 
 export default function TerritoryMap() {
+  const { t } = useTranslation();
   const { practitioners } = useAppStore();
   const navigate = useNavigate();
   const { timePeriod, periodLabel } = useTimePeriod();
@@ -170,7 +172,7 @@ export default function TerritoryMap() {
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <MapPin className="w-6 h-6 text-al-blue-500" />
-          <h1 className="text-2xl font-bold text-al-navy">Carte du territoire</h1>
+          <h1 className="text-2xl font-bold text-al-navy">{t('map.title')}</h1>
         </div>
         <PeriodSelector />
       </div>
@@ -183,27 +185,27 @@ export default function TerritoryMap() {
           <div className="p-6 border-b border-slate-200">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Filter className="w-5 h-5 text-al-blue-500" />
-              Filtres
+              {t('map.filters')}
             </h2>
 
             {/* Spécialité */}
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Spécialité</label>
+              <label className="block text-sm font-medium mb-2">{t('map.specialty')}</label>
               <select
                 value={filters.specialty}
                 onChange={(e) => setFilters(f => ({ ...f, specialty: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
               >
-                <option value="all">Toutes ({practitioners.length})</option>
-                <option value="Pneumologue">Pneumologues ({pneumologues})</option>
-                <option value="Médecin généraliste">Généralistes ({generalistes})</option>
+                <option value="all">{t('map.allCount', { count: practitioners.length })}</option>
+                <option value="Pneumologue">{t('map.pneumoCount', { count: pneumologues })}</option>
+                <option value="Médecin généraliste">{t('map.generalistCount', { count: generalistes })}</option>
               </select>
             </div>
 
             {/* Vingtile */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
-                Vingtile max : {filters.vingtileMax}
+                {t('map.vingtileMax', { value: filters.vingtileMax })}
               </label>
               <input
                 type="range"
@@ -214,8 +216,8 @@ export default function TerritoryMap() {
                 className="w-full accent-al-blue-500"
               />
               <div className="flex justify-between text-xs text-slate-500">
-                <span>Top 5%</span>
-                <span>Tous</span>
+                <span>{t('map.top5')}</span>
+                <span>{t('map.all')}</span>
               </div>
             </div>
 
@@ -228,24 +230,24 @@ export default function TerritoryMap() {
                   onChange={(e) => setFilters(f => ({ ...f, kolOnly: e.target.checked }))}
                   className="w-4 h-4 text-al-blue-500 rounded"
                 />
-                <span className="font-medium">KOLs uniquement</span>
+                <span className="font-medium">{t('map.kolsOnly')}</span>
               </label>
             </div>
 
             {/* Stats */}
             <div className="p-4 bg-al-blue-50 rounded-xl">
-              <h3 className="font-semibold text-al-navy mb-2 text-sm">Résumé {periodLabel}</h3>
+              <h3 className="font-semibold text-al-navy mb-2 text-sm">{t('map.summaryPeriod', { period: periodLabel })}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Praticiens affichés</span>
+                  <span className="text-slate-600">{t('map.practitionersShown')}</span>
                   <span className="font-medium">{mappedPractitioners.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">dont KOLs</span>
+                  <span className="text-slate-600">{t('map.includingKols')}</span>
                   <span className="font-medium">{mappedPractitioners.filter(p => p?.isKOL).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Volume total</span>
+                  <span className="text-slate-600">{t('map.totalVolume')}</span>
                   <span className="font-medium">
                     {(totalVolume / 1000000).toFixed(1)}M L
                   </span>
@@ -259,18 +261,18 @@ export default function TerritoryMap() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-purple-500" />
-                Praticiens à visiter
+                {t('map.practitionersToVisit')}
               </h2>
               <button
                 onClick={() => setShowSelectionList(!showSelectionList)}
                 className="text-sm text-al-blue-500 hover:underline font-medium"
               >
-                {showSelectionList ? 'Masquer' : 'Voir la liste'}
+                {showSelectionList ? t('map.hideList') : t('map.showList')}
               </button>
             </div>
 
             <div className="text-sm text-slate-600 mb-3">
-              <strong>{selectedPractitioners.length}</strong> praticien(s) sélectionné(s) pour {periodLabel.toLowerCase()}
+              <strong>{selectedPractitioners.length}</strong> {t('map.selectedPractitioners', { period: periodLabel.toLowerCase() })}
             </div>
 
             {showSelectionList && (
@@ -303,13 +305,13 @@ export default function TerritoryMap() {
                 onClick={() => setSelectedPractitionerIds(new Set(mappedPractitioners.filter(p => p).map(p => p!.id)))}
                 className="flex-1 text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
               >
-                Tout sélectionner
+                {t('map.selectAll')}
               </button>
               <button
                 onClick={() => setSelectedPractitionerIds(new Set())}
                 className="flex-1 text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
               >
-                Tout désélectionner
+                {t('map.deselectAll')}
               </button>
             </div>
           </div>
@@ -318,12 +320,12 @@ export default function TerritoryMap() {
           <div className="p-6 border-b border-slate-200">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Route className="w-5 h-5 text-al-blue-500" />
-              Optimisation d'itinéraire
+              {t('map.routeOptimization')}
             </h2>
 
             <div className="space-y-4">
               <p className="text-sm text-slate-600">
-                Optimisez vos tournées avec notre algorithme TSP 2-opt pour minimiser les distances et maximiser l'efficacité.
+                {t('map.routeOptDesc')}
               </p>
 
               <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg">
@@ -332,8 +334,8 @@ export default function TerritoryMap() {
                     <Route className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800">Outil d'optimisation avancé</p>
-                    <p className="text-xs text-slate-600">Sélection, configuration, optimisation multi-jours</p>
+                    <p className="font-semibold text-slate-800">{t('map.advancedTool')}</p>
+                    <p className="text-xs text-slate-600">{t('map.advancedToolDesc')}</p>
                   </div>
                 </div>
                 <button
@@ -341,17 +343,17 @@ export default function TerritoryMap() {
                   className="w-full bg-al-blue-500 hover:bg-al-blue-600 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <Route className="w-4 h-4" />
-                  Ouvrir l'outil d'optimisation
+                  {t('map.openOptTool')}
                 </button>
               </div>
 
               {selectedPractitioners.length > 0 && (
                 <div className="p-3 bg-slate-50 rounded-lg">
                   <p className="text-sm text-slate-700">
-                    <span className="font-bold text-al-blue-600">{selectedPractitioners.length}</span> praticiens sélectionnés sur la carte
+                    <span className="font-bold text-al-blue-600">{selectedPractitioners.length}</span> {t('map.selectedOnMap')}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    Utilisez l'outil d'optimisation pour planifier votre tournée
+                    {t('map.useOptTool')}
                   </p>
                 </div>
               )}
@@ -360,27 +362,27 @@ export default function TerritoryMap() {
 
           {/* Légende */}
           <div className="p-6">
-            <h3 className="font-semibold mb-3 text-sm">Légende</h3>
+            <h3 className="font-semibold mb-3 text-sm">{t('map.legend')}</h3>
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500" />
-                <span>Vingtile 1-2 (Top prescripteurs)</span>
+                <span>{t('map.vingtile12')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <span>Vingtile 3-5</span>
+                <span>{t('map.vingtile35')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span>Vingtile 6-10</span>
+                <span>{t('map.vingtile610')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-gray-500" />
-                <span>Vingtile 11+</span>
+                <span>{t('map.vingtile11plus')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span>KOL</span>
-                <span>Key Opinion Leader</span>
+                <span>{t('map.kolLabel')}</span>
+                <span>{t('map.kolDesc')}</span>
               </div>
             </div>
           </div>
@@ -421,7 +423,7 @@ export default function TerritoryMap() {
                       onClick={() => navigate(`/practitioner/${p.id}`)}
                       className="mt-3 w-full bg-al-blue-500 hover:bg-al-blue-600 text-white py-2 rounded-lg text-sm transition-colors"
                     >
-                      Voir le profil
+                      {t('map.seeProfile')}
                     </button>
                   </div>
                 </Popup>
@@ -434,14 +436,14 @@ export default function TerritoryMap() {
             <div className="flex items-center gap-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-al-navy">{mappedPractitioners.length}</p>
-                <p className="text-xs text-slate-500">Praticiens</p>
+                <p className="text-xs text-slate-500">{t('map.practitionersTab')}</p>
               </div>
               <div className="w-px h-10 bg-slate-200" />
               <div className="text-center">
                 <p className="text-2xl font-bold text-al-navy">
                   {mappedPractitioners.filter(p => p?.isKOL).length}
                 </p>
-                <p className="text-xs text-slate-500">KOLs</p>
+                <p className="text-xs text-slate-500">{t('map.kolsTab')}</p>
               </div>
             </div>
           </div>

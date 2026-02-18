@@ -22,20 +22,17 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUserDataStore, type UserNote, type VisitReportData, type AIAction } from '../../stores/useUserDataStore';
 import type { Practitioner } from '../../types';
+import { useTranslation, useLanguage } from '../../i18n';
+import { getLocaleCode } from '../../utils/helpers';
 
 interface NotesTabProps {
   practitioner: Practitioner;
 }
 
-const noteTypeConfig = {
-  observation: { label: 'Observation', icon: Eye, color: 'text-blue-500', bg: 'bg-blue-50' },
-  reminder: { label: 'Rappel', icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-50' },
-  strategy: { label: 'Stratégie', icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-  competitive: { label: 'Concurrence', icon: Swords, color: 'text-amber-500', bg: 'bg-amber-50' }
-};
-
 export function NotesTab({ practitioner }: NotesTabProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const {
     getNotesForPractitioner,
     getVisitReportsForPractitioner,
@@ -44,6 +41,13 @@ export function NotesTab({ practitioner }: NotesTabProps) {
     updateUserNote,
     deleteUserNote
   } = useUserDataStore();
+
+  const noteTypeConfig = {
+    observation: { label: t('practitioners.notes.types.observation'), icon: Eye, color: 'text-blue-500', bg: 'bg-blue-50' },
+    reminder: { label: t('practitioners.notes.types.reminder'), icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-50' },
+    strategy: { label: t('practitioners.notes.types.strategy'), icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    competitive: { label: t('practitioners.notes.types.competition'), icon: Swords, color: 'text-amber-500', bg: 'bg-amber-50' }
+  };
 
   const [activeSection, setActiveSection] = useState<'notes' | 'reports' | 'actions'>('notes');
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -78,25 +82,38 @@ export function NotesTab({ practitioner }: NotesTabProps) {
   };
 
   const handleDeleteNote = (noteId: string) => {
-    if (confirm('Supprimer cette note ?')) {
+    if (confirm(t('common.deleteNoteConfirm'))) {
       deleteUserNote(noteId);
     }
   };
 
+  const localeCode = getLocaleCode(language);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString(localeCode, { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(localeCode, { hour: '2-digit', minute: '2-digit' });
   };
 
   const sections = [
-    { id: 'notes', label: 'Notes', icon: FileText, count: notes.length },
-    { id: 'reports', label: 'Comptes-rendus', icon: Mic, count: visitReports.length },
-    { id: 'actions', label: 'Actions IA', icon: Brain, count: actions.filter(a => a.status === 'pending').length }
+    { id: 'notes', label: t('practitioners.notes.tabs.notes'), icon: FileText, count: notes.length },
+    { id: 'reports', label: t('practitioners.notes.tabs.reports'), icon: Mic, count: visitReports.length },
+    { id: 'actions', label: t('practitioners.notes.tabs.aiActions'), icon: Brain, count: actions.filter(a => a.status === 'pending').length }
+  ];
+
+  const quickTags = [
+    t('practitioners.notes.tagToFollowUp'),
+    t('practitioners.notes.tagInterestedTelesuivi'),
+    t('practitioners.notes.tagBudgetPending'),
+    t('practitioners.notes.tagPositiveContact'),
+    t('practitioners.notes.tagResistant'),
+    t('practitioners.notes.tagInfluencer'),
+    t('practitioners.notes.tagCompetitorPresent'),
+    t('practitioners.notes.tagHighPotential'),
   ];
 
   return (
@@ -146,7 +163,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                 className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-al-blue-400 hover:text-al-blue-600 transition-colors"
               >
                 <Plus className="w-5 h-5" />
-                Ajouter une note
+                {t('practitioners.notes.addNote')}
               </button>
             ) : (
               <motion.div
@@ -179,7 +196,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                 <textarea
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
-                  placeholder="Tapez votre note..."
+                  placeholder={t('practitioners.notes.typeYourNote')}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500 h-24 resize-none"
                   autoFocus
                 />
@@ -189,7 +206,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                     onClick={() => { setIsAdding(false); setNewNoteContent(''); }}
                     className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
                   >
-                    Annuler
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleAddNote}
@@ -197,7 +214,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                     className="px-4 py-2 text-sm bg-al-blue-500 text-white rounded-lg hover:bg-al-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed"
                   >
                     <Save className="w-4 h-4 inline mr-1" />
-                    Sauvegarder
+                    {t('common.save')}
                   </button>
                 </div>
               </motion.div>
@@ -207,8 +224,8 @@ export function NotesTab({ practitioner }: NotesTabProps) {
             {notes.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p>Aucune note pour ce praticien</p>
-                <p className="text-sm mt-1">Les notes ajoutées ici et via les comptes-rendus vocaux apparaîtront ici.</p>
+                <p>{t('practitioners.notes.noNotes')}</p>
+                <p className="text-sm mt-1">{t('practitioners.notes.noNotesDescription')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -233,7 +250,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                               {config.label.toUpperCase()}
                             </span>
                             <span className="text-xs text-slate-400">
-                              {formatDate(note.createdAt)} à {formatTime(note.createdAt)}
+                              {formatDate(note.createdAt)} {t('common.to')} {formatTime(note.createdAt)}
                             </span>
                           </div>
 
@@ -250,13 +267,13 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                                   onClick={() => setEditingNoteId(null)}
                                   className="px-3 py-1 text-xs text-slate-600"
                                 >
-                                  Annuler
+                                  {t('common.cancel')}
                                 </button>
                                 <button
                                   onClick={() => handleUpdateNote(note.id)}
                                   className="px-3 py-1 text-xs bg-al-blue-500 text-white rounded-lg"
                                 >
-                                  Sauvegarder
+                                  {t('common.save')}
                                 </button>
                               </div>
                             </div>
@@ -292,10 +309,10 @@ export function NotesTab({ practitioner }: NotesTabProps) {
             <div className="glass-card p-4">
               <p className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                Tags rapides
+                {t('practitioners.notes.quickTags')}
               </p>
               <div className="flex flex-wrap gap-2">
-                {['À relancer', 'Intéressé télésuivi', 'Budget en attente', 'Décideur', 'Prescripteur actif', 'Sensible prix', 'Innovation'].map(tag => (
+                {quickTags.map(tag => (
                   <button
                     key={tag}
                     onClick={() => {
@@ -327,15 +344,15 @@ export function NotesTab({ practitioner }: NotesTabProps) {
               className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition-all"
             >
               <Mic className="w-5 h-5" />
-              Nouveau compte-rendu vocal
+              {t('practitioners.notes.newVoiceReport')}
             </button>
 
             {/* Reports List */}
             {visitReports.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <Mic className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p>Aucun compte-rendu pour ce praticien</p>
-                <p className="text-sm mt-1">Dictez votre prochain compte-rendu de visite avec ARIA.</p>
+                <p>{t('practitioners.notes.noReports')}</p>
+                <p className="text-sm mt-1">{t('practitioners.notes.noReportsDescription')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -363,7 +380,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
             >
               <div className="flex items-center gap-2">
                 <Brain className="w-5 h-5 text-purple-500" />
-                <span className="font-medium">Voir toutes les actions IA</span>
+                <span className="font-medium">{t('practitioners.notes.seeAllAiActions')}</span>
               </div>
               <ChevronRight className="w-5 h-5 text-slate-400" />
             </button>
@@ -372,8 +389,8 @@ export function NotesTab({ practitioner }: NotesTabProps) {
             {actions.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <Brain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p>Aucune action IA pour ce praticien</p>
-                <p className="text-sm mt-1">ARIA vous suggérera des actions basées sur l'analyse des données.</p>
+                <p>{t('practitioners.notes.noAiActions')}</p>
+                <p className="text-sm mt-1">{t('practitioners.notes.noAiActionsDescription')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -386,7 +403,7 @@ export function NotesTab({ practitioner }: NotesTabProps) {
                     onClick={() => navigate('/next-actions')}
                     className="w-full text-center text-sm text-al-blue-600 hover:text-al-blue-700 py-2"
                   >
-                    Voir {actions.length - 5} actions de plus
+                    {t('practitioners.notes.seeMoreActions', { count: actions.length - 5 })}
                   </button>
                 )}
               </div>
@@ -401,11 +418,12 @@ export function NotesTab({ practitioner }: NotesTabProps) {
 // Visit Report Card Component
 function VisitReportCard({ report, index }: { report: VisitReportData; index: number }) {
   const [isExpanded, setIsExpanded] = useState(index === 0);
+  const { t } = useTranslation();
 
   const sentimentConfig = {
-    positive: { icon: ThumbsUp, color: 'text-green-600', bg: 'bg-green-50', label: 'Positif' },
-    neutral: { icon: MessageSquare, color: 'text-slate-600', bg: 'bg-slate-50', label: 'Neutre' },
-    negative: { icon: ThumbsDown, color: 'text-red-600', bg: 'bg-red-50', label: 'Négatif' }
+    positive: { icon: ThumbsUp, color: 'text-green-600', bg: 'bg-green-50', label: t('common.sentiment.positive') },
+    neutral: { icon: MessageSquare, color: 'text-slate-600', bg: 'bg-slate-50', label: t('common.sentiment.neutral') },
+    negative: { icon: ThumbsDown, color: 'text-red-600', bg: 'bg-red-50', label: t('common.sentiment.negative') }
   };
 
   const sentiment = sentimentConfig[report.extractedInfo.sentiment];
@@ -460,7 +478,7 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
               <div>
                 <h4 className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
                   <MessageSquare className="w-4 h-4" />
-                  Transcription
+                  {t('practitioners.notes.transcription')}
                 </h4>
                 <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
                   {report.transcript}
@@ -471,7 +489,7 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
               <div className="grid grid-cols-2 gap-3">
                 {report.extractedInfo.keyPoints.length > 0 && (
                   <div className="col-span-2 bg-emerald-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-emerald-700 mb-2">Points clés</h4>
+                    <h4 className="text-xs font-semibold text-emerald-700 mb-2">{t('practitioners.notes.keyPoints')}</h4>
                     <ul className="space-y-1">
                       {report.extractedInfo.keyPoints.map((point, i) => (
                         <li key={i} className="text-sm text-emerald-800 flex items-start gap-1">
@@ -485,10 +503,10 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
 
                 {report.extractedInfo.nextActions.length > 0 && (
                   <div className="bg-purple-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-purple-700 mb-2">Actions à faire</h4>
+                    <h4 className="text-xs font-semibold text-purple-700 mb-2">{t('practitioners.notes.todoActions')}</h4>
                     <ul className="space-y-1">
                       {report.extractedInfo.nextActions.map((action, i) => (
-                        <li key={i} className="text-xs text-purple-800">• {action}</li>
+                        <li key={i} className="text-xs text-purple-800">{action}</li>
                       ))}
                     </ul>
                   </div>
@@ -496,10 +514,10 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
 
                 {report.extractedInfo.opportunities.length > 0 && (
                   <div className="bg-amber-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-amber-700 mb-2">Opportunités</h4>
+                    <h4 className="text-xs font-semibold text-amber-700 mb-2">{t('practitioners.notes.opportunities')}</h4>
                     <ul className="space-y-1">
                       {report.extractedInfo.opportunities.map((opp, i) => (
-                        <li key={i} className="text-xs text-amber-800">• {opp}</li>
+                        <li key={i} className="text-xs text-amber-800">{opp}</li>
                       ))}
                     </ul>
                   </div>
@@ -507,10 +525,10 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
 
                 {report.extractedInfo.objections.length > 0 && (
                   <div className="bg-red-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-red-700 mb-2">Objections</h4>
+                    <h4 className="text-xs font-semibold text-red-700 mb-2">{t('practitioners.notes.objections')}</h4>
                     <ul className="space-y-1">
                       {report.extractedInfo.objections.map((obj, i) => (
-                        <li key={i} className="text-xs text-red-800">• {obj}</li>
+                        <li key={i} className="text-xs text-red-800">{obj}</li>
                       ))}
                     </ul>
                   </div>
@@ -518,7 +536,7 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
 
                 {report.extractedInfo.productsDiscussed.length > 0 && (
                   <div className="bg-blue-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-blue-700 mb-2">Produits discutés</h4>
+                    <h4 className="text-xs font-semibold text-blue-700 mb-2">{t('practitioners.notes.productsDiscussed')}</h4>
                     <div className="flex flex-wrap gap-1">
                       {report.extractedInfo.productsDiscussed.map((product, i) => (
                         <span key={i} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
@@ -531,7 +549,7 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
 
                 {report.extractedInfo.competitorsMentioned.length > 0 && (
                   <div className="bg-orange-50 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-orange-700 mb-2">Concurrents mentionnés</h4>
+                    <h4 className="text-xs font-semibold text-orange-700 mb-2">{t('practitioners.notes.competitorsMentioned')}</h4>
                     <div className="flex flex-wrap gap-1">
                       {report.extractedInfo.competitorsMentioned.map((comp, i) => (
                         <span key={i} className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
@@ -553,6 +571,7 @@ function VisitReportCard({ report, index }: { report: VisitReportData; index: nu
 // Action Card Component
 function ActionCard({ action }: { action: AIAction }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const priorityColors = {
     critical: 'border-l-red-500 bg-red-50',
@@ -562,10 +581,10 @@ function ActionCard({ action }: { action: AIAction }) {
   };
 
   const statusConfig = {
-    pending: { label: 'À faire', color: 'text-amber-600 bg-amber-100' },
-    completed: { label: 'Terminé', color: 'text-green-600 bg-green-100' },
-    snoozed: { label: 'Reporté', color: 'text-purple-600 bg-purple-100' },
-    dismissed: { label: 'Ignoré', color: 'text-slate-600 bg-slate-100' }
+    pending: { label: t('common.actionStatus.pending'), color: 'text-amber-600 bg-amber-100' },
+    completed: { label: t('common.actionStatus.completed'), color: 'text-green-600 bg-green-100' },
+    snoozed: { label: t('common.actionStatus.snoozed'), color: 'text-purple-600 bg-purple-100' },
+    dismissed: { label: t('common.actionStatus.dismissed'), color: 'text-slate-600 bg-slate-100' }
   };
 
   return (
@@ -588,13 +607,13 @@ function ActionCard({ action }: { action: AIAction }) {
           <div className="w-8 h-1 bg-slate-200 rounded overflow-hidden">
             <div className="h-full bg-red-500" style={{ width: `${action.scores.urgency}%` }} />
           </div>
-          <span className="text-slate-500">Urgence {action.scores.urgency}%</span>
+          <span className="text-slate-500">{t('practitioners.notes.urgency', { value: action.scores.urgency })}</span>
         </div>
         <div className="flex items-center gap-1 text-xs">
           <div className="w-8 h-1 bg-slate-200 rounded overflow-hidden">
             <div className="h-full bg-emerald-500" style={{ width: `${action.scores.impact}%` }} />
           </div>
-          <span className="text-slate-500">Impact {action.scores.impact}%</span>
+          <span className="text-slate-500">{t('practitioners.notes.impact', { value: action.scores.impact })}</span>
         </div>
       </div>
 
@@ -603,7 +622,7 @@ function ActionCard({ action }: { action: AIAction }) {
           onClick={() => navigate('/next-actions')}
           className="text-xs text-al-blue-600 hover:text-al-blue-700 font-medium"
         >
-          Voir les détails →
+          {t('practitioners.notes.seeDetailsArrow')}
         </button>
       )}
     </div>

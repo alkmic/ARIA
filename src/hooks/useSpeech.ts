@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import type { Language } from '../i18n/LanguageContext';
 
 interface SpeechOptions {
   rate?: number;
@@ -6,7 +7,7 @@ interface SpeechOptions {
   volume?: number;
 }
 
-export function useSpeech() {
+export function useSpeech(lang: Language = 'fr') {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
@@ -67,16 +68,17 @@ export function useSpeech() {
       ? voicesRef.current
       : window.speechSynthesis.getVoices();
 
-    // Trouver une voix française de qualité
-    const frenchVoice = voices.find(
-      (v) => v.lang.startsWith('fr') && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural'))
-    ) || voices.find((v) => v.lang.startsWith('fr')) || voices[0];
+    // Find a quality voice for the selected language
+    const langCode = lang === 'en' ? 'en' : 'fr';
+    const selectedVoice = voices.find(
+      (v) => v.lang.startsWith(langCode) && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural'))
+    ) || voices.find((v) => v.lang.startsWith(langCode)) || voices[0];
 
-    if (frenchVoice) {
-      utterance.voice = frenchVoice;
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
 
-    utterance.lang = 'fr-FR';
+    utterance.lang = lang === 'en' ? 'en-US' : 'fr-FR';
     utterance.rate = options?.rate || 0.95;
     utterance.pitch = options?.pitch || 1.0;
     utterance.volume = options?.volume || 1.0;

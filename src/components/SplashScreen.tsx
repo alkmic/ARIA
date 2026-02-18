@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { useTranslation } from '../i18n';
 
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [show, setShow] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,7 +58,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
               transition={{ delay: 0.5 }}
               className="text-white/70"
             >
-              Air Liquide Intelligent Assistant
+              {t('welcome.splashSubtitle')}
             </motion.p>
 
             {/* Barre de chargement */}

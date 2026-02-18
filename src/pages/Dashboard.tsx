@@ -19,11 +19,16 @@ import { SpecialtyBreakdown } from '../components/dashboard/SpecialtyBreakdown';
 import { VingtileDistribution } from '../components/dashboard/VingtileDistribution';
 import { QuickActions } from '../components/dashboard/QuickActions';
 import { DataService } from '../services/dataService';
+import { useTranslation } from '../i18n';
+import { useLanguage } from '../i18n';
+import { getLocaleCode } from '../utils/helpers';
 
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
   const { timePeriod, periodLabel, periodLabelShort } = useTimePeriod();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
 
   // Calculer les métriques pour la période sélectionnée
   const periodMetrics = useMemo(() => {
@@ -130,8 +135,8 @@ export const Dashboard: React.FC = () => {
   // Dynamic last sync time (based on current time)
   const lastSyncText = useMemo(() => {
     const minutes = today.getMinutes() % 15;
-    if (minutes < 5) return 'à l\'instant';
-    return `il y a ${minutes} min`;
+    if (minutes < 5) return t('dashboard.justNow');
+    return t('dashboard.minutesAgo', { minutes });
   }, []);
 
   const firstName = currentUser.name.split(' ')[0];
@@ -147,10 +152,10 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-al-navy">
-            Bonjour {firstName}
+            {t('dashboard.greeting', { name: firstName })}
           </h1>
           <p className="text-sm text-slate-500 flex flex-wrap items-center gap-2">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {new Date().toLocaleDateString(getLocaleCode(language), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
@@ -176,7 +181,7 @@ export const Dashboard: React.FC = () => {
         <AnimatedStatCard
           icon={Calendar}
           iconBgColor="bg-al-blue-500"
-          label={`Visites ${periodLabelShort}`}
+          label={t('dashboard.visitsLabel', { period: periodLabelShort })}
           value={periodMetrics.visitsCount}
           suffix={`/${periodMetrics.visitsObjective}`}
           trend={Math.round(periodMetrics.visitGrowth)}
@@ -186,18 +191,18 @@ export const Dashboard: React.FC = () => {
         <AnimatedStatCard
           icon={UserPlus}
           iconBgColor="bg-green-500"
-          label="Nouveaux prescripteurs"
+          label={t('dashboard.newPrescribers')}
           value={periodMetrics.newPrescribers}
           prefix="+"
           trend={timePeriod === 'month' ? 2 : timePeriod === 'quarter' ? 5 : 8}
-          trendLabel="vs période préc."
+          trendLabel={t('common.vsPreviousPeriod')}
           delay={0.1}
           linkTo="/practitioners"
         />
         <AnimatedStatCard
           icon={Droplets}
           iconBgColor="bg-cyan-500"
-          label="Volume prescrit"
+          label={t('dashboard.prescribedVolume')}
           value={periodMetrics.totalVolume / 1000}
           suffix="K L"
           decimals={0}
@@ -208,7 +213,7 @@ export const Dashboard: React.FC = () => {
         <AnimatedStatCard
           icon={Star}
           iconBgColor="bg-amber-500"
-          label="Fidélité moyenne"
+          label={t('dashboard.avgLoyalty')}
           value={periodMetrics.avgLoyalty}
           suffix="/10"
           decimals={1}
@@ -218,9 +223,9 @@ export const Dashboard: React.FC = () => {
         <AnimatedStatCard
           icon={AlertTriangle}
           iconBgColor="bg-red-500"
-          label="KOLs à voir urgent"
+          label={t('dashboard.urgentKols')}
           value={periodMetrics.undervisitedKOLs}
-          trendLabel={`Non vus >${timePeriod === 'month' ? '30' : timePeriod === 'quarter' ? '60' : '90'}j`}
+          trendLabel={t('dashboard.notSeenDays', { days: timePeriod === 'month' ? '30' : timePeriod === 'quarter' ? '60' : '90' })}
           delay={0.4}
           linkTo="/kol-planning"
         />
@@ -269,15 +274,16 @@ export const Dashboard: React.FC = () => {
 
 // ─── Top Actions Widget: Shows top 3 AI-generated actions on dashboard ───────
 function TopActionsWidget({ navigate }: { navigate: (path: string) => void }) {
+  const { t } = useTranslation();
   const topActions = useMemo(() => {
     return generateIntelligentActions({ maxActions: 3 });
   }, []);
 
   const priorityStyles = {
-    critical: { border: 'border-l-red-500', bg: 'bg-red-50', badge: 'bg-red-100 text-red-700', label: 'Critique' },
-    high: { border: 'border-l-amber-500', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700', label: 'Haute' },
-    medium: { border: 'border-l-blue-500', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700', label: 'Moyenne' },
-    low: { border: 'border-l-slate-400', bg: 'bg-slate-50', badge: 'bg-slate-100 text-slate-600', label: 'Faible' },
+    critical: { border: 'border-l-red-500', bg: 'bg-red-50', badge: 'bg-red-100 text-red-700', label: t('common.priority.critical') },
+    high: { border: 'border-l-amber-500', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700', label: t('common.priority.high') },
+    medium: { border: 'border-l-blue-500', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700', label: t('common.priority.medium') },
+    low: { border: 'border-l-slate-400', bg: 'bg-slate-50', badge: 'bg-slate-100 text-slate-600', label: t('common.priority.low') },
   };
 
   if (topActions.length === 0) return null;
@@ -289,13 +295,13 @@ function TopActionsWidget({ navigate }: { navigate: (path: string) => void }) {
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-amber-500 to-red-500 flex items-center justify-center">
             <Zap className="w-3.5 h-3.5 text-white" />
           </div>
-          Mes Prochaines Actions
+          {t('dashboard.myNextActions')}
         </h2>
         <button
           onClick={() => navigate('/next-actions')}
           className="text-xs text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
         >
-          Voir tout
+          {t('common.seeAll')}
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -342,14 +348,14 @@ function TopActionsWidget({ navigate }: { navigate: (path: string) => void }) {
                       onClick={(e) => { e.stopPropagation(); navigate(`/pitch?practitionerId=${action.practitionerId}`); }}
                       className="text-xs px-2 py-1 rounded-md bg-al-blue-50 text-al-blue-600 hover:bg-al-blue-100 transition-colors"
                     >
-                      Pitch
+                      {t('dashboard.pitch')}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/visit-report?practitionerId=${action.practitionerId}`); }}
                       className="text-xs px-2 py-1 rounded-md bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors"
                     >
                       <Mic className="w-3 h-3 inline mr-0.5" />
-                      CRV
+                      {t('dashboard.crv')}
                     </button>
                   </div>
                 </div>

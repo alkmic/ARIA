@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import { Map, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 import 'leaflet/dist/leaflet.css';
 
 interface TerritoryStats {
@@ -19,6 +20,7 @@ interface MapPoint {
 
 export function TerritoryMiniMap({ stats, points }: { stats: TerritoryStats; points: MapPoint[] }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const getColor = (status: string) => {
     switch (status) {
@@ -33,7 +35,7 @@ export function TerritoryMiniMap({ stats, points }: { stats: TerritoryStats; poi
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-bold text-base flex items-center gap-1.5">
           <Map className="w-3.5 h-3.5 text-al-blue-500" />
-          Mon territoire
+          {t('dashboard.myTerritory')}
         </h3>
       </div>
 
@@ -69,21 +71,21 @@ export function TerritoryMiniMap({ stats, points }: { stats: TerritoryStats; poi
         <div className="flex items-center justify-between p-1.5 bg-red-50 rounded-md">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-            <span className="text-xs text-red-700">Urgents (&gt;90j)</span>
+            <span className="text-xs text-red-700">{t('dashboard.urgent90')}</span>
           </div>
           <span className="font-bold text-xs text-red-700">{stats.urgent}</span>
         </div>
         <div className="flex items-center justify-between p-1.5 bg-amber-50 rounded-md">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
-            <span className="text-xs text-amber-700">30-90j</span>
+            <span className="text-xs text-amber-700">{t('dashboard.period30_90')}</span>
           </div>
           <span className="font-bold text-xs text-amber-700">{stats.toSchedule}</span>
         </div>
         <div className="flex items-center justify-between p-1.5 bg-green-50 rounded-md">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-            <span className="text-xs text-green-700">À jour (&lt;30j)</span>
+            <span className="text-xs text-green-700">{t('dashboard.upToDate')}</span>
           </div>
           <span className="font-bold text-xs text-green-700">{stats.upToDate}</span>
         </div>
@@ -94,7 +96,7 @@ export function TerritoryMiniMap({ stats, points }: { stats: TerritoryStats; poi
         onClick={() => navigate('/map')}
         className="mt-2 w-full btn-secondary text-xs py-1.5 flex items-center justify-center gap-1"
       >
-        Carte complète
+        {t('dashboard.fullMap')}
         <ChevronRight className="w-3 h-3" />
       </button>
     </div>

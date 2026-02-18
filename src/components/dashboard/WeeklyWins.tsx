@@ -1,31 +1,33 @@
 import { motion } from 'framer-motion';
 import { CheckCircle, UserPlus, Star, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../i18n';
 
 interface Win {
   icon: React.ReactNode;
-  label: string;
+  labelKey: string;
   value: string;
   color: string;
 }
 
 export function WeeklyWins() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const wins: Win[] = [
-    { icon: <CheckCircle className="w-5 h-5" />, label: 'Visites réalisées', value: '8', color: 'text-green-600 bg-green-100' },
-    { icon: <UserPlus className="w-5 h-5" />, label: 'Nouveaux prescripteurs', value: '2', color: 'text-blue-600 bg-blue-100' },
-    { icon: <Star className="w-5 h-5" />, label: 'KOL reconquis', value: '1', color: 'text-amber-600 bg-amber-100' },
+    { icon: <CheckCircle className="w-5 h-5" />, labelKey: 'dashboard.weeklyWins.visitsCompleted', value: '8', color: 'text-green-600 bg-green-100' },
+    { icon: <UserPlus className="w-5 h-5" />, labelKey: 'dashboard.weeklyWins.newPrescribers', value: '2', color: 'text-blue-600 bg-blue-100' },
+    { icon: <Star className="w-5 h-5" />, labelKey: 'dashboard.weeklyWins.kolRecovered', value: '1', color: 'text-amber-600 bg-amber-100' },
   ];
 
   const pending = [
-    { label: 'Propositions en attente de réponse', value: '3' },
-    { label: 'Relances à effectuer', value: '5' },
+    { labelKey: 'dashboard.weeklyPending.pendingProposals', value: '3' },
+    { labelKey: 'dashboard.weeklyPending.followUps', value: '5' },
   ];
 
   return (
     <div className="glass-card p-3 sm:p-4">
-      <h3 className="font-bold text-base mb-2">Cette semaine</h3>
+      <h3 className="font-bold text-base mb-2">{t('dashboard.thisWeek')}</h3>
 
       <div className="space-y-2 mb-3">
         {wins.map((win, i) => (
@@ -41,7 +43,7 @@ export function WeeklyWins() {
                 {win.icon}
               </div>
             </div>
-            <span className="flex-1 text-xs sm:text-sm text-slate-600">{win.label}</span>
+            <span className="flex-1 text-xs sm:text-sm text-slate-600">{t(win.labelKey)}</span>
             <span className="font-bold text-al-navy text-base sm:text-lg">{win.value}</span>
           </motion.div>
         ))}
@@ -51,7 +53,7 @@ export function WeeklyWins() {
         {pending.map((item, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
             <Clock className="w-3 h-3 text-slate-400 flex-shrink-0" />
-            <span className="flex-1 text-slate-500">{item.label}</span>
+            <span className="flex-1 text-slate-500">{t(item.labelKey)}</span>
             <span className="font-medium text-slate-700">{item.value}</span>
           </div>
         ))}
@@ -61,7 +63,7 @@ export function WeeklyWins() {
         onClick={() => navigate('/visits')}
         className="mt-2 w-full text-xs text-al-blue-500 hover:underline flex items-center justify-center gap-1"
       >
-        Voir l'historique complet
+        {t('dashboard.seeFullHistory')}
         <ChevronRight className="w-3 h-3" />
       </button>
     </div>

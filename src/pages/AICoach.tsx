@@ -70,6 +70,7 @@ import type { Practitioner } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { useUserDataStore } from '../stores/useUserDataStore';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
+import { useTranslation } from '../i18n';
 
 // Types pour les graphiques agentiques
 interface AgenticChartData {
@@ -99,6 +100,7 @@ interface Message {
 const CHART_COLORS = DEFAULT_CHART_COLORS;
 
 export default function AICoach() {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -126,17 +128,17 @@ export default function AICoach() {
   // Suggestions contextuelles — 3 catégories : Data, Stratégie, Connaissances
   const SUGGESTION_CHIPS = [
     // Data & Charts
-    "📊 Top 15 praticiens par volume",
-    "📊 Compare KOLs vs autres en volume et fidélité",
-    "📊 Répartition par ville et spécialité",
+    `📊 ${t('coach.suggestions.topPractitioners')}`,
+    `📊 ${t('coach.suggestions.compareKols')}`,
+    `📊 ${t('coach.suggestions.volumeChart')}`,
     // Stratégie
-    `🎯 Qui voir en priorité ${periodLabel.toLowerCase()} ?`,
-    "🎯 Quels praticiens sont à risque de churn ?",
-    "🎯 Mes KOLs non vus depuis 60 jours",
+    `🎯 ${t('coach.suggestions.atRiskPractitioners')}`,
+    `🎯 ${t('coach.suggestions.bestAction')}`,
+    `🎯 ${t('coach.suggestions.prepareVisit')}`,
     // Connaissances métier
-    "📖 Quels produits propose Air Liquide Santé ?",
-    "📖 Classification GOLD ABE 2025 et traitements",
-    "📖 Concurrents sur le marché PSAD en France",
+    `📖 ${t('coach.suggestions.bpcoTreatment')}`,
+    `📖 ${t('coach.suggestions.airLiquideAdvantages')}`,
+    `📖 ${t('coach.suggestions.regulatoryNews')}`,
   ];
 
   // Auto-scroll vers le bas
@@ -177,7 +179,7 @@ export default function AICoach() {
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('La reconnaissance vocale n\'est pas supportée par votre navigateur. Essayez Chrome ou Edge.');
+      alert(t('coach.voiceNotSupported'));
       return;
     }
 
@@ -312,7 +314,7 @@ export default function AICoach() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Désolé, une erreur inattendue est survenue. Veuillez réessayer.',
+        content: t('coach.errorOccurred'),
         timestamp: new Date(),
         isMarkdown: false,
         source: 'local'
@@ -335,7 +337,7 @@ export default function AICoach() {
   }, [searchParams, handleSend, llmConfigured, setSearchParams]);
 
   const clearConversation = () => {
-    if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
+    if (confirm(t('coach.clearConfirm'))) {
       setMessages([]);
       clearChartHistory();
       conversationHistoryRef.current = [];
@@ -345,7 +347,7 @@ export default function AICoach() {
 
   const exportConversation = () => {
     const text = messages
-      .map(m => `[${m.timestamp.toLocaleTimeString('fr-FR')}] ${m.role === 'user' ? 'Vous' : 'Coach IA'}: ${m.content}`)
+      .map(m => `[${m.timestamp.toLocaleTimeString('fr-FR')}] ${m.role === 'user' ? t('coach.you') : t('coach.title')}: ${m.content}`)
       .join('\n\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -368,12 +370,12 @@ export default function AICoach() {
                 <Brain className="w-7 h-7 text-white" />
               </div>
               <span className="bg-gradient-to-r from-al-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Coach IA
+                {t('coach.title')}
               </span>
             </h1>
             <p className="text-slate-600 text-sm sm:text-base flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
-              Assistant stratégique avec base de connaissances BPCO, O₂ & Air Liquide
+              {t('coach.subtitle')}
             </p>
           </div>
 
@@ -388,7 +390,7 @@ export default function AICoach() {
               title="Base de connaissances"
             >
               <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">Connaissances</span>
+              <span className="hidden sm:inline">{t('coach.knowledge')}</span>
               <span className="text-[11px] font-bold bg-emerald-500 text-white rounded-full px-1.5 py-0.5 leading-none">
                 {ragStats.totalChunks}
               </span>
@@ -401,7 +403,7 @@ export default function AICoach() {
                   title="Exporter la conversation"
                 >
                   <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">Export</span>
+                  <span className="hidden sm:inline">{t('coach.export')}</span>
                 </button>
                 <button
                   onClick={clearConversation}
@@ -409,7 +411,7 @@ export default function AICoach() {
                   title="Effacer la conversation"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Effacer</span>
+                  <span className="hidden sm:inline">{t('coach.clear')}</span>
                 </button>
               </>
             )}
@@ -427,7 +429,7 @@ export default function AICoach() {
             }`}
           >
             {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            Lecture auto {autoSpeak ? 'ON' : 'OFF'}
+            {autoSpeak ? t('coach.autoReadOn') : t('coach.autoReadOff')}
           </button>
 
           {isSpeaking && (
@@ -436,7 +438,7 @@ export default function AICoach() {
               className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium border-2 border-red-300 flex items-center gap-2 animate-pulse"
             >
               <VolumeX className="w-4 h-4" />
-              Arrêter la lecture
+              {t('coach.stopReading')}
             </button>
           )}
 
@@ -466,11 +468,11 @@ export default function AICoach() {
 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs border border-emerald-200">
             <Shield className="w-4 h-4" />
-            <span>RAG actif — {ragStats.totalChunks} docs</span>
+            <span>{t('coach.ragActive', { count: ragStats.totalChunks })}</span>
           </div>
 
           <span className="text-xs text-slate-500 px-2 hidden sm:inline">
-            CRM + connaissances BPCO, O₂, concurrence, réglementation
+            {t('coach.ragDescription')}
           </span>
         </div>
       </div>
@@ -488,7 +490,7 @@ export default function AICoach() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Database className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-semibold text-emerald-800">Base de connaissances RAG</h3>
+                  <h3 className="font-semibold text-emerald-800">{t('coach.ragKnowledgeBase')}</h3>
                   <span className="text-[11px] px-2 py-0.5 bg-emerald-200 text-emerald-700 rounded-full font-medium">
                     ~{ragStats.estimatedTokens.toLocaleString()} tokens
                   </span>
@@ -505,25 +507,25 @@ export default function AICoach() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
                   <div className="text-lg font-bold text-emerald-700">{ragStats.totalChunks}</div>
-                  <div className="text-[11px] text-slate-500">Documents</div>
+                  <div className="text-[11px] text-slate-500">{t('coach.documents')}</div>
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
                   <div className="text-lg font-bold text-emerald-700">{ragStats.totalSources}</div>
-                  <div className="text-[11px] text-slate-500">Sources</div>
+                  <div className="text-[11px] text-slate-500">{t('coach.sources')}</div>
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
                   <div className="text-lg font-bold text-emerald-700">{Object.keys(ragStats.byCategory).length}</div>
-                  <div className="text-[11px] text-slate-500">Catégories</div>
+                  <div className="text-[11px] text-slate-500">{t('coach.categories')}</div>
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 text-center border border-emerald-100">
                   <div className="text-lg font-bold text-emerald-700">{ragStats.downloadableSources}</div>
-                  <div className="text-[11px] text-slate-500">Téléchargeables</div>
+                  <div className="text-[11px] text-slate-500">{t('coach.downloadable')}</div>
                 </div>
               </div>
 
               {/* Tags */}
               <div className="mb-4">
-                <p className="text-xs font-medium text-emerald-700 mb-2">Domaines couverts :</p>
+                <p className="text-xs font-medium text-emerald-700 mb-2">{t('coach.coveredDomains')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(ragStats.byTag)
                     .sort((a, b) => b[1] - a[1])
@@ -540,7 +542,7 @@ export default function AICoach() {
               <div>
                 <p className="text-xs font-medium text-emerald-700 mb-2 flex items-center gap-1">
                   <FileText className="w-3.5 h-3.5" />
-                  Sources de référence ({knowledgeSources.length}) :
+                  {t('coach.referenceSources', { count: knowledgeSources.length })}
                 </p>
                 <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
                   {knowledgeSources
@@ -566,7 +568,7 @@ export default function AICoach() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors flex-shrink-0"
-                          title={src.downloadable ? 'Télécharger / Consulter' : 'Consulter la source'}
+                          title={src.downloadable ? t('coach.downloadConsult') : t('coach.consultSource')}
                         >
                           {src.downloadable ? (
                             <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -591,10 +593,10 @@ export default function AICoach() {
             <div className="flex items-center gap-2 mb-3">
               <MessageSquare className="w-5 h-5 text-purple-500" />
               <p className="text-sm font-semibold text-slate-700">
-                Dialogue libre activé - Posez n'importe quelle question !
+                {t('coach.freeDialogue')}
               </p>
             </div>
-            <p className="text-sm text-slate-500 mb-3">Exemples de questions :</p>
+            <p className="text-sm text-slate-500 mb-3">{t('coach.questionExamples')}</p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTION_CHIPS.map((chip, i) => (
                 <button
@@ -651,18 +653,18 @@ export default function AICoach() {
                           <div className="mt-2 pt-2 border-t border-slate-100">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
-                                {message.source === 'agentic' ? 'ARIA Engine + LLM' : 'ARIA Engine'}
+                                {message.source === 'agentic' ? t('coach.ariaEngineLLM') : t('coach.ariaEngine')}
                               </span>
                               {message.usedRAG && (
                                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
                                   <BookOpen className="w-2.5 h-2.5" />
-                                  Base de connaissances
+                                  {t('coach.knowledgeBase')}
                                 </span>
                               )}
                               <button
                                 onClick={() => speak(message.content)}
                                 className="p-1 hover:bg-slate-100 rounded transition-colors"
-                                title="Lire à voix haute"
+                                title={t('coach.readAloud')}
                               >
                                 <Volume2 className="w-3.5 h-3.5 text-slate-400" />
                               </button>
@@ -670,7 +672,7 @@ export default function AICoach() {
                             {/* RAG Sources */}
                             {message.ragSources && message.ragSources.length > 0 && (
                               <div className="mt-2 space-y-1">
-                                <p className="text-[11px] text-slate-400 font-medium">Sources :</p>
+                                <p className="text-[11px] text-slate-400 font-medium">{t('coach.sources')} :</p>
                                 {message.ragSources.slice(0, 3).map((src, i) => (
                                   <a
                                     key={i}
@@ -740,7 +742,7 @@ export default function AICoach() {
                           <div className="flex gap-1 flex-shrink-0">
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/pitch?practitionerId=${p.id}`); }}
-                              title="Générer un pitch"
+                              title={t('coach.generatePitch')}
                               className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
                             >
                               <Sparkles className="w-3.5 h-3.5" />
@@ -778,7 +780,7 @@ export default function AICoach() {
                         {message.agenticChart.generatedByLLM && (
                           <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 rounded-full">
                             <Code2 className="w-3 h-3" />
-                            Généré par IA
+                            {t('coach.generatedByAI')}
                           </span>
                         )}
                       </div>
@@ -931,7 +933,7 @@ export default function AICoach() {
                       {/* Suggestions de suivi */}
                       {message.suggestions && message.suggestions.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-100">
-                          <p className="text-xs text-slate-500 mb-2">Pour approfondir :</p>
+                          <p className="text-xs text-slate-500 mb-2">{t('coach.deeperDive')}</p>
                           <div className="flex flex-wrap gap-2">
                             {message.suggestions.map((suggestion, i) => (
                               <button
@@ -996,7 +998,7 @@ export default function AICoach() {
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="ml-2 text-xs text-slate-400">Analyse en cours...</span>
+                  <span className="ml-2 text-xs text-slate-400">{t('coach.analyzing')}</span>
                 </div>
               </div>
             </motion.div>
@@ -1013,7 +1015,7 @@ export default function AICoach() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend(input)}
-              placeholder="Question sur vos praticiens, la BPCO, l'oxygénothérapie, la concurrence..."
+              placeholder={t('coach.inputPlaceholder')}
               className="input-field flex-1 text-sm sm:text-base"
               disabled={isTyping}
             />
@@ -1025,7 +1027,7 @@ export default function AICoach() {
                   ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
                   : 'btn-secondary'
               } disabled:opacity-50`}
-              title={isListening ? 'Arrêter l\'écoute' : 'Dicter la question'}
+              title={isListening ? t('coach.stopListening') : t('coach.dictateQuestion')}
             >
               {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
@@ -1041,7 +1043,7 @@ export default function AICoach() {
           {isListening && (
             <p className="text-xs text-red-600 mt-2 animate-pulse font-medium flex items-center gap-2">
               <Mic className="w-3 h-3" />
-              Écoute en cours... Parlez maintenant
+              {t('coach.listeningInProgress')}
             </p>
           )}
         </div>

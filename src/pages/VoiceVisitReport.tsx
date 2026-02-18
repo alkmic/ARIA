@@ -29,6 +29,7 @@ import { quickSearch } from '../services/universalSearch';
 import { DataService } from '../services/dataService';
 import { useAppStore } from '../stores/useAppStore';
 import { useUserDataStore } from '../stores/useUserDataStore';
+import { useTranslation } from '../i18n';
 import type { PractitionerProfile } from '../types/database';
 
 interface ExtractedInfo {
@@ -52,6 +53,7 @@ export default function VoiceVisitReport() {
   const navigate = useNavigate();
   const { complete } = useGroq();
   const { upcomingVisits } = useAppStore();
+  const { t } = useTranslation();
 
   // State
   const [step, setStep] = useState<'select' | 'record' | 'review' | 'ai_deductions' | 'saved'>('select');
@@ -437,18 +439,18 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
             <FileText className="w-7 h-7 text-white" />
           </div>
           <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            Compte-Rendu de Visite
+            {t('voiceReport.title')}
           </span>
         </h1>
         <p className="text-slate-600">
-          Dictez ou tapez votre compte-rendu et ARIA extraira automatiquement les informations clés
+          {t('voiceReport.subtitle')}
         </p>
       </div>
 
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {['Sélectionner', 'Enregistrer', 'Vérifier', 'Déductions IA', 'Terminé'].map((label, i) => {
+          {[t('voiceReport.steps.select'), t('voiceReport.steps.record'), t('voiceReport.steps.verify'), t('voiceReport.steps.aiDeductions'), t('voiceReport.steps.done')].map((label, i) => {
             const stepIndex = ['select', 'record', 'review', 'ai_deductions', 'saved'].indexOf(step);
             const isActive = i === stepIndex;
             const isCompleted = i < stepIndex;
@@ -495,7 +497,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
               <div className="glass-card p-6">
                 <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-emerald-500" />
-                  Visites d'aujourd'hui
+                  {t('voiceReport.todayVisits')}
                 </h3>
                 <div className="grid gap-3">
                   {todayVisits.map(visit => (
@@ -532,13 +534,13 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
             <div className="glass-card p-6">
               <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <User className="w-5 h-5 text-al-blue-500" />
-                Rechercher un praticien
+                {t('voiceReport.searchPractitioner')}
               </h3>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Nom du praticien ou ville..."
+                placeholder={t('voiceReport.searchPlaceholder')}
                 className="input-field w-full mb-4"
               />
 
@@ -600,14 +602,14 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onClick={() => { setSelectedPractitioner(null); setStep('select'); }}
                 className="text-sm text-al-blue-600 hover:text-al-blue-700"
               >
-                Changer
+                {t('voiceReport.changePractitioner')}
               </button>
             </div>
 
             {/* Input Area - Voice OR Text */}
             <div className="glass-card p-6">
               <h3 className="font-semibold text-slate-800 mb-4 text-center">
-                Comment souhaitez-vous saisir votre compte-rendu ?
+                {t('voiceReport.howToInput')}
               </h3>
 
               <div className="grid md:grid-cols-2 gap-4 mb-6">
@@ -636,7 +638,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                     </motion.button>
 
                     <p className={`mt-3 font-medium text-sm ${isRecording ? 'text-red-600' : 'text-slate-600'}`}>
-                      {isRecording ? 'Enregistrement...' : 'Dicter'}
+                      {isRecording ? t('voiceReport.recording') : t('voiceReport.dictate')}
                     </p>
                   </div>
                 </div>
@@ -646,9 +648,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                   <textarea
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
-                    placeholder="Ou tapez directement votre compte-rendu ici...
-
-Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a mentionné avoir 3 patients candidats. Prochaine étape: envoyer la documentation technique."
+                    placeholder={t('voiceReport.textPlaceholder')}
                     className="w-full h-32 p-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                     disabled={isRecording}
                   />
@@ -660,7 +660,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
                     {isRecording && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
-                    {isRecording ? 'Transcription en cours...' : 'Votre compte-rendu'}
+                    {isRecording ? t('voiceReport.transcriptionInProgress') : t('voiceReport.yourReport')}
                   </label>
                   <div className="bg-slate-50 rounded-xl p-4 max-h-48 overflow-y-auto min-h-[80px]">
                     <p className="text-slate-700 whitespace-pre-wrap">{transcript}</p>
@@ -679,7 +679,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                   className="btn-secondary flex-1 disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Effacer
+                  {t('voiceReport.clearText')}
                 </button>
                 <button
                   onClick={processTranscript}
@@ -689,12 +689,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyse...
+                      {t('voiceReport.analyzing')}
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Analyser avec IA
+                      {t('voiceReport.analyzeWithAI')}
                     </>
                   )}
                 </button>
@@ -703,12 +703,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
 
             {/* Tips */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
-              <p className="text-sm font-medium text-emerald-800 mb-2">Conseils pour un bon compte-rendu :</p>
+              <p className="text-sm font-medium text-emerald-800 mb-2">{t('voiceReport.tips.title')}</p>
               <ul className="text-sm text-emerald-700 space-y-1">
-                <li>• Mentionnez les produits discutés (Oxygène, VNI, BPCO...)</li>
-                <li>• Indiquez le sentiment général du praticien</li>
-                <li>• Notez les objections ou freins exprimés</li>
-                <li>• Précisez les prochaines actions à mener</li>
+                <li>• {t('voiceReport.tips.products')}</li>
+                <li>• {t('voiceReport.tips.reactions')}</li>
+                <li>• {t('voiceReport.tips.competitors')}</li>
+                <li>• {t('voiceReport.tips.actions')}</li>
               </ul>
             </div>
           </motion.div>
@@ -728,10 +728,9 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               <div className="flex items-start gap-3">
                 <Sparkles className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-amber-800">Analyse IA — Validation requise</p>
+                  <p className="font-semibold text-amber-800">{t('voiceReport.aiAnalysis')}</p>
                   <p className="text-sm text-amber-700 mt-1">
-                    ARIA a analysé votre compte-rendu et extrait les informations ci-dessous.
-                    Vérifiez, modifiez ou complétez avant de sauvegarder dans la fiche du praticien.
+                    {t('voiceReport.aiAnalysisDesc')}
                   </p>
                 </div>
               </div>
@@ -770,7 +769,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                     {s === 'positive' ? <ThumbsUp className="w-3 h-3" /> :
                      s === 'negative' ? <ThumbsDown className="w-3 h-3" /> :
                      <MessageSquare className="w-3 h-3" />}
-                    {s === 'positive' ? 'Positif' : s === 'negative' ? 'Négatif' : 'Neutre'}
+                    {s === 'positive' ? t('common.sentiment.positive') : s === 'negative' ? t('common.sentiment.negative') : t('common.sentiment.neutral')}
                   </button>
                 ))}
               </div>
@@ -780,7 +779,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             <div className="grid md:grid-cols-2 gap-4">
               {/* Editable Tags Section */}
               <EditableTagsSection
-                title="Sujets abordés"
+                title={t('voiceReport.topicsDiscussed')}
                 items={extractedInfo.topics}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, topics: items })}
                 icon={<Tag className="w-4 h-4 text-blue-500" />}
@@ -789,7 +788,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
 
               <EditableTagsSection
-                title="Produits discutés"
+                title={t('voiceReport.productsDiscussed')}
                 items={extractedInfo.productsDiscussed}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, productsDiscussed: items })}
                 icon={<FileText className="w-4 h-4 text-emerald-500" />}
@@ -799,7 +798,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
 
               <EditableListSection
-                title="Prochaines actions"
+                title={t('voiceReport.nextActions')}
                 items={extractedInfo.nextActions}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, nextActions: items })}
                 icon={<Target className="w-4 h-4 text-purple-500" />}
@@ -808,7 +807,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
 
               <EditableListSection
-                title="Opportunités détectées"
+                title={t('voiceReport.opportunitiesDetected')}
                 items={extractedInfo.opportunities}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, opportunities: items })}
                 icon={<TrendingUp className="w-4 h-4 text-amber-500" />}
@@ -817,7 +816,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
 
               <EditableListSection
-                title="Objections / Freins"
+                title={t('voiceReport.objectionsBarriers')}
                 items={extractedInfo.objections}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, objections: items })}
                 icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
@@ -826,7 +825,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
 
               <EditableListSection
-                title="Points clés"
+                title={t('voiceReport.keyPoints')}
                 items={extractedInfo.keyPoints}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, keyPoints: items })}
                 icon={<Check className="w-4 h-4 text-green-500" />}
@@ -835,7 +834,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               />
 
               <EditableTagsSection
-                title="Concurrents mentionnés"
+                title={t('voiceReport.competitorsMentioned')}
                 items={extractedInfo.competitorsMentioned}
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, competitorsMentioned: items })}
                 icon={<AlertCircle className="w-4 h-4 text-orange-500" />}
@@ -849,7 +848,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             <div className="glass-card p-4">
               <label className="block font-medium text-slate-700 mb-2 flex items-center gap-2">
                 <Edit3 className="w-4 h-4" />
-                Transcription (modifiable)
+                {t('voiceReport.editableTranscript')}
               </label>
               <textarea
                 value={editedNotes}
@@ -863,15 +862,15 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             <div className="glass-card p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
               <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Ce qui sera intégré à la fiche de {selectedPractitioner.title} {selectedPractitioner.lastName}
+                {t('voiceReport.integrationPreview', { name: `${selectedPractitioner.title} ${selectedPractitioner.lastName}` })}
               </h4>
               <ul className="text-sm text-emerald-700 space-y-1">
-                <li>• Compte-rendu de visite avec transcription complète</li>
-                {extractedInfo.keyPoints.length > 0 && <li>• {extractedInfo.keyPoints.length} point(s) clé(s) → Note d'observation</li>}
-                {extractedInfo.opportunities.length > 0 && <li>• {extractedInfo.opportunities.length} opportunité(s) → Note stratégique</li>}
-                {extractedInfo.competitorsMentioned.length > 0 && <li>• Intelligence concurrentielle ({extractedInfo.competitorsMentioned.join(', ')}) → Note concurrence</li>}
-                {extractedInfo.nextActions.length > 0 && <li>• {extractedInfo.nextActions.length} action(s) à suivre</li>}
-                <li>• Données accessibles par le Coach IA pour répondre à vos questions</li>
+                <li>• {t('voiceReport.visitReportItem')}</li>
+                {extractedInfo.keyPoints.length > 0 && <li>• {t('voiceReport.keyPointsNote', { count: String(extractedInfo.keyPoints.length) })}</li>}
+                {extractedInfo.opportunities.length > 0 && <li>• {t('voiceReport.opportunitiesNote', { count: String(extractedInfo.opportunities.length) })}</li>}
+                {extractedInfo.competitorsMentioned.length > 0 && <li>• {t('voiceReport.competitorIntel', { names: extractedInfo.competitorsMentioned.join(', ') })}</li>}
+                {extractedInfo.nextActions.length > 0 && <li>• {t('voiceReport.actionsToFollow', { count: String(extractedInfo.nextActions.length) })}</li>}
+                <li>• {t('voiceReport.dataAccessible')}</li>
               </ul>
             </div>
 
@@ -881,14 +880,14 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 onClick={() => setStep('record')}
                 className="btn-secondary flex-1"
               >
-                Retour
+                {t('common.back')}
               </button>
               <button
                 onClick={generateDeductions}
                 className="btn-primary flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                Analyser et enrichir la fiche
+                {t('voiceReport.analyzeWithAI')}
               </button>
             </div>
           </motion.div>
@@ -908,11 +907,9 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               <div className="flex items-start gap-3">
                 <Sparkles className="w-5 h-5 text-violet-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-violet-800">Déductions IA — Enrichissement du profil</p>
+                  <p className="font-semibold text-violet-800">{t('voiceReport.aiDeductionsTitle')}</p>
                   <p className="text-sm text-violet-700 mt-1">
-                    L'IA a analysé votre compte-rendu et propose les informations suivantes pour enrichir la fiche de{' '}
-                    <strong>{selectedPractitioner.title} {selectedPractitioner.lastName}</strong>.
-                    Validez ou refusez chaque déduction avant l'enregistrement.
+                    {t('voiceReport.aiDeductionsDesc')}
                   </p>
                 </div>
               </div>
@@ -923,12 +920,12 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               <div className="space-y-3">
                 {aiDeductions.map((deduction) => {
                   const categoryConfig = {
-                    product_interest: { icon: <Tag className="w-4 h-4 text-blue-500" />, bg: 'bg-blue-50', border: 'border-blue-200', label: 'Intérêt produit' },
-                    competitor: { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, bg: 'bg-orange-50', border: 'border-orange-200', label: 'Concurrence' },
-                    objection: { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, bg: 'bg-red-50', border: 'border-red-200', label: 'Objection' },
-                    opportunity: { icon: <TrendingUp className="w-4 h-4 text-emerald-500" />, bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Opportunité' },
-                    relationship: { icon: <MessageSquare className="w-4 h-4 text-purple-500" />, bg: 'bg-purple-50', border: 'border-purple-200', label: 'Relation' },
-                    preference: { icon: <Target className="w-4 h-4 text-indigo-500" />, bg: 'bg-indigo-50', border: 'border-indigo-200', label: 'Préférence' },
+                    product_interest: { icon: <Tag className="w-4 h-4 text-blue-500" />, bg: 'bg-blue-50', border: 'border-blue-200', label: t('voiceReport.categoryLabels.productInterest') },
+                    competitor: { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, bg: 'bg-orange-50', border: 'border-orange-200', label: t('voiceReport.categoryLabels.competitor') },
+                    objection: { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, bg: 'bg-red-50', border: 'border-red-200', label: t('voiceReport.categoryLabels.objection') },
+                    opportunity: { icon: <TrendingUp className="w-4 h-4 text-emerald-500" />, bg: 'bg-emerald-50', border: 'border-emerald-200', label: t('voiceReport.categoryLabels.opportunity') },
+                    relationship: { icon: <MessageSquare className="w-4 h-4 text-purple-500" />, bg: 'bg-purple-50', border: 'border-purple-200', label: t('voiceReport.categoryLabels.relationship') },
+                    preference: { icon: <Target className="w-4 h-4 text-indigo-500" />, bg: 'bg-indigo-50', border: 'border-indigo-200', label: t('voiceReport.categoryLabels.preference') },
                   };
                   const config = categoryConfig[deduction.category];
 
@@ -969,7 +966,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
               </div>
             ) : (
               <div className="glass-card p-6 text-center text-slate-500">
-                Aucune déduction IA disponible pour ce compte-rendu.
+                {t('voiceReport.noDeductions')}
               </div>
             )}
 
@@ -977,7 +974,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             <div className="glass-card p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
               <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2">
                 <Check className="w-4 h-4" />
-                Résumé des enrichissements validés
+                {t('voiceReport.validatedEnrichments')}
               </h4>
               <p className="text-sm text-emerald-700">
                 {aiDeductions.filter(d => d.accepted).length} déduction(s) sur {aiDeductions.length} seront intégrées à la fiche de{' '}
@@ -992,7 +989,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 onClick={() => setStep('review')}
                 className="btn-secondary flex-1"
               >
-                Retour
+                {t('common.back')}
               </button>
               <button
                 onClick={() => {
@@ -1000,14 +997,14 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 }}
                 className="btn-secondary"
               >
-                Tout accepter
+                {t('voiceReport.acceptAll')}
               </button>
               <button
                 onClick={saveReportWithDeductions}
                 className="btn-primary flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
               >
                 <Check className="w-4 h-4 mr-2" />
-                Valider et sauvegarder ({aiDeductions.filter(d => d.accepted).length})
+                {t('voiceReport.validateAndSave', { count: String(aiDeductions.filter(d => d.accepted).length) })}
               </button>
             </div>
           </motion.div>
@@ -1031,10 +1028,10 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
             </motion.div>
 
             <h2 className="text-2xl font-bold text-slate-800 mb-2">
-              Compte-rendu enregistré !
+              {t('voiceReport.reportSaved')}
             </h2>
             <p className="text-slate-600 mb-8">
-              Le profil de {selectedPractitioner.title} {selectedPractitioner.lastName} a été enrichi
+              {t('voiceReport.profileEnriched', { name: `${selectedPractitioner.title} ${selectedPractitioner.lastName}` })}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -1042,7 +1039,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 onClick={() => navigate(`/practitioner/${selectedPractitioner.id}`)}
                 className="btn-primary bg-gradient-to-r from-emerald-500 to-teal-500"
               >
-                Voir le profil
+                {t('voiceReport.seeProfile')}
               </button>
               <button
                 onClick={() => {
@@ -1054,7 +1051,7 @@ Ex: Visite très positive, le Dr a montré un vif intérêt pour la VNI. Il a me
                 className="btn-secondary"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Nouveau compte-rendu
+                {t('voiceReport.newReport')}
               </button>
             </div>
           </motion.div>

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Filter } from 'lucide-react';
 import type { FilterOptions, PracticeType } from '../../types';
+import { useTranslation } from '../../i18n';
 
 interface FilterPanelProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface FilterPanelProps {
 }
 
 export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: FilterPanelProps) {
+  const { t } = useTranslation();
+
   const handleSpecialtyChange = (specialty: 'Médecin généraliste' | 'Pneumologue') => {
     const currentSpecialties = filters.specialty || [];
     const newSpecialties = currentSpecialties.includes(specialty)
@@ -89,7 +92,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-al-blue-500 to-al-teal flex items-center justify-center">
                     <Filter className="w-5 h-5 text-white" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Filtres</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{t('practitioners.filterPanel.title')}</h2>
                 </div>
                 <button
                   onClick={onClose}
@@ -100,43 +103,46 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
               </div>
               {activeFilterCount > 0 && (
                 <p className="text-sm text-gray-600">
-                  {activeFilterCount} filtre{activeFilterCount > 1 ? 's' : ''} actif{activeFilterCount > 1 ? 's' : ''}
+                  {t('practitioners.filterPanel.activeFilters', { count: activeFilterCount, plural: activeFilterCount > 1 ? 's' : '' })}
                 </p>
               )}
             </div>
 
             {/* Filters */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-              {/* Spécialité */}
+              {/* Specialty */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Spécialité</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('practitioners.filterPanel.specialty')}</h3>
                 <div className="space-y-2">
-                  {(['Pneumologue', 'Médecin généraliste'] as const).map((specialty) => (
+                  {([
+                    { value: 'Pneumologue' as const, labelKey: 'common.specialty.pneumologue' },
+                    { value: 'Médecin généraliste' as const, labelKey: 'common.specialty.generaliste' },
+                  ]).map(({ value, labelKey }) => (
                     <label
-                      key={specialty}
+                      key={value}
                       className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
                     >
                       <input
                         type="checkbox"
-                        checked={filters.specialty?.includes(specialty) || false}
-                        onChange={() => handleSpecialtyChange(specialty)}
+                        checked={filters.specialty?.includes(value) || false}
+                        onChange={() => handleSpecialtyChange(value)}
                         className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
-                      <span className="text-sm text-gray-700">{specialty}</span>
+                      <span className="text-sm text-gray-700">{t(labelKey)}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Type d'exercice */}
+              {/* Practice type */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Type d'exercice</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('practitioners.filterPanel.practiceType')}</h3>
                 <div className="space-y-2">
                   {([
-                    { value: 'ville' as PracticeType, label: 'Praticien de ville' },
-                    { value: 'hospitalier' as PracticeType, label: 'Praticien hospitalier' },
-                    { value: 'mixte' as PracticeType, label: 'Praticien mixte' },
-                  ]).map(({ value, label }) => (
+                    { value: 'ville' as PracticeType, labelKey: 'practitioners.filterPanel.cityPractitioner' },
+                    { value: 'hospitalier' as PracticeType, labelKey: 'practitioners.filterPanel.hospitalPractitioner' },
+                    { value: 'mixte' as PracticeType, labelKey: 'practitioners.filterPanel.mixedPractitioner' },
+                  ]).map(({ value, labelKey }) => (
                     <label
                       key={value}
                       className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
@@ -147,7 +153,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                         onChange={() => handlePracticeTypeChange(value)}
                         className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
-                      <span className="text-sm text-gray-700">{label}</span>
+                      <span className="text-sm text-gray-700">{t(labelKey)}</span>
                     </label>
                   ))}
                 </div>
@@ -155,7 +161,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
 
               {/* Vingtile */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Vingtile (Potentiel)</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('practitioners.filterPanel.vingtilePotential')}</h3>
                 <div className="space-y-2">
                   {[1, 2, 3, 4, 5].map((vingtile) => (
                     <label
@@ -169,30 +175,37 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                         className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
                       <span className="text-sm text-gray-700">
-                        Vingtile {vingtile} {vingtile === 1 && '(Top 5%)'}
+                        {vingtile === 1
+                          ? t('practitioners.filterPanel.vingtileTop5', { v: vingtile })
+                          : `${t('common.vingtile')} ${vingtile}`
+                        }
                       </span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Niveau de Risque */}
+              {/* Risk level */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Niveau de Risque</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('practitioners.filterPanel.riskLevel')}</h3>
                 <div className="space-y-2">
-                  {(['low', 'medium', 'high'] as const).map((risk) => (
+                  {([
+                    { value: 'low' as const, labelKey: 'common.risk.low' },
+                    { value: 'medium' as const, labelKey: 'common.risk.medium' },
+                    { value: 'high' as const, labelKey: 'common.risk.high' },
+                  ]).map(({ value, labelKey }) => (
                     <label
-                      key={risk}
+                      key={value}
                       className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
                     >
                       <input
                         type="checkbox"
-                        checked={filters.riskLevel?.includes(risk) || false}
-                        onChange={() => handleRiskLevelChange(risk)}
+                        checked={filters.riskLevel?.includes(value) || false}
+                        onChange={() => handleRiskLevelChange(value)}
                         className="w-4 h-4 text-al-blue-500 rounded focus:ring-2 focus:ring-al-blue-500"
                       />
-                      <span className="text-sm text-gray-700 capitalize">
-                        {risk === 'low' ? 'Faible' : risk === 'medium' ? 'Moyen' : 'Élevé'}
+                      <span className="text-sm text-gray-700">
+                        {t(labelKey)}
                       </span>
                     </label>
                   ))}
@@ -201,7 +214,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
 
               {/* KOL */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Type de Praticien</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('practitioners.filterPanel.practitionerType')}</h3>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                     <input
@@ -210,7 +223,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                       onChange={() => handleIsKOLChange(undefined)}
                       className="w-4 h-4 text-al-blue-500 focus:ring-2 focus:ring-al-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Tous</span>
+                    <span className="text-sm text-gray-700">{t('practitioners.filterPanel.allTypes')}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                     <input
@@ -219,7 +232,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                       onChange={() => handleIsKOLChange(true)}
                       className="w-4 h-4 text-al-blue-500 focus:ring-2 focus:ring-al-blue-500"
                     />
-                    <span className="text-sm text-gray-700">KOL uniquement</span>
+                    <span className="text-sm text-gray-700">{t('practitioners.filterPanel.kolOnly')}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                     <input
@@ -228,7 +241,7 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                       onChange={() => handleIsKOLChange(false)}
                       className="w-4 h-4 text-al-blue-500 focus:ring-2 focus:ring-al-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Non-KOL uniquement</span>
+                    <span className="text-sm text-gray-700">{t('practitioners.filterPanel.nonKolOnly')}</span>
                   </label>
                 </div>
               </div>
@@ -241,13 +254,13 @@ export function FilterPanel({ isOpen, onClose, filters, onFilterChange }: Filter
                 disabled={activeFilterCount === 0}
                 className="w-full py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Réinitialiser les filtres
+                {t('practitioners.filterPanel.resetFilters')}
               </button>
               <button
                 onClick={onClose}
                 className="w-full py-2 text-sm bg-al-blue-500 text-white hover:bg-al-blue-600 rounded-lg transition-colors font-medium"
               >
-                Appliquer ({activeFilterCount})
+                {t('practitioners.filterPanel.applyCount', { count: activeFilterCount })}
               </button>
             </div>
           </motion.div>

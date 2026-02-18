@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { MapPin, CheckCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../i18n';
 import type { Practitioner } from '../../types';
 
 interface Visit {
@@ -13,6 +14,7 @@ interface Visit {
 
 export function DayTimeline({ visits }: { visits: Visit[] }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const getStatusStyles = (status: Visit['status'], isNext: boolean) => {
     if (status === 'completed') return 'bg-green-100 border-green-300';
@@ -35,10 +37,10 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
     <div className="glass-card p-3 sm:p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-base">
-          Ma journée
+          {t('dashboard.myDay')}
         </h3>
         <span className="text-xs text-slate-500">
-          {visits.filter(v => v.status === 'completed').length}/{visits.length} terminées
+          {visits.filter(v => v.status === 'completed').length}/{visits.length} {t('dashboard.completed')}
         </span>
       </div>
 
@@ -85,7 +87,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
                 </p>
                 <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-slate-500">
                   <span className="truncate max-w-[100px] sm:max-w-none">{visit.practitioner.specialty}</span>
-                  <span className="hidden sm:inline">•</span>
+                  <span className="hidden sm:inline">&bull;</span>
                   <span className="hidden sm:flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
                     {visit.practitioner.city}
@@ -98,18 +100,18 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
                 {visit.status === 'completed' && (
                   <span className="flex items-center gap-1 text-xs sm:text-sm text-green-600 font-medium">
                     <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Terminée</span>
+                    <span className="hidden sm:inline">{t('dashboard.completedSingle')}</span>
                   </span>
                 )}
                 {visit.status === 'prepared' && (
                   <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                    <span className="hidden sm:inline">Pitch prêt ✓</span>
-                    <span className="sm:hidden">✓</span>
+                    <span className="hidden sm:inline">{t('dashboard.pitchReady')}</span>
+                    <span className="sm:hidden">&check;</span>
                   </span>
                 )}
                 {visit.status === 'to-prepare' && (
                   <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
-                    <span className="hidden sm:inline">À préparer</span>
+                    <span className="hidden sm:inline">{t('dashboard.toPrepare')}</span>
                     <span className="sm:hidden">!</span>
                   </span>
                 )}
@@ -119,8 +121,8 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
               {/* Badge "Prochaine" */}
               {visit.isNext && (
                 <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 bg-al-blue-500 text-white text-xs font-bold rounded-full">
-                  <span className="hidden sm:inline">PROCHAINE</span>
-                  <span className="sm:hidden">→</span>
+                  <span className="hidden sm:inline">{t('dashboard.next')}</span>
+                  <span className="sm:hidden">&rarr;</span>
                 </div>
               )}
             </motion.div>
@@ -134,13 +136,13 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
           onClick={() => navigate('/visits')}
           className="flex-1 btn-secondary text-xs py-1.5"
         >
-          Toutes les visites
+          {t('dashboard.allVisits')}
         </button>
         <button
           onClick={() => navigate('/tour-optimization')}
           className="flex-1 btn-primary text-xs py-1.5"
         >
-          Optimiser tournée
+          {t('dashboard.optimizeTour')}
         </button>
       </div>
     </div>

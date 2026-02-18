@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-
 interface AnimatedStatCardProps {
   icon: LucideIcon;
   iconBgColor: string;

@@ -16,9 +16,11 @@ import TourOptimizationPage from './pages/TourOptimizationPage';
 import VoiceVisitReport from './pages/VoiceVisitReport';
 import NextBestActions from './pages/NextBestActions';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
+import { LanguageProvider } from './i18n';
 
 function App() {
   return (
+    <LanguageProvider>
     <TimePeriodProvider>
       <BrowserRouter>
         <Routes>
@@ -49,6 +51,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </TimePeriodProvider>
+    </LanguageProvider>
   );
 }
 

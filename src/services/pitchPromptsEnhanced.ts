@@ -11,6 +11,7 @@ import { searchByCategory, searchByTag } from './ragService';
 import { getEnrichedPractitionerContext } from './practitionerDataBridge';
 import type { PractitionerProfile } from '../types/database';
 import type { KnowledgeCategory } from '../data/ragKnowledgeBase';
+import { getLanguage } from '../i18n/LanguageContext';
 
 const LENGTH_WORDS = {
   short: 200,
@@ -412,7 +413,7 @@ ${config.includeObjections ? `
 [FOLLOW_UP]
 Plan de suivi post-visite en 3 étapes (J+1, J+7, J+30) avec actions concrètes personnalisées.
 
-Génère le pitch complet en suivant cette structure exacte.`;
+Génère le pitch complet en suivant cette structure exacte.${getLanguage() === 'en' ? '\n\nIMPORTANT: The user interface is in English. Generate the entire pitch in English. All sections, arguments, objections, and follow-up plans must be written in English.' : ''}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

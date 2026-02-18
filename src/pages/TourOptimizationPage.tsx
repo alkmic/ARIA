@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
+import { useTranslation } from '../i18n';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import type { Practitioner, UpcomingVisit } from '../types';
 import 'leaflet/dist/leaflet.css';
@@ -116,6 +117,7 @@ export const TourOptimizationPage: React.FC = () => {
   const { practitioners, upcomingVisits, addVisits } = useAppStore();
   const [saved, setSaved] = useState(false);
   const { periodLabel } = useTimePeriod();
+  const { t } = useTranslation();
 
   // IDs des praticiens déjà planifiés
   const alreadyPlannedIds = useMemo(() => {
@@ -657,43 +659,43 @@ export const TourOptimizationPage: React.FC = () => {
   const criteriaOptions = [
     {
       id: 'balanced' as const,
-      label: 'Équilibré',
+      label: t('tour.criteria.balanced'),
       icon: Zap,
-      description: 'Compromis temps/priorité',
-      benefit: 'Optimise le temps tout en respectant les priorités métier',
-      expectedSaving: 'Meilleur compromis global'
+      description: t('tour.criteria.balancedDesc'),
+      benefit: t('tour.criteria.balancedBenefit'),
+      expectedSaving: t('tour.criteria.balancedSaving')
     },
     {
       id: 'time' as const,
-      label: 'Gain de temps',
+      label: t('tour.criteria.time'),
       icon: Clock,
-      description: 'Minimiser les trajets',
-      benefit: 'Regroupe les visites par proximité géographique',
-      expectedSaving: 'Trajets regroupés par zone'
+      description: t('tour.criteria.timeDesc'),
+      benefit: t('tour.criteria.timeBenefit'),
+      expectedSaving: t('tour.criteria.timeSaving')
     },
     {
       id: 'kol-first' as const,
-      label: 'KOL prioritaires',
+      label: t('tour.criteria.kolFirst'),
       icon: Star,
-      description: 'KOLs visités en premier',
-      benefit: 'Garantit les RDV avec les leaders d\'opinion avant tout',
-      expectedSaving: 'KOLs dans les premiers jours'
+      description: t('tour.criteria.kolFirstDesc'),
+      benefit: t('tour.criteria.kolFirstBenefit'),
+      expectedSaving: t('tour.criteria.kolFirstSaving')
     },
     {
       id: 'volume' as const,
-      label: 'Volume maximal',
+      label: t('tour.criteria.volume'),
       icon: Droplets,
-      description: 'Gros prescripteurs en priorité',
-      benefit: 'Priorise les praticiens à fort volume de prescription',
-      expectedSaving: 'Focus top prescripteurs'
+      description: t('tour.criteria.volumeDesc'),
+      benefit: t('tour.criteria.volumeBenefit'),
+      expectedSaving: t('tour.criteria.volumeSaving')
     },
     {
       id: 'distance' as const,
-      label: 'Distance min',
+      label: t('tour.criteria.distance'),
       icon: Navigation,
-      description: 'Trajet le plus court',
-      benefit: 'Minimise le kilométrage total de la tournée',
-      expectedSaving: 'Kilométrage minimisé'
+      description: t('tour.criteria.distanceDesc'),
+      benefit: t('tour.criteria.distanceBenefit'),
+      expectedSaving: t('tour.criteria.distanceSaving')
     },
   ];
 
@@ -769,10 +771,10 @@ export const TourOptimizationPage: React.FC = () => {
 
   // Étapes du wizard
   const stepConfig = [
-    { id: 'selection', label: '1. Sélection', icon: Users },
-    { id: 'configuration', label: '2. Configuration', icon: Filter },
-    { id: 'optimization', label: '3. Optimisation', icon: Zap },
-    { id: 'result', label: '4. Résultat', icon: CheckCircle },
+    { id: 'selection', label: t('tour.steps.selection'), icon: Users },
+    { id: 'configuration', label: t('tour.steps.configuration'), icon: Filter },
+    { id: 'optimization', label: t('tour.steps.optimization'), icon: Zap },
+    { id: 'result', label: t('tour.steps.result'), icon: CheckCircle },
   ];
 
   return (
@@ -787,7 +789,7 @@ export const TourOptimizationPage: React.FC = () => {
           className="flex items-center gap-2 text-slate-600 hover:text-al-blue-500 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Retour au tableau de bord</span>
+          <span className="text-sm">{t('tour.backToDashboard')}</span>
         </button>
 
         <div className="flex items-center justify-between">
@@ -797,10 +799,10 @@ export const TourOptimizationPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
-                Optimisation de Tournée
+                {t('tour.title')}
               </h1>
               <p className="text-slate-600 mt-1">
-                Planifiez et optimisez vos visites avec l'IA
+                {t('tour.subtitle')}
               </p>
             </div>
           </div>
@@ -851,7 +853,7 @@ export const TourOptimizationPage: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Rechercher un praticien..."
+                      placeholder={t('tour.searchPractitioner')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
@@ -864,9 +866,9 @@ export const TourOptimizationPage: React.FC = () => {
                   onChange={(e) => setFilterSpecialty(e.target.value)}
                   className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
                 >
-                  <option value="all">Toutes spécialités</option>
-                  <option value="Pneumologue">Pneumologues</option>
-                  <option value="Médecin généraliste">Généralistes</option>
+                  <option value="all">{t('tour.allSpecialties')}</option>
+                  <option value="Pneumologue">{t('tour.pneumologists')}</option>
+                  <option value="Médecin généraliste">{t('tour.generalists')}</option>
                 </select>
 
                 <select
@@ -874,27 +876,27 @@ export const TourOptimizationPage: React.FC = () => {
                   onChange={(e) => setFilterKOL(e.target.value === 'all' ? null : e.target.value === 'kol')}
                   className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-al-blue-500"
                 >
-                  <option value="all">Tous les praticiens</option>
-                  <option value="kol">KOLs uniquement</option>
-                  <option value="non-kol">Non KOLs</option>
+                  <option value="all">{t('tour.allPractitioners')}</option>
+                  <option value="kol">{t('tour.kolsOnly')}</option>
+                  <option value="non-kol">{t('tour.nonKols')}</option>
                 </select>
               </div>
 
               {/* Quick select buttons */}
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200">
                 <button onClick={selectAll} className="btn-secondary text-xs py-1.5 px-3">
-                  Tout sélectionner
+                  {t('tour.selectAll')}
                 </button>
                 <button onClick={deselectAll} className="btn-secondary text-xs py-1.5 px-3">
-                  Tout désélectionner
+                  {t('tour.deselectAll')}
                 </button>
                 <button onClick={selectKOLs} className="btn-secondary text-xs py-1.5 px-3">
                   <Star className="w-3 h-3 mr-1" />
-                  Ajouter KOLs
+                  {t('tour.addKols')}
                 </button>
                 <button onClick={selectTopVingtile} className="btn-secondary text-xs py-1.5 px-3">
                   <Droplets className="w-3 h-3 mr-1" />
-                  Top Vingtile (1-5)
+                  {t('tour.topVingtile')}
                 </button>
               </div>
             </div>
@@ -903,7 +905,7 @@ export const TourOptimizationPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-4">
                 <p className="text-sm text-slate-600">
-                  <span className="font-bold text-al-blue-600">{selectedIds.size}</span> praticiens sélectionnés sur {practitionersWithCoords.length}
+                  <span className="font-bold text-al-blue-600">{selectedIds.size}</span> {t('tour.selectedCount', { total: String(practitionersWithCoords.length) })}
                 </p>
                 {alreadyPlannedIds.size > 0 && (
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -914,13 +916,13 @@ export const TourOptimizationPage: React.FC = () => {
                       className="w-4 h-4 text-amber-500 rounded"
                     />
                     <span className="text-amber-700">
-                      Montrer {alreadyPlannedIds.size} déjà planifié(s)
+                      {t('tour.showPlanned', { count: String(alreadyPlannedIds.size) })}
                     </span>
                   </label>
                 )}
               </div>
               <p className="text-sm text-slate-600">
-                Période: <span className="font-medium">{periodLabel}</span>
+                {t('tour.periodLabel', { period: periodLabel })}
               </p>
             </div>
 
@@ -945,7 +947,7 @@ export const TourOptimizationPage: React.FC = () => {
                     >
                       {isPlanned && (
                         <div className="absolute top-2 right-2 bg-amber-500 text-white text-[11px] px-2 py-0.5 rounded-full font-medium">
-                          Planifié {plannedVisit?.date}
+                          {t('tour.planned', { date: plannedVisit?.date || '' })}
                         </div>
                       )}
                       <div className="flex items-start gap-3">
@@ -986,7 +988,7 @@ export const TourOptimizationPage: React.FC = () => {
                 disabled={selectedIds.size === 0}
                 className="btn-primary flex items-center gap-2 disabled:opacity-50"
               >
-                Continuer
+                {t('tour.continue')}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1006,7 +1008,7 @@ export const TourOptimizationPage: React.FC = () => {
             <div className="glass-card p-6">
               <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-purple-500" />
-                Critère d'optimisation
+                {t('tour.optimizationCriteria')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 {criteriaOptions.map((opt) => (
@@ -1058,13 +1060,13 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-6">
                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
                   <Home className="w-5 h-5 text-green-500" />
-                  Point de départ
+                  {t('tour.startPointLabel')}
                 </h3>
                 <div className="space-y-3">
                   {[
-                    { id: 'lyon', label: 'Lyon Centre', desc: 'Part-Dieu' },
-                    { id: 'grenoble', label: 'Grenoble', desc: 'Centre-ville' },
-                    { id: 'home', label: 'Mon domicile', desc: 'Adresse personnelle' },
+                    { id: 'lyon', label: t('tour.startPoints.lyon'), desc: t('tour.startPoints.lyonDesc') },
+                    { id: 'grenoble', label: t('tour.startPoints.grenoble'), desc: t('tour.startPoints.grenobleDesc') },
+                    { id: 'home', label: t('tour.startPoints.home'), desc: t('tour.startPoints.homeDesc') },
                   ].map((opt) => (
                     <button
                       key={opt.id}
@@ -1086,12 +1088,12 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-6">
                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
                   <Filter className="w-5 h-5 text-blue-500" />
-                  Paramètres
+                  {t('tour.parameters')}
                 </h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Date de début
+                      {t('tour.startDate')}
                     </label>
                     <input
                       type="date"
@@ -1103,7 +1105,7 @@ export const TourOptimizationPage: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Visites par jour: <span className="text-al-blue-600">{visitsPerDay}</span>
+                      {t('tour.visitsPerDay', { count: String(visitsPerDay) })}
                     </label>
                     <div className="flex items-center gap-3">
                       <button
@@ -1131,7 +1133,7 @@ export const TourOptimizationPage: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Durée par visite: <span className="text-al-blue-600">{visitDuration} min</span>
+                      {t('tour.visitDuration', { minutes: String(visitDuration) })}
                     </label>
                     <div className="flex gap-2">
                       {[30, 45, 60].map((d) => (
@@ -1157,10 +1159,10 @@ export const TourOptimizationPage: React.FC = () => {
             <div className="glass-card p-6 bg-gradient-to-br from-purple-50 to-blue-50">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800">Résumé</h3>
+                  <h3 className="font-bold text-lg text-slate-800">{t('tour.summary')}</h3>
                   <p className="text-sm text-slate-600 mt-1">
-                    {selectedIds.size} praticiens sur ~{Math.ceil(selectedIds.size / visitsPerDay)} jours •
-                    Début: {new Date(startDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {t('tour.summaryText', { count: String(selectedIds.size), days: String(Math.ceil(selectedIds.size / visitsPerDay)) })} •
+                    {t('tour.start')}: {new Date(startDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -1169,14 +1171,14 @@ export const TourOptimizationPage: React.FC = () => {
                     className="btn-secondary"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Retour
+                    {t('tour.back')}
                   </button>
                   <button
                     onClick={runOptimization}
                     className="btn-primary flex items-center gap-2"
                   >
                     <Play className="w-5 h-5" />
-                    Lancer l'optimisation
+                    {t('tour.launchOptimization')}
                   </button>
                 </div>
               </div>
@@ -1197,7 +1199,7 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                 <Zap className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-xl text-slate-800 mb-2">Optimisation en cours...</h3>
+              <h3 className="font-bold text-xl text-slate-800 mb-2">{t('tour.optimizing')}</h3>
               <p className="text-slate-600 mb-6">{optimizationStep}</p>
 
               <div className="relative h-4 bg-slate-200 rounded-full overflow-hidden mb-2">
@@ -1232,7 +1234,7 @@ export const TourOptimizationPage: React.FC = () => {
                   <div>
                     <div className="font-bold text-amber-800">
                       {criteria === 'kol-first'
-                        ? `${result.totalKOLs} KOLs planifiés en priorité`
+                        ? t('tour.kolsPlanned', { count: String(result.totalKOLs) })
                         : `Volume ciblé : ${Math.round(result.totalVolumeCovered / 1000)}K L`}
                     </div>
                     <div className="text-sm text-amber-700">
@@ -1251,15 +1253,15 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-4 bg-gradient-to-br from-green-50 to-emerald-50">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingDown className="w-5 h-5 text-green-600" />
-                  <span className="text-sm text-slate-600">Distance économisée</span>
+                  <span className="text-sm text-slate-600">{t('tour.distanceSaved')}</span>
                 </div>
                 <div className="text-2xl font-bold text-green-700">
                   {result.kmSaved > 0 ? `${result.kmSaved} km` : '~0 km'}
                 </div>
                 <div className="text-xs text-green-600 mt-1">
                   {result.percentDistSaved > 0
-                    ? `-${result.percentDistSaved}% vs sans optimisation`
-                    : 'Praticiens regroupés par zone'}
+                    ? t('tour.vsWithoutOpt', { pct: String(result.percentDistSaved) })
+                    : t('tour.groupedByZone')}
                 </div>
               </div>
 
@@ -1267,7 +1269,7 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-4 bg-gradient-to-br from-purple-50 to-pink-50">
                 <div className="flex items-center gap-2 mb-2">
                   <Navigation className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm text-slate-600">Distance totale</span>
+                  <span className="text-sm text-slate-600">{t('tour.totalDistance')}</span>
                 </div>
                 <div className="text-2xl font-bold text-purple-700">{result.totalDistance} km</div>
                 <div className="text-xs text-slate-500 mt-1">
@@ -1281,7 +1283,7 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="w-5 h-5 text-blue-600" />
-                  <span className="text-sm text-slate-600">Temps de trajet</span>
+                  <span className="text-sm text-slate-600">{t('tour.travelTime')}</span>
                 </div>
                 <div className="text-2xl font-bold text-blue-700">
                   {result.totalTravelTime >= 60
@@ -1299,10 +1301,10 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-4 bg-gradient-to-br from-slate-50 to-gray-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar className="w-5 h-5 text-slate-600" />
-                  <span className="text-sm text-slate-600">Jours planifiés</span>
+                  <span className="text-sm text-slate-600">{t('tour.plannedDays')}</span>
                 </div>
                 <div className="text-2xl font-bold text-slate-700">{result.days.length}</div>
-                <div className="text-xs text-slate-500 mt-1">{result.totalVisits} visites au total</div>
+                <div className="text-xs text-slate-500 mt-1">{t('tour.totalVisits', { count: String(result.totalVisits) })}</div>
               </div>
             </div>
 
@@ -1319,7 +1321,7 @@ export const TourOptimizationPage: React.FC = () => {
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    Jour {day.day} - {day.date.split(' ').slice(0, 2).join(' ')}
+                    {t('tour.dayLabel', { day: String(day.day) })} - {day.date.split(' ').slice(0, 2).join(' ')}
                   </button>
                 ))}
               </div>
@@ -1331,7 +1333,7 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-4">
                 <h3 className="font-bold text-lg text-slate-800 mb-3 flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-blue-500" />
-                  Itinéraire Jour {editableResult[activeDay]?.day}
+                  {t('tour.itineraryDay', { day: String(editableResult[activeDay]?.day) })}
                 </h3>
                 <div className="h-[400px] rounded-xl overflow-hidden border border-slate-200">
                   <MapContainer
@@ -1375,7 +1377,7 @@ export const TourOptimizationPage: React.FC = () => {
                     {/* Point de départ */}
                     <Marker position={startCoords[startPoint]} icon={createStartIcon()}>
                       <Popup>
-                        <div className="font-bold text-green-700">Point de départ</div>
+                        <div className="font-bold text-green-700">{t('tour.startingPoint')}</div>
                       </Popup>
                     </Marker>
                   </MapContainer>
@@ -1386,11 +1388,11 @@ export const TourOptimizationPage: React.FC = () => {
               <div className="glass-card p-4">
                 <h3 className="font-bold text-lg text-slate-800 mb-3 flex items-center gap-2">
                   <RouteIcon className="w-5 h-5 text-purple-500" />
-                  Planning Jour {editableResult[activeDay]?.day}
+                  {t('tour.planningDay', { day: String(editableResult[activeDay]?.day) })}
                 </h3>
                 <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
                   <span className="bg-slate-100 px-2 py-1 rounded">
-                    {editableResult[activeDay]?.visits.length} visites
+                    {t('tour.visitsCount', { count: String(editableResult[activeDay]?.visits.length) })}
                   </span>
                   <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
                     9h00 - {editableResult[activeDay]?.endTime}
@@ -1436,7 +1438,7 @@ export const TourOptimizationPage: React.FC = () => {
                       H
                     </div>
                     <div className="flex-1">
-                      <span className="font-medium text-sm text-slate-700">Retour à la base</span>
+                      <span className="font-medium text-sm text-slate-700">{t('tour.returnToBase')}</span>
                     </div>
                     <div className="text-right text-xs text-slate-500">
                       {editableResult[activeDay]?.returnTravelTime} min • {editableResult[activeDay]?.returnDistance} km
@@ -1454,15 +1456,15 @@ export const TourOptimizationPage: React.FC = () => {
                     <>
                       <h3 className="font-bold text-lg text-green-800 flex items-center gap-2">
                         <CheckCircle className="w-5 h-5" />
-                        Visites enregistrées avec succès !
+                        {t('tour.visitsRegistered')}
                       </h3>
                       <p className="text-sm text-green-700 mt-1">
-                        {result.days.reduce((sum, d) => sum + d.visits.length, 0)} visites ajoutées à votre agenda
+                        {t('tour.visitsAdded', { count: String(result.days.reduce((sum, d) => sum + d.visits.length, 0)) })}
                       </p>
                     </>
                   ) : (
                     <>
-                      <h3 className="font-bold text-lg text-slate-800">Tournée optimisée avec succès !</h3>
+                      <h3 className="font-bold text-lg text-slate-800">{t('tour.optimizationSuccess')}</h3>
                       <p className="text-sm text-slate-600 mt-1">
                         {criteria === 'kol-first'
                           ? `${result.totalKOLs} KOLs planifiés en priorité${result.kmSaved > 0 ? ` • ${result.kmSaved} km économisés grâce au regroupement géographique` : ` • ${result.totalVisits} visites sur ${result.days.length} jours`}`
@@ -1484,21 +1486,21 @@ export const TourOptimizationPage: React.FC = () => {
                     }}
                     className="btn-secondary"
                   >
-                    Nouvelle optimisation
+                    {t('tour.newOptimization')}
                   </button>
                   {!saved && (
                     <button onClick={saveToVisits} className="btn-secondary flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white border-green-500">
                       <Save className="w-4 h-4" />
-                      Enregistrer dans mes visites
+                      {t('tour.saveToVisits')}
                     </button>
                   )}
                   <button onClick={exportIcal} className="btn-secondary flex items-center gap-2">
                     <CalendarPlus className="w-4 h-4" />
-                    Export iCal
+                    {t('tour.exportIcal')}
                   </button>
                   <button onClick={exportPDF} className="btn-primary flex items-center gap-2">
                     <Download className="w-4 h-4" />
-                    Export PDF
+                    {t('tour.exportPdf')}
                   </button>
                 </div>
               </div>

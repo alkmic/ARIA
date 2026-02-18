@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from '../i18n';
 
 export type TimePeriod = 'month' | 'quarter' | 'year';
 
@@ -14,16 +15,17 @@ const TimePeriodContext = createContext<TimePeriodContextType | undefined>(undef
 
 export const TimePeriodProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('month');
+  const { t } = useTranslation();
 
   const periodLabel =
-    timePeriod === 'month' ? 'Ce mois' :
-    timePeriod === 'quarter' ? 'Ce trimestre' :
-    'Cette année';
+    timePeriod === 'month' ? t('common.period.thisMonth') :
+    timePeriod === 'quarter' ? t('common.period.thisQuarter') :
+    t('common.period.thisYear');
 
   const periodLabelShort =
-    timePeriod === 'month' ? 'mensuel' :
-    timePeriod === 'quarter' ? 'trimestriel' :
-    'annuel';
+    timePeriod === 'month' ? t('common.period.monthly') :
+    timePeriod === 'quarter' ? t('common.period.quarterly') :
+    t('common.period.yearly');
 
   return (
     <TimePeriodContext.Provider value={{ timePeriod, setTimePeriod, periodLabel, periodLabelShort }}>

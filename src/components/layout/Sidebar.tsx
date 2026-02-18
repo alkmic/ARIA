@@ -15,35 +15,37 @@ import {
   Zap,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
+import { useTranslation } from '../../i18n';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const menuItems = [
-  { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
-  { id: 'practitioners', icon: Users, label: 'Praticiens', path: '/practitioners' },
-  { id: 'visits', icon: Calendar, label: 'Visites', path: '/visits' },
-  { id: 'map', icon: Map, label: 'Territoire', path: '/map' },
-  { id: 'tour', icon: Route, label: 'Optimisation', path: '/tour-optimization' },
-];
-
-const aiItems = [
-  { id: 'next-actions', icon: Zap, label: 'Mes Actions', path: '/next-actions' },
-  { id: 'visit-report', icon: Mic, label: 'Compte-rendu', path: '/visit-report' },
-  { id: 'pitch', icon: Sparkles, label: 'Pitch IA', path: '/pitch' },
-  { id: 'coach', icon: MessageCircle, label: 'Coach IA', path: '/coach', badge: 'Data' },
-];
-
-const managerItems = [
-  { id: 'manager', icon: BarChart3, label: 'Vue équipe', path: '/manager' },
-  { id: 'kol', icon: Brain, label: 'Planning KOL', path: '/kol-planning' },
-];
-
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const { currentUser } = useAppStore();
+  const { t } = useTranslation();
+
+  const menuItems = [
+    { id: 'dashboard', icon: Home, label: t('nav.dashboard'), path: '/dashboard' },
+    { id: 'practitioners', icon: Users, label: t('nav.practitioners'), path: '/practitioners' },
+    { id: 'visits', icon: Calendar, label: t('nav.visits'), path: '/visits' },
+    { id: 'map', icon: Map, label: t('nav.territory'), path: '/map' },
+    { id: 'tour', icon: Route, label: t('nav.optimization'), path: '/tour-optimization' },
+  ];
+
+  const aiItems = [
+    { id: 'next-actions', icon: Zap, label: t('nav.myActions'), path: '/next-actions' },
+    { id: 'visit-report', icon: Mic, label: t('nav.visitReport'), path: '/visit-report' },
+    { id: 'pitch', icon: Sparkles, label: t('nav.pitchIA'), path: '/pitch' },
+    { id: 'coach', icon: MessageCircle, label: t('nav.coachIA'), path: '/coach', badge: 'Data' },
+  ];
+
+  const managerItems = [
+    { id: 'manager', icon: BarChart3, label: t('nav.teamView'), path: '/manager' },
+    { id: 'kol', icon: Brain, label: t('nav.kolPlanning'), path: '/kol-planning' },
+  ];
 
   const renderMenuItem = (item: typeof menuItems[0] & { badge?: string }) => {
     const Icon = item.icon;
@@ -115,14 +117,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <div className="pt-6 mt-4 border-t border-white/10">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4 flex items-center gap-2">
             <Sparkles className="w-3 h-3" />
-            Intelligence IA
+            {t('nav.aiIntelligence')}
           </p>
           {aiItems.map(renderMenuItem)}
         </div>
 
         {/* Section Manager */}
         <div className="pt-6 mt-4 border-t border-white/10">
-          <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4">Manager</p>
+          <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4">{t('nav.manager')}</p>
           {managerItems.map(renderMenuItem)}
         </div>
       </nav>
@@ -135,7 +137,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 cursor-pointer"
         >
           <Settings className="w-5 h-5" />
-          <span className="font-medium">Paramètres</span>
+          <span className="font-medium">{t('nav.settings')}</span>
         </Link>
       </div>
 

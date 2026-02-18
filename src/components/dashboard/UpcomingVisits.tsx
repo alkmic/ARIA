@@ -5,12 +5,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { useTranslation } from '../../i18n';
 
 export const UpcomingVisits: React.FC = () => {
   const navigate = useNavigate();
   const { getTodayVisits, getHighPriorityPractitioners } = useAppStore();
   const todayVisits = getTodayVisits();
   const priorityPractitioners = getHighPriorityPractitioners();
+  const { t } = useTranslation();
 
   return (
     <div className="grid grid-cols-2 gap-6">
@@ -22,7 +24,7 @@ export const UpcomingVisits: React.FC = () => {
         className="glass-card p-6"
       >
         <h2 className="text-lg font-bold text-slate-800 mb-4">
-          Visites aujourd'hui
+          {t('dashboard.visitsToday')}
         </h2>
 
         <div className="space-y-4">
@@ -70,7 +72,7 @@ export const UpcomingVisits: React.FC = () => {
             ))
           ) : (
             <p className="text-slate-500 text-sm text-center py-4">
-              Aucune visite prévue aujourd'hui
+              {t('dashboard.noVisitsToday')}
             </p>
           )}
 
@@ -81,7 +83,7 @@ export const UpcomingVisits: React.FC = () => {
               className="w-full cursor-pointer"
               onClick={() => navigate('/visits')}
             >
-              Voir toutes les visites
+              {t('dashboard.seeAllVisits')}
             </Button>
           )}
         </div>
@@ -95,7 +97,7 @@ export const UpcomingVisits: React.FC = () => {
         className="glass-card p-6"
       >
         <h2 className="text-lg font-bold text-slate-800 mb-4">
-          Praticiens prioritaires
+          {t('dashboard.priorityPractitioners')}
         </h2>
 
         <div className="space-y-4">
@@ -133,10 +135,10 @@ export const UpcomingVisits: React.FC = () => {
                     )}
                   </div>
                   <p className="text-xs text-slate-600 mb-1">
-                    {practitioner.specialty} • Vingtile {practitioner.vingtile} • {(practitioner.volumeL / 1000).toFixed(0)}K L
+                    {practitioner.specialty} &bull; {t('common.vingtile')} {practitioner.vingtile} &bull; {(practitioner.volumeL / 1000).toFixed(0)}K L
                   </p>
                   <p className="text-xs text-danger font-medium">
-                    Non vu depuis {daysSinceVisit} jours
+                    {t('dashboard.notSeenSince', { days: daysSinceVisit })}
                   </p>
                 </div>
               </motion.div>
@@ -149,7 +151,7 @@ export const UpcomingVisits: React.FC = () => {
             className="w-full cursor-pointer"
             onClick={() => navigate('/practitioners?filter=priority')}
           >
-            Voir tous les prioritaires
+            {t('dashboard.seeAllPriority')}
           </Button>
         </div>
       </motion.div>

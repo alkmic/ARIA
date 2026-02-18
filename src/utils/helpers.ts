@@ -1,16 +1,28 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
+import type { Language } from '../i18n/LanguageContext';
+import { getLanguage } from '../i18n/LanguageContext';
 
-export const formatDate = (date: string | Date): string => {
-  return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
+const locales = { fr, en: enUS };
+
+export const getLocaleCode = (lang?: Language): string =>
+  (lang ?? getLanguage()) === 'en' ? 'en-US' : 'fr-FR';
+
+export const formatDate = (date: string | Date, lang?: Language): string => {
+  const l = lang ?? getLanguage();
+  return format(new Date(date), 'dd/MM/yyyy', { locale: locales[l] });
 };
 
-export const formatDateTime = (date: string | Date): string => {
-  return format(new Date(date), 'dd/MM/yyyy à HH:mm', { locale: fr });
+export const formatDateTime = (date: string | Date, lang?: Language): string => {
+  const l = lang ?? getLanguage();
+  const pattern = l === 'en' ? "MM/dd/yyyy 'at' HH:mm" : "dd/MM/yyyy 'à' HH:mm";
+  return format(new Date(date), pattern, { locale: locales[l] });
 };
 
-export const formatRelativeTime = (date: string | Date): string => {
-  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: fr });
+export const formatRelativeTime = (date: string | Date, lang?: Language): string => {
+  const l = lang ?? getLanguage();
+  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: locales[l] });
 };
 
 export const formatVolume = (volumeL: number): string => {
@@ -22,8 +34,9 @@ export const formatVolume = (volumeL: number): string => {
   return `${volumeL} L`;
 };
 
-export const formatNumber = (num: number): string => {
-  return new Intl.NumberFormat('fr-FR').format(num);
+export const formatNumber = (num: number, lang?: Language): string => {
+  const l = lang ?? getLanguage();
+  return new Intl.NumberFormat(l === 'en' ? 'en-US' : 'fr-FR').format(num);
 };
 
 export const formatPercentage = (value: number, total: number): string => {

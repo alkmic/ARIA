@@ -16,6 +16,7 @@
 import { webLlmService } from './webLlmService';
 import { getStoredApiKey, getStoredLLMConfig, resolveProvider, getProviderDef, isReasoningModel } from './apiKeyService';
 import { DataService } from './dataService';
+import { getLanguage } from '../i18n/LanguageContext';
 import {
   DATA_SCHEMA,
   parseLLMChartResponse,
@@ -416,26 +417,27 @@ function getProvider(): ProviderConfig {
 // PROMPTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question. Retourne UNIQUEMENT du JSON brut (premier caractère = {, dernier = }).
+const ROUTER_SYSTEM_PROMPT = `Routeur ARIA Coach — CRM pharma Air Liquide Healthcare (O₂). Classifie la question (FR ou EN). Retourne UNIQUEMENT du JSON brut (premier caractère = {, dernier = }).
 
 Intents: chart_create (nouvelle visu), chart_modify (modifier graphique précédent), data_query (question factuelle sur données CRM des praticiens/visites/territoire), practitioner_info (info sur un praticien nommé), strategic_advice (conseil/priorité/stratégie), knowledge_query (question métier: produits, services, catalogue, BPCO, oxygénothérapie, Air Liquide, Orkyn', réglementation, concurrence, GOLD, HAS, LPPR, épidémiologie, dispositifs médicaux), follow_up (suite de la conversation), general (salutations/hors sujet).
 
 ATTENTION — Routage produits/services/catalogue :
 - Questions sur les produits, services, catalogue, gamme, offres, solutions, dispositifs, matériel d'Air Liquide, Orkyn', ALMS → knowledge_query (PAS data_query, PAS general)
 - "quels produits/combien de produits/que vend/que propose/catalogue/gamme/offre/solution" → knowledge_query
-- "quels services" → knowledge_query
+- "what products/how many products/what does it sell/catalog/range/offering/solution" → knowledge_query
+- "quels services" / "what services" → knowledge_query
 
-Routage:
-- "graphique/montre-moi/affiche/diagramme/camembert/barres/courbe" → chart_create
-- "en camembert/en radar/change en/transforme en/mets ça en/plutôt en" → chart_modify (si graphique précédent)
-- Nom propre identifiable de praticien → practitioner_info
-- Questions sur données CRM praticiens (volumes, visites, fidélité, vingtile, villes, KOL) → data_query
-- "publication/publié/article/actualité/conférence/certification/distinction/événement" + nom de praticien → practitioner_info (avec le nom dans searchTerms.names)
-- "toutes les publications/liste les publications/qui a publié/publications des" (question globale sans nom spécifique) → data_query (dataScope: "full")
-- "priorité/stratégie/recommandation/que faire" → strategic_advice
-- Questions sur BPCO, oxygénothérapie, GOLD, HAS, réglementation, LPPR, concurrence, Vivisol, Orkyn', Air Liquide (organisation, produits, services), OLD, OCT, spirométrie, traitements, classification, exacerbation, télésuivi, dispositifs, ventilateurs, masques, PPC → knowledge_query
-- "qu'est-ce que/c'est quoi/explique/définition/comment fonctionne" → knowledge_query
-- Référence implicite au contexte précédent → follow_up
+Routage (FR et EN / French and English):
+- "graphique/montre-moi/affiche/diagramme/camembert/barres/courbe" / "chart/show me/display/diagram/pie chart/bar chart/curve/graph" → chart_create
+- "en camembert/en radar/change en/transforme en/mets ça en/plutôt en" / "as a pie/as a radar/change to/transform to/switch to" → chart_modify (si graphique précédent)
+- Nom propre identifiable de praticien / Identifiable proper name of practitioner → practitioner_info
+- Questions sur données CRM praticiens (volumes, visites, fidélité, vingtile, villes, KOL) / Questions about CRM data (volumes, visits, loyalty, vingtile, cities, KOL) → data_query
+- "publication/publié/article/actualité/conférence/certification/distinction/événement" / "publication/published/article/news/conference/certification/award/event" + nom de praticien → practitioner_info (avec le nom dans searchTerms.names)
+- "toutes les publications/liste les publications/qui a publié/publications des" / "all publications/list publications/who published" (question globale sans nom spécifique) → data_query (dataScope: "full")
+- "priorité/stratégie/recommandation/que faire" / "priority/strategy/recommendation/what should I do" → strategic_advice
+- Questions sur BPCO, oxygénothérapie, GOLD, HAS, réglementation, LPPR, concurrence, Vivisol, Orkyn', Air Liquide (organisation, produits, services), OLD, OCT, spirométrie, traitements, classification, exacerbation, télésuivi, dispositifs, ventilateurs, masques, PPC / Questions about COPD, oxygen therapy, GOLD, HAS, regulations, LPPR, competition, treatments, devices → knowledge_query
+- "qu'est-ce que/c'est quoi/explique/définition/comment fonctionne" / "what is/explain/definition/how does it work" → knowledge_query
+- Référence implicite au contexte précédent / Implicit reference to previous context → follow_up
 
 groupBy: "city"|"specialty"|"vingtile"|"vingtileBucket"|"loyaltyBucket"|"riskLevel"|"visitBucket"|"isKOL"
 chartType: "bar"|"pie"|"line"|"composed"|"radar"
@@ -510,9 +512,11 @@ Tu n'as PAS accès à :
 - Fournis TOUJOURS des chiffres précis quand ils sont disponibles dans le contexte
 - Adapte la longueur : court pour les questions simples, détaillé pour les analyses
 - Ne mentionne jamais le fonctionnement interne de ton système (routage, contexte, API, RAG)
-- Réponds TOUJOURS en français
 - Pour les salutations : réponds brièvement et propose ton aide
 - Si la question est ambiguë, demande une clarification plutôt que deviner`;
+
+const COACH_LANGUAGE_SUFFIX_FR = '\n- Réponds TOUJOURS en français.';
+const COACH_LANGUAGE_SUFFIX_EN = '\n- IMPORTANT: The user interface is in English. Always respond entirely in English. Do NOT respond in French. Use English for all responses, analysis, recommendations, and data descriptions.';
 
 const CHART_SYSTEM_PROMPT = `Tu es un expert en visualisation de données pour le CRM pharmaceutique ARIA (Air Liquide Healthcare, oxygénothérapie).
 
@@ -548,7 +552,7 @@ Génère une spécification JSON PRÉCISE pour créer le graphique demandé à p
 \`\`\`json
 {
   "chartType": "bar" | "pie" | "line" | "composed" | "radar",
-  "title": "Titre descriptif en français",
+  "title": "Descriptive title in the user's language",
   "description": "Description courte de ce que montre le graphique",
   "query": {
     "source": "practitioners",
@@ -1329,13 +1333,13 @@ async function generateTextResponse(
   periodLabel: string
 ): Promise<string | null> {
   const messages: LLMMessage[] = [
-    { role: 'system', content: COACH_SYSTEM_PROMPT },
+    { role: 'system', content: COACH_SYSTEM_PROMPT + (getLanguage() === 'en' ? COACH_LANGUAGE_SUFFIX_EN : COACH_LANGUAGE_SUFFIX_FR) },
   ];
 
   // Add data context as a system message (clear separation from conversation)
   messages.push({
     role: 'system',
-    content: `## Données Disponibles (${periodLabel})\n${dataContext}`,
+    content: `## ${getLanguage() === 'en' ? 'Available Data' : 'Données Disponibles'} (${periodLabel})\n${dataContext}`,
   });
 
   // Add chart context if a chart was just generated
@@ -1488,8 +1492,8 @@ async function generateDirectResponse(
   const context = buildGeneralContext(periodLabel, practitioners, upcomingVisits, question);
 
   const messages: LLMMessage[] = [
-    { role: 'system', content: COACH_SYSTEM_PROMPT },
-    { role: 'system', content: `## Données Disponibles (${periodLabel})\n${context}` },
+    { role: 'system', content: COACH_SYSTEM_PROMPT + (getLanguage() === 'en' ? COACH_LANGUAGE_SUFFIX_EN : COACH_LANGUAGE_SUFFIX_FR) },
+    { role: 'system', content: `## ${getLanguage() === 'en' ? 'Available Data' : 'Données Disponibles'} (${periodLabel})\n${context}` },
   ];
 
   // Add conversation history (excluding current question — it will be added separately)
@@ -1581,7 +1585,9 @@ export async function processQuestion(
 
   if (!savedConfig && !savedApiKey) {
     return {
-      textContent: `**Configuration LLM non trouvée.**\n\nLa connexion a peut-être été testée mais pas sauvegardée.\n\n**Solution :** Retournez dans **Paramètres** → section **LLM / IA** et cliquez sur **"Sauvegarder & Tester"** (le bouton bleu).\n\n_Le bouton vert "Tester la connexion" vérifie la connexion mais ne l'enregistre pas toujours._`,
+      textContent: getLanguage() === 'en'
+        ? `**LLM Configuration not found.**\n\nThe connection may have been tested but not saved.\n\n**Solution:** Go to **Settings** → **LLM / AI** section and click **"Save & Test"** (the blue button).\n\n_The green "Test connection" button checks the connection but does not always save it._`
+        : `**Configuration LLM non trouvée.**\n\nLa connexion a peut-être été testée mais pas sauvegardée.\n\n**Solution :** Retournez dans **Paramètres** → section **LLM / IA** et cliquez sur **"Sauvegarder & Tester"** (le bouton bleu).\n\n_Le bouton vert "Tester la connexion" vérifie la connexion mais ne l'enregistre pas toujours._`,
       source: 'llm',
     };
   }
@@ -1710,11 +1716,13 @@ export async function processQuestion(
   }
 
   // ─── ALL LLM CALLS FAILED: Explicit error with diagnostic ──────────────
-  const errorDetail = lastLLMError || 'Aucune réponse du serveur';
-  const providerName = savedConfig ? `${savedConfig.provider} / ${savedConfig.model}` : 'aucun';
+  const errorDetail = lastLLMError || (getLanguage() === 'en' ? 'No server response' : 'Aucune réponse du serveur');
+  const providerName = savedConfig ? `${savedConfig.provider} / ${savedConfig.model}` : (getLanguage() === 'en' ? 'none' : 'aucun');
   console.error('[AICoachEngine] All LLM calls failed:', { errorDetail, provider: providerName, configSaved: !!savedConfig, apiKey: !!savedApiKey });
   return {
-    textContent: `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\n**Config :** ${providerName}\n\n**Actions :**\n1. Allez dans **Paramètres** → **"Sauvegarder & Tester"** (bouton bleu)\n2. Ou chargez le modèle **WebLLM** dans Paramètres (fonctionne directement dans le navigateur)`,
+    textContent: getLanguage() === 'en'
+      ? `**Sorry, the AI service is unavailable.**\n\n**Error:** \`${errorDetail}\`\n\n**Config:** ${providerName}\n\n**Actions:**\n1. Go to **Settings** → **"Save & Test"** (blue button)\n2. Or load the **WebLLM** model in Settings (runs directly in your browser)`
+      : `**Désolé, le service d'intelligence artificielle est indisponible.**\n\n**Erreur :** \`${errorDetail}\`\n\n**Config :** ${providerName}\n\n**Actions :**\n1. Allez dans **Paramètres** → **"Sauvegarder & Tester"** (bouton bleu)\n2. Ou chargez le modèle **WebLLM** dans Paramètres (fonctionne directement dans le navigateur)`,
     source: 'llm',
   };
 }

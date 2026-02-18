@@ -2,12 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, MessageCircle, Map, Route, Mic, Zap } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface QuickAction {
   id: string;
   icon: React.ElementType;
-  label: string;
-  description: string;
+  labelKey: string;
   path: string;
   color: string;
 }
@@ -16,48 +16,42 @@ const actions: QuickAction[] = [
   {
     id: 'actions',
     icon: Zap,
-    label: 'Mes Actions',
-    description: 'Actions IA prioritaires',
+    labelKey: 'dashboard.quickActions.myActions',
     path: '/next-actions',
     color: 'from-amber-500 to-red-500',
   },
   {
     id: 'pitch',
     icon: Sparkles,
-    label: 'Pitch IA',
-    description: 'Générer un pitch personnalisé',
+    labelKey: 'dashboard.quickActions.pitchIA',
     path: '/pitch',
     color: 'from-purple-500 to-indigo-500',
   },
   {
     id: 'visit-report',
     icon: Mic,
-    label: 'Compte-rendu',
-    description: 'Dicter un CRV vocal',
+    labelKey: 'dashboard.quickActions.visitReport',
     path: '/visit-report',
     color: 'from-teal-500 to-cyan-500',
   },
   {
     id: 'coach',
     icon: MessageCircle,
-    label: 'Coach IA',
-    description: 'Dialogue avec ARIA',
+    labelKey: 'dashboard.quickActions.coachIA',
     path: '/coach',
     color: 'from-al-blue-500 to-al-sky',
   },
   {
     id: 'tour',
     icon: Route,
-    label: 'Optimiser Tournée',
-    description: 'Planifier les visites du jour',
+    labelKey: 'dashboard.quickActions.optimizeTour',
     path: '/tour-optimization',
     color: 'from-green-500 to-emerald-500',
   },
   {
     id: 'map',
     icon: Map,
-    label: 'Territoire',
-    description: 'Visualiser votre secteur',
+    labelKey: 'dashboard.quickActions.territory',
     path: '/map',
     color: 'from-amber-500 to-orange-500',
   },
@@ -65,11 +59,12 @@ const actions: QuickAction[] = [
 
 export const QuickActions: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-2">
       <h2 className="text-base font-bold text-slate-800">
-        Accès rapide
+        {t('dashboard.quickAccess')}
       </h2>
 
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -85,7 +80,7 @@ export const QuickActions: React.FC = () => {
             <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-2 mx-auto`}>
               <action.icon className="w-4.5 h-4.5 text-white" />
             </div>
-            <p className="font-semibold text-slate-800 text-sm text-center">{action.label}</p>
+            <p className="font-semibold text-slate-800 text-sm text-center">{t(action.labelKey)}</p>
           </motion.button>
         ))}
       </div>

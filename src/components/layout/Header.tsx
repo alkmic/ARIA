@@ -3,6 +3,7 @@ import { Bell, Menu, Sparkles } from 'lucide-react';
 import { UniversalCommandBar } from '../ui/UniversalCommandBar';
 import { NotificationDrawer } from '../ui/NotificationDrawer';
 import { useAppStore } from '../../stores/useAppStore';
+import { useTranslation } from '../../i18n';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -12,6 +13,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { currentUser, insights } = useAppStore();
   const unreadCount = insights.filter(i => i.priority === 'high').length;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { t } = useTranslation();
 
   const initials = currentUser.name.split(' ').map(n => n[0]).join('');
 
@@ -32,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             <span className="font-medium text-purple-700">ARIA</span>
             <span className="text-slate-400">|</span>
-            <span>Parlez ou tapez vos commandes</span>
+            <span>{t('nav.speakOrType')}</span>
           </div>
 
           {/* Universal Command Bar - Voice-First Search */}
