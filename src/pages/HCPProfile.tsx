@@ -9,6 +9,7 @@ import { FilterPanel } from '../components/practitioners/FilterPanel';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { getTopPractitioners } from '../services/metricsCalculator';
+import { useTranslation } from '../i18n';
 import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
@@ -18,6 +19,7 @@ export const HCPProfile: React.FC = () => {
   const { timePeriod, periodLabel } = useTimePeriod();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({});
+  const { t } = useTranslation();
 
   // Handle ?filter=priority query param
   useEffect(() => {
@@ -51,9 +53,9 @@ export const HCPProfile: React.FC = () => {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">Praticiens</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">{t('practitioners.title')}</h1>
             <p className="text-slate-600">
-              {practitioners.length} praticiens dans votre portefeuille
+              {t('practitioners.countInPortfolio', { count: practitioners.length })}
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -63,7 +65,7 @@ export const HCPProfile: React.FC = () => {
               className="btn-primary flex items-center space-x-2 cursor-pointer"
             >
               <Filter className="w-5 h-5" />
-              <span>Filtres</span>
+              <span>{t('practitioners.filters')}</span>
               {(filters.specialty?.length || 0) +
                 (filters.vingtile?.length || 0) +
                 (filters.riskLevel?.length || 0) +
@@ -83,7 +85,7 @@ export const HCPProfile: React.FC = () => {
         {/* Period Indicator */}
         <div className="glass-card px-4 py-2 inline-block">
           <p className="text-sm font-medium text-slate-700">
-            <span className="text-al-blue-600">Top praticiens</span> {periodLabel}
+            <span className="text-al-blue-600">{t('practitioners.topPractitioners')}</span> {periodLabel}
           </p>
         </div>
       </div>
@@ -101,8 +103,8 @@ export const HCPProfile: React.FC = () => {
         <div className="glass-card p-12 text-center">
           <p className="text-gray-600">
             {searchQuery
-              ? `Aucun praticien trouvé pour "${searchQuery}"`
-              : 'Aucun praticien dans votre portefeuille'}
+              ? t('practitioners.noPractitionerFound', { query: searchQuery })
+              : t('practitioners.noPractitionerInPortfolio')}
           </p>
         </div>
       ) : (
@@ -158,7 +160,7 @@ export const HCPProfile: React.FC = () => {
                       variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'default'}
                       size="sm"
                     >
-                      {practitioner.riskLevel === 'high' ? 'Risque élevé' : practitioner.riskLevel === 'medium' ? 'Risque moyen' : 'Risque faible'}
+                      {practitioner.riskLevel === 'high' ? t('common.risk.high') : practitioner.riskLevel === 'medium' ? t('common.risk.medium') : t('common.risk.low')}
                     </Badge>
                   </div>
                 </div>
@@ -174,7 +176,7 @@ export const HCPProfile: React.FC = () => {
                     navigate(`/pitch?practitionerId=${practitioner.id}`);
                   }}
                   className="ml-3 p-2 rounded-lg bg-al-blue-50 text-al-blue-600 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-al-blue-100"
-                  title="Générer un pitch"
+                  title={t('practitioners.generatePitch')}
                 >
                   <Sparkles className="w-4 h-4" />
                 </button>

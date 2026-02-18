@@ -33,7 +33,8 @@ import {
 import { DataService } from '../services/dataService';
 import { generateIntelligentActions } from '../services/actionIntelligence';
 import { useUserDataStore, type AIAction } from '../stores/useUserDataStore';
-import { useTimePeriod } from '../contexts/TimePeriodContext';
+// TimePeriodContext no longer needed here
+import { useTranslation } from '../i18n';
 
 // Configuration des types d'actions
 const ACTION_CONFIG = {
@@ -132,11 +133,18 @@ const SCORE_CONFIG = {
 
 // Composant Score Gauge avec tooltip
 const ScoreGauge = ({ type, value }: { type: keyof typeof SCORE_CONFIG; value: number }) => {
+  const { t } = useTranslation();
   const config = SCORE_CONFIG[type];
+  const translatedLabels: Record<string, { label: string; description: string }> = {
+    urgency: { label: t('nextActions.urgencyLabel'), description: t('nextActions.urgencyDesc') },
+    impact: { label: t('nextActions.impactPotential'), description: t('nextActions.impactPotentialDesc') },
+    probability: { label: t('nextActions.facilityLabel'), description: t('nextActions.facilityDesc') },
+  };
+  const translated = translatedLabels[type];
   return (
     <div className="group relative">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-600 w-24 font-medium">{config.label}</span>
+        <span className="text-xs text-slate-600 w-24 font-medium">{translated.label}</span>
         <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
@@ -149,7 +157,7 @@ const ScoreGauge = ({ type, value }: { type: keyof typeof SCORE_CONFIG; value: n
       </div>
       {/* Tooltip */}
       <div className="absolute -top-8 left-24 hidden group-hover:block bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
-        {config.description}
+        {translated.description}
       </div>
     </div>
   );
@@ -170,6 +178,7 @@ const ActionCard = ({
   onDismiss: (id: string) => void;
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [completionNote, setCompletionNote] = useState('');
   const [showCompleteForm, setShowCompleteForm] = useState(false);
@@ -313,12 +322,12 @@ const ActionCard = ({
               className="mt-4 pt-4 border-t border-slate-200"
             >
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Note de complétion (optionnel)
+                {t('nextActions.completionNote')}
               </label>
               <textarea
                 value={completionNote}
                 onChange={(e) => setCompletionNote(e.target.value)}
-                placeholder="Décrivez brièvement ce qui a été fait..."
+                placeholder={t('nextActions.completionPlaceholder')}
                 className="input-field w-full resize-none"
                 rows={2}
               />
@@ -328,13 +337,13 @@ const ActionCard = ({
                   className="btn-primary bg-gradient-to-r from-green-500 to-emerald-500 flex-1"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Confirmer
+                  {t('nextActions.confirmAction')}
                 </button>
                 <button
                   onClick={() => setShowCompleteForm(false)}
                   className="btn-secondary"
                 >
-                  Annuler
+                  {t('common.cancel')}
                 </button>
               </div>
             </motion.div>
@@ -349,12 +358,12 @@ const ActionCard = ({
           {isExpanded ? (
             <>
               <ChevronUp className="w-4 h-4" />
-              Masquer les détails
+              {t('nextActions.hideDetails')}
             </>
           ) : (
             <>
               <ChevronDown className="w-4 h-4" />
-              Voir l'analyse complète
+              {t('nextActions.seeFullAnalysis')}
             </>
           )}
         </button>
@@ -374,8 +383,8 @@ const ActionCard = ({
                 <div className="bg-slate-50 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
-                    Analyse ARIA
-                    <span className="text-xs font-normal text-slate-400">(survolez pour plus de détails)</span>
+                    {t('nextActions.ariaAnalysis')}
+                    <span className="text-xs font-normal text-slate-400">{t('nextActions.hoverForDetails')}</span>
                   </h4>
                   <div className="space-y-3">
                     <ScoreGauge type="urgency" value={action.scores.urgency} />
@@ -384,7 +393,7 @@ const ActionCard = ({
                   </div>
                   <div className="mt-3 pt-3 border-t border-slate-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-700">Score global</span>
+                      <span className="text-sm font-semibold text-slate-700">{t('nextActions.overallScore')}</span>
                       <span className="text-lg font-bold text-al-blue-600">{action.scores.overall}/100</span>
                     </div>
                   </div>
@@ -394,7 +403,7 @@ const ActionCard = ({
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center gap-2">
                     <Target className="w-4 h-4" />
-                    Métriques clés
+                    {t('nextActions.keyMetrics')}
                   </h4>
                   <ul className="space-y-1">
                     {action.aiJustification.metrics.map((metric, i) => (
@@ -412,7 +421,7 @@ const ActionCard = ({
                   <div className="bg-red-50 rounded-lg p-4">
                     <h4 className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
-                      Risques si non-action
+                      {t('nextActions.risksIfNoAction')}
                     </h4>
                     <ul className="space-y-1">
                       {action.aiJustification.risks.map((risk, i) => (
@@ -428,7 +437,7 @@ const ActionCard = ({
                   <div className="bg-green-50 rounded-lg p-4">
                     <h4 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-2">
                       <Lightbulb className="w-4 h-4" />
-                      Opportunités
+                      {t('nextActions.opportunities')}
                     </h4>
                     <ul className="space-y-1">
                       {action.aiJustification.opportunities.map((opp, i) => (
@@ -466,7 +475,7 @@ const ActionCard = ({
                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-100">
                   <h4 className="text-sm font-semibold text-purple-700 mb-2 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
-                    Approche suggérée par ARIA
+                    {t('nextActions.suggestedApproach')}
                   </h4>
                   <p className="text-sm text-purple-600 leading-relaxed">
                     {action.aiJustification.suggestedApproach}
@@ -480,35 +489,35 @@ const ActionCard = ({
                     className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-al-blue-300 hover:bg-al-blue-50 text-slate-700 hover:text-al-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
-                    Voir profil
+                    {t('nextActions.seeProfile')}
                   </button>
                   <button
                     onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}
                     className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
-                    Préparer pitch
+                    {t('nextActions.preparePitch')}
                   </button>
                   <button
                     onClick={() => navigate(`/visit-report?practitioner=${practitioner.id}`)}
                     className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 text-slate-700 hover:text-purple-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
-                    Compte-rendu
+                    {t('nextActions.makeReport')}
                   </button>
                   <button
                     onClick={() => navigate(`/tour-optimization?include=${practitioner.id}`)}
                     className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Route className="w-4 h-4" />
-                    Ajouter tournée
+                    {t('nextActions.addToTour')}
                   </button>
                   <a
                     href={`tel:${practitioner.contact.phone}`}
                     className="flex-1 min-w-[140px] py-2.5 px-4 text-sm font-medium bg-white border border-slate-200 hover:border-green-300 hover:bg-green-50 text-slate-700 hover:text-green-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Phone className="w-4 h-4" />
-                    Appeler
+                    {t('nextActions.call')}
                   </a>
                 </div>
               </div>
@@ -523,7 +532,7 @@ const ActionCard = ({
 // Page principale
 export default function NextBestActions() {
   const navigate = useNavigate();
-  const { periodLabel } = useTimePeriod();
+  const { t } = useTranslation();
   const {
     actions: storedActions,
     addAction,
@@ -603,11 +612,11 @@ export default function NextBestActions() {
             <Zap className="w-7 h-7 text-white" />
           </div>
           <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Mes Prochaines Actions
+            {t('nextActions.title')}
           </span>
         </h1>
         <p className="text-slate-600">
-          Recommandations intelligentes générées par ARIA basées sur l'analyse de vos données {periodLabel.toLowerCase()}
+          {t('nextActions.subtitle')}
         </p>
       </div>
 
@@ -624,18 +633,17 @@ export default function NextBestActions() {
             </div>
             <div className="flex-1">
               <p className="font-bold text-lg">
-                {stats.byType.new_practitioner} nouveau{stats.byType.new_practitioner > 1 ? 'x' : ''} praticien{stats.byType.new_practitioner > 1 ? 's' : ''} détecté{stats.byType.new_practitioner > 1 ? 's' : ''}
+                {t('nextActions.newPractitionersBanner', { count: String(stats.byType.new_practitioner) })}
               </p>
               <p className="text-white/80 text-sm">
-                Contactez-les en priorité avant la concurrence pour établir la relation.
-                Chaque jour compte pour maximiser vos chances de captation.
+                {t('nextActions.newPractitionersBannerDesc')}
               </p>
             </div>
             <button
               onClick={() => setFilter(filter === 'new_practitioner' ? null : 'new_practitioner')}
               className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium text-sm transition-colors flex-shrink-0"
             >
-              {filter === 'new_practitioner' ? 'Voir tout' : 'Voir les nouveaux'}
+              {filter === 'new_practitioner' ? t('nextActions.seeAllLabel') : t('nextActions.seeNew')}
             </button>
           </div>
         </motion.div>
@@ -672,13 +680,13 @@ export default function NextBestActions() {
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-purple-500" />
               <span className="text-sm text-slate-600">
-                <strong className="text-slate-800">{userStats.reportsThisWeek}</strong> compte-rendus cette semaine
+                <strong className="text-slate-800">{userStats.reportsThisWeek}</strong> {t('nextActions.reportsThisWeek')}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
               <span className="text-sm text-slate-600">
-                <strong className="text-slate-800">{userStats.completedActions}</strong> actions complétées
+                <strong className="text-slate-800">{userStats.completedActions}</strong> {t('nextActions.completedActions')}
               </span>
             </div>
           </div>
@@ -687,7 +695,7 @@ export default function NextBestActions() {
             className="text-sm text-al-blue-600 hover:text-al-blue-700 font-medium flex items-center gap-1"
           >
             <BarChart3 className="w-4 h-4" />
-            Voir dashboard
+            {t('nextActions.seeDashboard')}
           </button>
         </div>
       </div>
@@ -704,7 +712,7 @@ export default function NextBestActions() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Toutes ({stats.total})
+            {t('nextActions.filterAll')} ({stats.total})
           </button>
           {(Object.keys(ACTION_CONFIG) as Array<keyof typeof ACTION_CONFIG>).map(type => {
             const config = ACTION_CONFIG[type];
@@ -734,7 +742,7 @@ export default function NextBestActions() {
               onChange={(e) => setShowCompleted(e.target.checked)}
               className="rounded border-slate-300"
             />
-            Historique ({stats.completed})
+            {t('nextActions.history')} ({stats.completed})
           </label>
         </div>
       </div>
@@ -762,12 +770,12 @@ export default function NextBestActions() {
           >
             <CheckCircle2 className="w-16 h-16 text-emerald-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-800 mb-2">
-              {filter ? 'Aucune action de ce type' : 'Toutes les actions sont traitées !'}
+              {filter ? t('nextActions.noActionsOfType') : t('nextActions.allActionsProcessed')}
             </h3>
             <p className="text-slate-500">
               {filter
-                ? 'Essayez un autre filtre ou consultez toutes les actions'
-                : 'Excellent travail ! ARIA analysera vos données pour de nouvelles recommandations.'}
+                ? t('nextActions.tryOtherFilter')
+                : t('nextActions.excellentWork')}
             </p>
           </motion.div>
         )}
@@ -786,19 +794,19 @@ export default function NextBestActions() {
           </div>
           <div>
             <p className="font-semibold text-purple-800 mb-2 flex items-center gap-2">
-              Analyse ARIA
-              <span className="text-xs font-normal text-purple-500">Mise à jour en temps réel</span>
+              {t('nextActions.ariaAnalysis')}
+              <span className="text-xs font-normal text-purple-500">{t('nextActions.realTimeUpdate')}</span>
             </p>
             <p className="text-sm text-purple-700 leading-relaxed">
               {stats.byType.new_practitioner > 0
-                ? `${stats.byType.new_practitioner} nouveau(x) praticien(s) détecté(s) sur votre territoire ! Ces professionnels n'ont pas encore de prestataire Air Liquide attitré — c'est une fenêtre de captation unique. Les données montrent que le premier prestataire à établir le contact a 73% de chances de devenir le fournisseur principal. Priorisez ces contacts cette semaine.`
+                ? t('nextActions.insightNewPractitioners', { count: String(stats.byType.new_practitioner) })
                 : stats.critical > 0
-                  ? `Attention : ${stats.critical} action(s) critique(s) nécessitent votre attention immédiate. Ces KOLs représentent une part significative de votre volume et n'ont pas été vus depuis longtemps. L'analyse des tendances montre un risque de perte de relation si aucune action n'est entreprise cette semaine.`
+                  ? t('nextActions.insightCritical', { count: String(stats.critical) })
                   : stats.byType.risk > 0
-                    ? `${stats.byType.risk} praticien(s) à risque détecté(s). Leurs scores de fidélité ont baissé récemment. Une intervention rapide pourrait prévenir une attrition. Concentrez-vous sur la compréhension de leurs besoins et proposez des solutions personnalisées.`
+                    ? t('nextActions.insightRisk', { count: String(stats.byType.risk) })
                     : stats.byType.opportunity > 0
-                      ? `${stats.byType.opportunity} opportunité(s) de croissance identifiée(s). Ces praticiens ont un excellent score de fidélité et un potentiel de développement significatif. Le moment est idéal pour proposer des services additionnels ou une montée en gamme.`
-                      : 'Votre portefeuille est en excellente santé ! Continuez à maintenir le contact régulier avec vos praticiens clés pour préserver cette dynamique positive.'}
+                      ? t('nextActions.insightOpportunity', { count: String(stats.byType.opportunity) })
+                      : t('nextActions.insightHealthy')}
             </p>
           </div>
         </div>

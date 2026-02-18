@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTimePeriod } from '../../contexts/TimePeriodContext';
+import { useTranslation } from '../../i18n';
 
 interface PeriodSelectorProps {
   className?: string;
@@ -11,6 +12,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
   size = 'md'
 }) => {
   const { timePeriod, setTimePeriod } = useTimePeriod();
+  const { t } = useTranslation();
 
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',
@@ -30,9 +32,9 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
         ${className}
       `}
     >
-      <option value="month">Ce mois</option>
-      <option value="quarter">Ce trimestre</option>
-      <option value="year">Cette année</option>
+      <option value="month">{t('common.period.thisMonth')}</option>
+      <option value="quarter">{t('common.period.thisQuarter')}</option>
+      <option value="year">{t('common.period.thisYear')}</option>
     </select>
   );
 };

@@ -7,9 +7,12 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { format, addDays, isSameDay, startOfWeek, addWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { filterVisitsByPeriod } from '../services/metricsCalculator';
+import { useTranslation } from '../i18n';
+import { useLanguage } from '../i18n';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 
@@ -19,6 +22,10 @@ export const Visits: React.FC = () => {
   const { timePeriod } = useTimePeriod();
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const { t } = useTranslation();
+  const { language } = useLanguage();
+
+  const dateFnsLocale = language === 'en' ? enUS : fr;
 
   // Filter visits by time period first
   const periodFilteredVisits = useMemo(() => {
@@ -79,10 +86,10 @@ export const Visits: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">
-          Mes Visites
+          {t('visits.title')}
         </h1>
         <p className="text-slate-600">
-          Gérez et planifiez vos visites médicales
+          {t('visits.subtitle')}
         </p>
       </div>
 
@@ -92,10 +99,10 @@ export const Visits: React.FC = () => {
           <Filter className="w-5 h-5 text-slate-600" />
           <div className="flex gap-2">
             {[
-              { key: 'all', label: 'Toutes' },
-              { key: 'today', label: "Aujourd'hui" },
-              { key: 'week', label: 'Cette semaine' },
-              { key: 'month', label: 'Ce mois' },
+              { key: 'all', label: t('visits.filters.all') },
+              { key: 'today', label: t('visits.filters.today') },
+              { key: 'week', label: t('visits.filters.thisWeek') },
+              { key: 'month', label: t('visits.filters.thisMonth') },
             ].map((filter) => (
               <button
                 key={filter.key}
@@ -143,7 +150,7 @@ export const Visits: React.FC = () => {
                 }`}
               >
                 <span className={`text-xs font-medium mb-1 ${isSelected ? 'text-white' : 'text-slate-600'}`}>
-                  {format(day, 'EEE', { locale: fr })}
+                  {format(day, 'EEE', { locale: dateFnsLocale })}
                 </span>
                 <span className={`text-2xl font-bold ${isSelected ? 'text-white' : 'text-slate-800'}`}>
                   {format(day, 'd')}
@@ -171,13 +178,13 @@ export const Visits: React.FC = () => {
           <div className="glass-card p-12 text-center">
             <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-800 mb-2">
-              Aucune visite planifiée
+              {t('visits.noVisits')}
             </h3>
             <p className="text-slate-600 mb-6">
-              Commencez par planifier vos premières visites
+              {t('visits.startPlanning')}
             </p>
             <Button onClick={() => navigate('/practitioners')}>
-              Voir les praticiens
+              {t('visits.seePractitioners')}
             </Button>
           </div>
         ) : (
@@ -198,7 +205,7 @@ export const Visits: React.FC = () => {
                   <div className="flex items-center gap-2 text-slate-800">
                     <Calendar className="w-5 h-5" />
                     <h2 className="text-xl font-bold">
-                      {format(date, 'EEEE d MMMM yyyy', { locale: fr })}
+                      {format(date, 'EEEE d MMMM yyyy', { locale: dateFnsLocale })}
                     </h2>
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
@@ -306,13 +313,13 @@ export const Visits: React.FC = () => {
               <div className="text-3xl font-bold gradient-text mb-1">
                 {new Set(filteredVisits.map((v) => v.practitioner.id)).size}
               </div>
-              <div className="text-sm text-slate-600">Praticiens différents</div>
+              <div className="text-sm text-slate-600">{t('visits.differentPractitioners')}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold gradient-text mb-1">
                 {filteredVisits.filter((v) => v.practitioner.isKOL).length}
               </div>
-              <div className="text-sm text-slate-600">Visites KOL</div>
+              <div className="text-sm text-slate-600">{t('visits.kolVisits')}</div>
             </div>
           </div>
         </div>

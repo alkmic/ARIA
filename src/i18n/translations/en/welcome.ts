@@ -1,0 +1,27 @@
+export const welcome = {
+  mainTitle: 'ARIA',
+  mainSubtitle: 'Air Liquide Intelligent Assistant',
+  description: 'Your intelligent assistant to optimize your relationships with practitioners and maximize the impact of your medical visits.',
+  launchExperience: 'Launch experience',
+  features: {
+    generativeAI: 'Generative AI',
+    generativeAIDesc: 'Personalized pitches and intelligent insights',
+    predictiveAnalysis: 'Predictive Analysis',
+    predictiveAnalysisDesc: 'Identification of priority opportunities',
+    virtualCoach: 'Virtual Coach',
+    virtualCoachDesc: 'Strategic recommendations in real time',
+  },
+  landingSubtitle: 'Intelligent Assistant for Representatives',
+  landingDescription: 'Optimize your field visits, generate personalized pitches and maximize the impact of your sales actions.',
+  landingFeatures: {
+    coachIA: 'AI Coach',
+    pitchIA: 'AI Pitch',
+    analytics: 'Analytics',
+    crmPro: 'CRM Pro',
+    territory: 'Territory',
+    objectives: 'Objectives',
+  },
+  accessDashboard: 'Access dashboard',
+  versionPowered: 'v1.0 · Powered by multi-provider AI',
+  splashSubtitle: 'Air Liquide Intelligent Assistant',
+};

@@ -12,7 +12,8 @@ import { DataService } from '../services/dataService';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { formatDate } from '../utils/helpers';
+import { formatDate, getLocaleCode } from '../utils/helpers';
+import { useTranslation, useLanguage, getLanguage } from '../i18n';
 import { NewsTab } from '../components/practitioner/NewsTab';
 import { NotesTab } from '../components/practitioner/NotesTab';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
@@ -27,6 +28,7 @@ export default function PractitionerProfile() {
   const { getPractitionerById } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('synthesis');
   const { timePeriod, periodLabel, periodLabelShort } = useTimePeriod();
+  const { t } = useTranslation();
 
   const practitioner = getPractitionerById(id || '');
 
@@ -34,9 +36,9 @@ export default function PractitionerProfile() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <p className="text-xl text-slate-600">Praticien non trouvé</p>
+          <p className="text-xl text-slate-600">{t('practitioners.practitionerNotFound')}</p>
           <Button onClick={() => navigate('/')} className="mt-4">
-            Retour au dashboard
+            {t('practitioners.backToDashboard')}
           </Button>
         </div>
       </div>
@@ -55,11 +57,11 @@ export default function PractitionerProfile() {
   const volumeHistory = practitioner.volumeHistory || generateVolumeHistory(practitioner.volumeL);
 
   const tabs = [
-    { id: 'synthesis', label: 'Synthèse IA', icon: Sparkles },
-    { id: 'history', label: 'Historique', icon: Calendar },
-    { id: 'metrics', label: 'Métriques', icon: TrendingUp },
-    { id: 'news', label: 'Actualités', icon: Newspaper },
-    { id: 'notes', label: 'Notes', icon: FileEdit }
+    { id: 'synthesis', label: t('practitioners.tabs.synthesis'), icon: Sparkles },
+    { id: 'history', label: t('practitioners.tabs.history'), icon: Calendar },
+    { id: 'metrics', label: t('practitioners.tabs.metrics'), icon: TrendingUp },
+    { id: 'news', label: t('practitioners.tabs.news'), icon: Newspaper },
+    { id: 'notes', label: t('practitioners.tabs.notes'), icon: FileEdit }
   ];
 
   return (
@@ -76,13 +78,13 @@ export default function PractitionerProfile() {
             className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
+            <span>{t('common.back')}</span>
           </button>
           <PeriodSelector size="sm" />
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'success'}>
-            Risque {practitioner.riskLevel}
+            {t('common.risk.label')} {practitioner.riskLevel}
           </Badge>
           {practitioner.isKOL && (
             <Badge variant="warning">Key Opinion Leader</Badge>
@@ -108,11 +110,11 @@ export default function PractitionerProfile() {
                 <Zap className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                <p className="font-bold">Nouveau praticien — Contact prioritaire</p>
+                <p className="font-bold">{t('practitioners.newPractitioner')}</p>
                 <p className="text-white/80 text-sm">
-                  Détecté il y a {detectedDaysAgo ?? '?'} jour(s)
-                  {dbProfile.previousProvider && ` • Ancien prestataire : ${dbProfile.previousProvider}`}
-                  . Aucune visite enregistrée — planifiez un premier contact rapidement.
+                  {t('practitioners.detectedDaysAgo', { days: detectedDaysAgo ?? '?' })}
+                  {dbProfile.previousProvider && ` • ${t('practitioners.previousProvider', { provider: dbProfile.previousProvider })}`}
+                  {t('practitioners.noVisitRecorded')}
                 </p>
               </div>
               <Button
@@ -122,7 +124,7 @@ export default function PractitionerProfile() {
                 className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30 flex-shrink-0"
               >
                 <Wand2 className="w-4 h-4 mr-1" />
-                Préparer visite
+                {t('practitioners.prepareVisit')}
               </Button>
             </div>
           </motion.div>
@@ -149,17 +151,17 @@ export default function PractitionerProfile() {
             <div className="flex items-center justify-center gap-1.5 mb-4">
               {practitioner.practiceType === 'ville' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                  <Home className="w-3 h-3" /> Ville
+                  <Home className="w-3 h-3" /> {t('common.practiceType.ville')}
                 </span>
               )}
               {practitioner.practiceType === 'hospitalier' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                  <Building2 className="w-3 h-3" /> Hospitalier
+                  <Building2 className="w-3 h-3" /> {t('common.practiceType.hospitalier')}
                 </span>
               )}
               {practitioner.practiceType === 'mixte' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                  <Building className="w-3 h-3" /> Mixte
+                  <Building className="w-3 h-3" /> {t('common.practiceType.mixte')}
                 </span>
               )}
             </div>
@@ -200,27 +202,27 @@ export default function PractitionerProfile() {
 
             <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <span className="text-slate-600">Volume {periodLabelShort}</span>
+                <span className="text-slate-600">{t('practitioners.volumeLabel', { period: periodLabelShort })}</span>
                 <span className="font-semibold text-slate-800">
                   {(practitioner.volumeL / 1000).toFixed(0)}K L
                 </span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <span className="text-slate-600">Patients</span>
+                <span className="text-slate-600">{t('common.patients')}</span>
                 <span className="font-semibold text-slate-800">~{practitioner.patientCount}</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <span className="text-slate-600">Tendance</span>
+                <span className="text-slate-600">{t('practitioners.trendLabel')}</span>
                 <span className={`font-semibold flex items-center gap-1 ${
                   practitioner.trend === 'up' ? 'text-success' :
                   practitioner.trend === 'down' ? 'text-danger' : 'text-slate-600'
                 }`}>
                   {practitioner.trend === 'up' ? '+12%' :
-                   practitioner.trend === 'down' ? '-8%' : 'Stable'}
+                   practitioner.trend === 'down' ? '-8%' : t('common.trend.stable')}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-600">Fidélité</span>
+                <span className="text-slate-600">{t('practitioners.loyaltyLabel')}</span>
                 <span className="font-semibold text-slate-800">
                   {practitioner.loyaltyScore}/10
                 </span>
@@ -236,7 +238,7 @@ export default function PractitionerProfile() {
               onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}
             >
               <Wand2 className="w-5 h-5 mr-2" />
-              Préparer la visite
+              {t('practitioners.prepareTheVisit')}
             </Button>
             <Button
               variant="secondary"
@@ -244,7 +246,7 @@ export default function PractitionerProfile() {
               onClick={() => navigate(`/visit-report?practitionerId=${practitioner.id}`)}
             >
               <Mic className="w-5 h-5 mr-2" />
-              Compte-rendu de visite
+              {t('practitioners.visitReport')}
             </Button>
             <Button
               variant="secondary"
@@ -252,11 +254,11 @@ export default function PractitionerProfile() {
               onClick={() => navigate(`/coach?q=Analyse complète de ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}`)}
             >
               <MessageCircle className="w-5 h-5 mr-2" />
-              Demander au Coach IA
+              {t('practitioners.askCoachIA')}
             </Button>
             <Button variant="secondary" className="w-full">
               <Phone className="w-5 h-5 mr-2" />
-              Appeler
+              {t('practitioners.call')}
             </Button>
           </div>
         </div>
@@ -313,6 +315,8 @@ export default function PractitionerProfile() {
 // Tab Synthesis
 function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoints: string[] }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
 
   // Get database profile for richer data
   const dbProfile = useMemo(() => DataService.getPractitionerById(practitioner.id), [practitioner.id]);
@@ -373,32 +377,32 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
         <div className="glass-card p-6 bg-gradient-to-br from-violet-50 to-indigo-50 border-violet-100">
           <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
             <Sparkles className="w-5 h-5 text-violet-600" />
-            Analyse IA des comptes-rendus
-            <span className="text-xs font-normal text-violet-400 ml-1">({aiDeductions.reportCount} CR analysés)</span>
+            {t('practitioners.aiAnalysisReports')}
+            <span className="text-xs font-normal text-violet-400 ml-1">({t('practitioners.reportsAnalyzed', { count: aiDeductions.reportCount })})</span>
           </h3>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="p-3 bg-white/70 rounded-lg">
-              <p className="text-xs text-slate-500 mb-1">Tendance relationnelle</p>
+              <p className="text-xs text-slate-500 mb-1">{t('practitioners.relationshipTrend')}</p>
               <p className={`text-sm font-semibold ${
                 aiDeductions.sentimentTrend === 'positive' ? 'text-green-600' :
                 aiDeductions.sentimentTrend === 'negative' ? 'text-red-600' : 'text-slate-600'
               }`}>
-                {aiDeductions.sentimentTrend === 'positive' ? 'Relation en amélioration' :
-                 aiDeductions.sentimentTrend === 'negative' ? 'Points de vigilance' : 'Relation stable'}
+                {aiDeductions.sentimentTrend === 'positive' ? t('practitioners.relationImproving') :
+                 aiDeductions.sentimentTrend === 'negative' ? t('practitioners.watchPoints') : t('practitioners.stableRelation')}
               </p>
             </div>
             <div className="p-3 bg-white/70 rounded-lg">
-              <p className="text-xs text-slate-500 mb-1">Dernier CR</p>
+              <p className="text-xs text-slate-500 mb-1">{t('practitioners.lastReport')}</p>
               <p className="text-sm font-medium text-slate-700">
-                {reportSummary.lastReportDate ? new Date(reportSummary.lastReportDate).toLocaleDateString('fr-FR') : '-'}
+                {reportSummary.lastReportDate ? new Date(reportSummary.lastReportDate).toLocaleDateString(getLocaleCode(language)) : '-'}
               </p>
             </div>
           </div>
 
           {aiDeductions.products.length > 0 && (
             <div className="mb-3">
-              <p className="text-xs font-medium text-slate-500 mb-1.5">Produits discutés (tous CR)</p>
+              <p className="text-xs font-medium text-slate-500 mb-1.5">{t('practitioners.productsDiscussedAll')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {aiDeductions.products.map((p, i) => (
                   <span key={i} className="px-2.5 py-1 bg-white/80 text-xs rounded-full text-violet-700 border border-violet-200">{p}</span>
@@ -411,7 +415,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
             <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <p className="text-xs font-medium text-orange-700 mb-1 flex items-center gap-1">
                 <Shield className="w-3.5 h-3.5" />
-                Concurrents mentionnés
+                {t('practitioners.competitorsMentioned')}
               </p>
               <p className="text-sm text-orange-600">{aiDeductions.competitors.join(', ')}</p>
             </div>
@@ -421,7 +425,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
             <div className="mb-3">
               <p className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                Objections / Freins identifiés
+                {t('practitioners.objectionsIdentified')}
               </p>
               <ul className="space-y-1">
                 {aiDeductions.objections.slice(0, 4).map((o, i) => (
@@ -438,7 +442,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
             <div className="mb-3">
               <p className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                Opportunités détectées
+                {t('practitioners.opportunitiesDetected')}
               </p>
               <ul className="space-y-1">
                 {aiDeductions.opportunities.slice(0, 4).map((o, i) => (
@@ -455,7 +459,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
             <div className="pt-3 border-t border-violet-100">
               <p className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
                 <Target className="w-3.5 h-3.5 text-violet-500" />
-                Actions en attente
+                {t('practitioners.pendingActions')}
               </p>
               {aiDeductions.pendingActions.slice(0, 3).map((a, i) => (
                 <p key={i} className="text-sm text-slate-700 flex items-center gap-1.5 mb-0.5">
@@ -469,7 +473,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           {/* Show latest report details */}
           {visitReports.length > 0 && visitReports[0].extractedInfo.keyPoints.length > 0 && (
             <div className="mt-3 pt-3 border-t border-violet-100">
-              <p className="text-xs font-medium text-slate-500 mb-1">Dernier compte-rendu — Points clés</p>
+              <p className="text-xs font-medium text-slate-500 mb-1">{t('practitioners.lastReportKeyPoints')}</p>
               <p className="text-sm text-slate-600">{visitReports[0].extractedInfo.keyPoints.slice(0, 3).join('. ')}</p>
             </div>
           )}
@@ -481,29 +485,29 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
         <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
           <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
             <Mic className="w-5 h-5 text-indigo-600" />
-            Comptes-rendus de visite ({reportSummary.totalReports})
+            {t('practitioners.visitReportsCount', { count: reportSummary.totalReports })}
           </h3>
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <p className="text-xs text-slate-500">Dernier CR</p>
+              <p className="text-xs text-slate-500">{t('practitioners.lastReport')}</p>
               <p className="text-sm font-medium text-slate-700">
-                {reportSummary.lastReportDate ? new Date(reportSummary.lastReportDate).toLocaleDateString('fr-FR') : '-'}
+                {reportSummary.lastReportDate ? new Date(reportSummary.lastReportDate).toLocaleDateString(getLocaleCode(language)) : '-'}
               </p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Dernier sentiment</p>
+              <p className="text-xs text-slate-500">{t('practitioners.lastSentiment')}</p>
               <p className={`text-sm font-medium ${
                 reportSummary.lastSentiment === 'positive' ? 'text-green-600' :
                 reportSummary.lastSentiment === 'negative' ? 'text-red-600' : 'text-slate-600'
               }`}>
-                {reportSummary.lastSentiment === 'positive' ? 'Positif' :
-                 reportSummary.lastSentiment === 'negative' ? 'Négatif' : 'Neutre'}
+                {reportSummary.lastSentiment === 'positive' ? t('common.sentiment.positive') :
+                 reportSummary.lastSentiment === 'negative' ? t('common.sentiment.negative') : t('common.sentiment.neutral')}
               </p>
             </div>
           </div>
           {reportSummary.topProducts.length > 0 && (
             <div className="mb-2">
-              <p className="text-xs text-slate-500 mb-1">Produits discutés</p>
+              <p className="text-xs text-slate-500 mb-1">{t('practitioners.productsDiscussed')}</p>
               <div className="flex flex-wrap gap-1">
                 {reportSummary.topProducts.map((p, i) => (
                   <span key={i} className="px-2 py-0.5 bg-white/70 text-xs rounded-full text-slate-600">{p}</span>
@@ -513,7 +517,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           )}
           {reportSummary.pendingActions.length > 0 && (
             <div className="mt-2 pt-2 border-t border-indigo-100">
-              <p className="text-xs text-slate-500 mb-1">Actions en attente</p>
+              <p className="text-xs text-slate-500 mb-1">{t('practitioners.pendingActions')}</p>
               {reportSummary.pendingActions.slice(0, 3).map((action, i) => (
                 <p key={i} className="text-sm text-slate-700 flex items-center gap-1.5">
                   <Target className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
@@ -529,7 +533,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
       <div className="glass-card p-6">
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
           <Sparkles className="w-5 h-5 text-al-blue-500" />
-          Synthèse IA
+          {t('practitioners.aiSynthesis')}
         </h3>
         <p className="text-slate-600 leading-relaxed">{practitioner.aiSummary}</p>
       </div>
@@ -539,20 +543,20 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
         <div className="glass-card p-6">
           <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
             <FileEdit className="w-5 h-5 text-al-blue-500" />
-            Dernières notes de visite
+            {t('practitioners.lastVisitNotes')}
           </h3>
           <div className="space-y-3">
             {dbProfile.notes.slice(0, 3).map((note, i) => (
               <div key={note.id || i} className="p-3 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString('fr-FR')}</span>
+                  <span className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString(getLocaleCode(language))}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                     note.type === 'visit' ? 'bg-blue-100 text-blue-600' :
                     note.type === 'phone' ? 'bg-green-100 text-green-600' :
                     note.type === 'email' ? 'bg-purple-100 text-purple-600' :
                     'bg-slate-100 text-slate-600'
                   }`}>
-                    {note.type === 'visit' ? 'Visite' : note.type === 'phone' ? 'Téléphone' : note.type === 'email' ? 'Email' : 'Observation'}
+                    {note.type === 'visit' ? t('common.contactType.visit') : note.type === 'phone' ? t('common.contactType.phone') : note.type === 'email' ? t('common.contactType.email') : t('common.contactType.observation')}
                   </span>
                   <span className="text-xs text-slate-400">{note.author}</span>
                 </div>
@@ -573,7 +577,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
       <div className="glass-card p-6">
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
           <Target className="w-5 h-5 text-al-blue-500" />
-          Points clés pour la prochaine visite
+          {t('practitioners.keyPointsNextVisit')}
         </h3>
         <ul className="space-y-3">
           {keyPoints.map((point, i) => (
@@ -589,7 +593,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
       <div className="glass-card p-6 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100">
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
           <Swords className="w-5 h-5 text-amber-600" />
-          Battlecard vs Concurrence
+          {t('practitioners.battlecard')}
           {dbProfile?.previousProvider && (
             <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
               Ex-{dbProfile.previousProvider}
@@ -601,7 +605,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
             dbProfile.battlecards.map((bc, idx) => (
               <div key={idx} className={`p-4 rounded-xl ${bc.isPrimary ? 'bg-amber-100/80 ring-2 ring-amber-300' : 'bg-white/80'}`}>
                 <p className={`text-sm font-semibold mb-2 ${bc.isPrimary ? 'text-red-700' : 'text-amber-700'}`}>
-                  vs {bc.competitor} {bc.isPrimary && '(concurrent direct)'}
+                  vs {bc.competitor} {bc.isPrimary && t('practitioners.directCompetitor')}
                 </p>
                 <div className="text-sm text-slate-700 space-y-1">
                   {bc.ourAdvantages.slice(0, 3).map((adv, i) => (
@@ -610,7 +614,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
                 </div>
                 {bc.isPrimary && bc.counterArguments.length > 0 && (
                   <div className="mt-3 pt-2 border-t border-amber-200">
-                    <p className="text-xs font-semibold text-amber-800 mb-1">Contre-arguments clés :</p>
+                    <p className="text-xs font-semibold text-amber-800 mb-1">{t('practitioners.keyCounterArguments')}</p>
                     {bc.counterArguments.slice(0, 2).map((ca, i) => (
                       <p key={i} className="text-xs text-amber-700 mb-1">→ {ca}</p>
                     ))}
@@ -661,17 +665,17 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
       <div className="glass-card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-100">
         <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
           <Lightbulb className="w-5 h-5 text-green-600" />
-          Prochaine meilleure action
+          {t('practitioners.nextBestAction')}
         </h3>
         <p className="text-slate-700 mb-4">{practitioner.nextBestAction}</p>
         <div className="flex gap-2">
           <Button variant="primary" size="sm" onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}>
             <Wand2 className="w-4 h-4 mr-1" />
-            Préparer le pitch
+            {t('practitioners.preparePitch')}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => navigate(`/visit-report?practitionerId=${practitioner.id}`)}>
             <Mic className="w-4 h-4 mr-1" />
-            Compte-rendu
+            {t('practitioners.reportShort')}
           </Button>
         </div>
       </div>
@@ -681,6 +685,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
 
 // Tab History - fusionne conversations statiques + comptes-rendus dynamiques
 function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: { conversations: any[]; timePeriod: string; periodLabel: string; practitionerId: string }) {
+  const { t } = useTranslation();
   const allVisitReports = useUserDataStore(state => state.visitReports);
   const visitReports = useMemo(
     () => allVisitReports
@@ -729,10 +734,10 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
       {/* Period indicator */}
       <div className="glass-card p-3 bg-al-blue-50 border-al-blue-100">
         <p className="text-sm text-slate-600">
-          Affichage des visites : <span className="font-semibold text-slate-800">{periodLabel}</span>
+          {t('practitioners.displayVisits')} : <span className="font-semibold text-slate-800">{periodLabel}</span>
           {filteredConversations.length !== conversations.length && (
             <span className="ml-2 text-slate-500">
-              ({filteredConversations.length} sur {conversations.length})
+              {t('practitioners.countOfTotal', { filtered: filteredConversations.length, total: conversations.length })}
             </span>
           )}
         </p>
@@ -741,7 +746,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
       {filteredConversations.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">Aucune conversation enregistrée pour cette période</p>
+          <p className="text-slate-500">{t('practitioners.noConversation')}</p>
         </div>
       ) : (
         filteredConversations.map((conv, i) => (
@@ -770,7 +775,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
                   )}
                 </p>
                 <p className="text-sm text-slate-500">
-                  {conv.type || 'Visite'} • {conv.duration || '25 min'}
+                  {conv.type || t('practitioners.visitType')} • {conv.duration || '25 min'}
                 </p>
               </div>
               <Badge variant={
@@ -787,7 +792,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
             {/* Actions */}
             {conv.actions && conv.actions.length > 0 && (
               <div className="mt-3 pt-3 border-t border-slate-100 ml-13">
-                <p className="text-sm font-medium text-slate-700 mb-2">Actions convenues :</p>
+                <p className="text-sm font-medium text-slate-700 mb-2">{t('practitioners.agreedActions')}</p>
                 <ul className="space-y-1">
                   {conv.actions.map((action: string, j: number) => (
                     <li key={j} className="flex items-center gap-2 text-sm text-slate-600">
@@ -807,6 +812,8 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
 
 // Tab Metrics
 function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort }: { volumeHistory: any[]; practitioner: any; periodLabel: string; periodLabelShort: string }) {
+  const { t } = useTranslation();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -815,7 +822,7 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
     >
       {/* Volume Chart */}
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Évolution des volumes ({periodLabel})</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('practitioners.volumeEvolution', { period: periodLabel })}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={volumeHistory}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -836,7 +843,7 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
               stroke="#0066B3"
               strokeWidth={3}
               dot={{ fill: '#0066B3', strokeWidth: 2 }}
-              name="Volumes Dr."
+              name={t('practitioners.volumesDr')}
             />
             <Line
               type="monotone"
@@ -845,7 +852,7 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}
-              name="Moyenne vingtile"
+              name={t('practitioners.vingtileAvg')}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -854,23 +861,23 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="glass-card p-4 text-center">
-          <p className="text-sm text-slate-600 mb-1">Volume {periodLabelShort}</p>
+          <p className="text-sm text-slate-600 mb-1">{t('practitioners.volumePeriod', { period: periodLabelShort })}</p>
           <p className="text-2xl font-bold text-slate-800">
             {(practitioner.volumeL / 1000).toFixed(0)}K L
           </p>
-          <p className="text-sm text-success mt-1">+12% vs période précédente</p>
+          <p className="text-sm text-success mt-1">{t('practitioners.vsPreviousPeriod')}</p>
         </div>
         <div className="glass-card p-4 text-center">
-          <p className="text-sm text-slate-600 mb-1">Visites réalisées</p>
+          <p className="text-sm text-slate-600 mb-1">{t('practitioners.visitsCompleted')}</p>
           <p className="text-2xl font-bold text-slate-800">{practitioner.visitCount}</p>
-          <p className="text-sm text-slate-500 mt-1">Dernière : {practitioner.lastVisitDate ? formatDate(practitioner.lastVisitDate) : 'Jamais'}</p>
+          <p className="text-sm text-slate-500 mt-1">{t('practitioners.lastVisit')} : {practitioner.lastVisitDate ? formatDate(practitioner.lastVisitDate) : t('practitioners.never')}</p>
         </div>
         <div className="glass-card p-4 text-center">
-          <p className="text-sm text-slate-600 mb-1">Score fidélité</p>
+          <p className="text-sm text-slate-600 mb-1">{t('practitioners.loyaltyScore')}</p>
           <p className="text-2xl font-bold text-slate-800">{practitioner.loyaltyScore}/10</p>
           <p className="text-sm text-al-blue-500 mt-1">
-            {practitioner.loyaltyScore >= 8 ? 'Excellent' :
-             practitioner.loyaltyScore >= 6 ? 'Bon' : 'À améliorer'}
+            {practitioner.loyaltyScore >= 8 ? t('common.loyalty.excellent') :
+             practitioner.loyaltyScore >= 6 ? t('common.loyalty.good') : t('common.loyalty.toImprove')}
           </p>
         </div>
       </div>
@@ -880,7 +887,10 @@ function MetricsTab({ volumeHistory, practitioner, periodLabel, periodLabelShort
 
 // Helper to generate volume history (deterministic, no Math.random() during render)
 function generateVolumeHistory(annualVolume: number) {
-  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+  const lang = getLanguage();
+  const months = lang === 'en'
+    ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    : ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
   const monthlyBase = annualVolume / 12;
   const vingtileAvg = monthlyBase * 0.95;
   // Deterministic seasonal pattern (winter peak for respiratory)

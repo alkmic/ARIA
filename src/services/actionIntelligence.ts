@@ -6,6 +6,10 @@
 import { DataService } from './dataService';
 import type { PractitionerProfile } from '../types/database';
 import type { AIAction } from '../stores/useUserDataStore';
+import { getLanguage } from '../i18n/LanguageContext';
+
+/** Bilingual text helper — returns FR or EN text based on current language */
+const txt = (fr: string, en: string): string => getLanguage() === 'en' ? en : fr;
 
 // Types pour les scores et analyses
 interface ActionScore {
@@ -193,63 +197,63 @@ function generateAIJustification(
 
   // Métriques justificatives
   const metrics: string[] = [];
-  metrics.push(`${volumeShare}% du volume total du territoire`);
+  metrics.push(txt(`${volumeShare}% du volume total du territoire`, `${volumeShare}% of total territory volume`));
   metrics.push(`Vingtile ${p.metrics.vingtile}/20 (Top ${p.metrics.vingtile * 5}%)`);
-  metrics.push(`Fidélité: ${p.metrics.loyaltyScore}/10`);
+  metrics.push(txt(`Fidélité: ${p.metrics.loyaltyScore}/10`, `Loyalty: ${p.metrics.loyaltyScore}/10`));
 
   if (context.daysSinceVisit < 999) {
-    metrics.push(`Dernière visite: il y a ${context.daysSinceVisit} jours`);
+    metrics.push(txt(`Dernière visite: il y a ${context.daysSinceVisit} jours`, `Last visit: ${context.daysSinceVisit} days ago`));
   }
 
   if (context.recentPublications > 0) {
-    metrics.push(`${context.recentPublications} publication(s) récente(s)`);
+    metrics.push(txt(`${context.recentPublications} publication(s) récente(s)`, `${context.recentPublications} recent publication(s)`));
   }
 
-  metrics.push(`#${context.territoryContext.cityRank} sur ${context.territoryContext.cityTotal} à ${p.address.city}`);
+  metrics.push(txt(`#${context.territoryContext.cityRank} sur ${context.territoryContext.cityTotal} à ${p.address.city}`, `#${context.territoryContext.cityRank} of ${context.territoryContext.cityTotal} in ${p.address.city}`));
 
   // Risques si non action
   const risks: string[] = [];
 
   if (type === 'visit_kol' || type === 'visit_urgent') {
     if (context.daysSinceVisit > 60) {
-      risks.push(`Risque de perte de relation après ${context.daysSinceVisit} jours sans contact`);
+      risks.push(txt(`Risque de perte de relation après ${context.daysSinceVisit} jours sans contact`, `Risk of relationship loss after ${context.daysSinceVisit} days without contact`));
     }
     if (context.competitorMentions.length > 0) {
-      risks.push(`Concurrents mentionnés récemment: ${context.competitorMentions.join(', ')}`);
+      risks.push(txt(`Concurrents mentionnés récemment: ${context.competitorMentions.join(', ')}`, `Competitors recently mentioned: ${context.competitorMentions.join(', ')}`));
     }
   }
 
   if (type === 'risk') {
-    risks.push(`Volume à risque: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`);
+    risks.push(txt(`Volume à risque: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`, `Volume at risk: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year`));
     if (context.loyaltyTrend === 'declining') {
-      risks.push('Tendance de fidélité en baisse sur les 90 derniers jours');
+      risks.push(txt('Tendance de fidélité en baisse sur les 90 derniers jours', 'Loyalty trend declining over the last 90 days'));
     }
   }
 
   if (risks.length === 0) {
-    risks.push('Opportunité manquée si action retardée');
+    risks.push(txt('Opportunité manquée si action retardée', 'Missed opportunity if action delayed'));
   }
 
   // Opportunités si action
   const opportunities: string[] = [];
 
   if (type === 'opportunity' || type === 'upsell') {
-    opportunities.push(`Potentiel de croissance: +${p.metrics.potentialGrowth}%`);
+    opportunities.push(txt(`Potentiel de croissance: +${p.metrics.potentialGrowth}%`, `Growth potential: +${p.metrics.potentialGrowth}%`));
     if (context.loyaltyTrend === 'improving') {
-      opportunities.push('Relation en amélioration - moment idéal pour développer');
+      opportunities.push(txt('Relation en amélioration - moment idéal pour développer', 'Improving relationship - ideal time to develop'));
     }
   }
 
   if (p.metrics.isKOL) {
-    opportunities.push('Impact réseau: influence sur autres prescripteurs de la zone');
+    opportunities.push(txt('Impact réseau: influence sur autres prescripteurs de la zone', 'Network impact: influence on other prescribers in the area'));
   }
 
   if (context.recentPublications > 0) {
-    opportunities.push('Point d\'accroche: discuter de ses publications récentes');
+    opportunities.push(txt('Point d\'accroche: discuter de ses publications récentes', 'Talking point: discuss their recent publications'));
   }
 
   if (opportunities.length === 0) {
-    opportunities.push('Renforcement de la relation et maintien du volume');
+    opportunities.push(txt('Renforcement de la relation et maintien du volume', 'Strengthen relationship and maintain volume'));
   }
 
   // Approche suggérée
@@ -258,65 +262,77 @@ function generateAIJustification(
   switch (type) {
     case 'visit_kol':
       suggestedApproach = context.recentPublications > 0
-        ? `Abordez ses récentes publications pour créer un échange de valeur. Préparez une présentation des innovations Air Liquide qui pourraient l'intéresser.`
-        : `Planifiez une visite de qualité avec présentation des dernières innovations. Proposez une invitation à un événement médical.`;
+        ? txt(`Abordez ses récentes publications pour créer un échange de valeur. Préparez une présentation des innovations Air Liquide qui pourraient l'intéresser.`, `Discuss their recent publications to create a value exchange. Prepare a presentation of Air Liquide innovations that may interest them.`)
+        : txt(`Planifiez une visite de qualité avec présentation des dernières innovations. Proposez une invitation à un événement médical.`, `Plan a quality visit with a presentation of the latest innovations. Propose an invitation to a medical event.`);
       break;
     case 'visit_urgent':
-      suggestedApproach = `Visite de routine avec focus sur la satisfaction. Identifiez les besoins non couverts et proposez des solutions adaptées.`;
+      suggestedApproach = txt(`Visite de routine avec focus sur la satisfaction. Identifiez les besoins non couverts et proposez des solutions adaptées.`, `Routine visit focused on satisfaction. Identify unmet needs and propose tailored solutions.`);
       break;
     case 'opportunity':
-      suggestedApproach = `Présentez les services premium et les nouvelles gammes. Le praticien est réceptif - proposez un élargissement de l'offre.`;
+      suggestedApproach = txt(`Présentez les services premium et les nouvelles gammes. Le praticien est réceptif - proposez un élargissement de l'offre.`, `Present premium services and new product lines. The practitioner is receptive - propose expanding the offering.`);
       break;
     case 'risk':
       suggestedApproach = context.competitorMentions.length > 0
-        ? `Visite d'urgence pour comprendre les raisons de l'intérêt concurrent. Préparez une contre-argumentation et des avantages différenciants.`
-        : `Contact rapide pour évaluer la satisfaction. Proposez un geste commercial ou un service additionnel si nécessaire.`;
+        ? txt(`Visite d'urgence pour comprendre les raisons de l'intérêt concurrent. Préparez une contre-argumentation et des avantages différenciants.`, `Urgent visit to understand reasons for competitor interest. Prepare counter-arguments and differentiating advantages.`)
+        : txt(`Contact rapide pour évaluer la satisfaction. Proposez un geste commercial ou un service additionnel si nécessaire.`, `Quick contact to evaluate satisfaction. Propose a commercial gesture or additional service if needed.`);
       break;
     case 'followup':
-      suggestedApproach = `Recontactez pour donner suite aux points évoqués lors de la dernière interaction. Montrez que vous êtes réactif.`;
+      suggestedApproach = txt(`Recontactez pour donner suite aux points évoqués lors de la dernière interaction. Montrez que vous êtes réactif.`, `Follow up on the points discussed during the last interaction. Show that you are responsive.`);
       break;
     case 'upsell':
-      suggestedApproach = `La relation est excellente. Proposez progressivement des services additionnels ou une montée en gamme.`;
+      suggestedApproach = txt(`La relation est excellente. Proposez progressivement des services additionnels ou une montée en gamme.`, `The relationship is excellent. Gradually propose additional services or an upgrade.`);
       break;
     default:
-      suggestedApproach = `Planifiez un contact personnalisé adapté au profil du praticien.`;
+      suggestedApproach = txt(`Planifiez un contact personnalisé adapté au profil du praticien.`, `Plan a personalized contact tailored to the practitioner's profile.`);
   }
 
   // Génération du résumé IA
   const summaryParts: string[] = [];
 
   if (p.metrics.isKOL) {
-    summaryParts.push(`${p.title} ${p.lastName} est un KOL majeur de ${p.address.city}`);
+    summaryParts.push(txt(`${p.title} ${p.lastName} est un KOL majeur de ${p.address.city}`, `${p.title} ${p.lastName} is a major KOL in ${p.address.city}`));
   } else if (p.metrics.vingtile <= 5) {
-    summaryParts.push(`${p.title} ${p.lastName} fait partie de vos Top 25% prescripteurs`);
+    summaryParts.push(txt(`${p.title} ${p.lastName} fait partie de vos Top 25% prescripteurs`, `${p.title} ${p.lastName} is in your Top 25% prescribers`));
   } else {
     summaryParts.push(`${p.title} ${p.lastName} (${p.specialty})`);
   }
 
   if (type === 'risk') {
-    summaryParts.push(`présente des signaux d'alerte avec un score de fidélité de ${p.metrics.loyaltyScore}/10`);
+    summaryParts.push(txt(`présente des signaux d'alerte avec un score de fidélité de ${p.metrics.loyaltyScore}/10`, `shows warning signs with a loyalty score of ${p.metrics.loyaltyScore}/10`));
   } else if (type === 'opportunity') {
-    summaryParts.push(`présente un potentiel de développement de +${p.metrics.potentialGrowth}%`);
+    summaryParts.push(txt(`présente un potentiel de développement de +${p.metrics.potentialGrowth}%`, `shows a growth potential of +${p.metrics.potentialGrowth}%`));
   } else if (context.daysSinceVisit > 45) {
-    summaryParts.push(`n'a pas été visité depuis ${context.daysSinceVisit} jours`);
+    summaryParts.push(txt(`n'a pas été visité depuis ${context.daysSinceVisit} jours`, `has not been visited in ${context.daysSinceVisit} days`));
   }
 
   const summary = summaryParts.join(' ') + '. ' +
-    `Score de priorité: ${scores.overall}/100 (Urgence: ${scores.urgency}, Impact: ${scores.impact}, Probabilité: ${scores.probability}).`;
+    txt(
+      `Score de priorité: ${scores.overall}/100 (Urgence: ${scores.urgency}, Impact: ${scores.impact}, Probabilité: ${scores.probability}).`,
+      `Priority score: ${scores.overall}/100 (Urgency: ${scores.urgency}, Impact: ${scores.impact}, Probability: ${scores.probability}).`
+    );
 
   // Contexte concurrentiel
   const competitorAlert = context.competitorMentions.length > 0
-    ? `⚠️ Alerte concurrence: ${context.competitorMentions.join(', ')} mentionné(s) dans les dernières interactions. Vigilance accrue requise.`
+    ? txt(
+        `⚠️ Alerte concurrence: ${context.competitorMentions.join(', ')} mentionné(s) dans les dernières interactions. Vigilance accrue requise.`,
+        `⚠️ Competitor alert: ${context.competitorMentions.join(', ')} mentioned in recent interactions. Increased vigilance required.`
+      )
     : undefined;
 
   // Contexte actualité
   const contextualNews = context.recentPublications > 0
-    ? `📰 ${context.recentPublications} publication(s) récente(s) - excellent point d'accroche pour la conversation.`
+    ? txt(
+        `📰 ${context.recentPublications} publication(s) récente(s) - excellent point d'accroche pour la conversation.`,
+        `📰 ${context.recentPublications} recent publication(s) - excellent conversation starter.`
+      )
     : undefined;
 
   // Analyse de tendance
   const trendAnalysis = context.loyaltyTrend !== 'stable'
-    ? `📈 Tendance: Fidélité ${context.loyaltyTrend === 'improving' ? 'en amélioration' : 'en déclin'} sur les 90 derniers jours.`
+    ? txt(
+        `📈 Tendance: Fidélité ${context.loyaltyTrend === 'improving' ? 'en amélioration' : 'en déclin'} sur les 90 derniers jours.`,
+        `📈 Trend: Loyalty ${context.loyaltyTrend === 'improving' ? 'improving' : 'declining'} over the last 90 days.`
+      )
     : undefined;
 
   return {
@@ -342,21 +358,21 @@ function determinePriority(scores: ActionScore, _type: AIAction['type']): AIActi
 // Génère la date suggérée
 function generateSuggestedDate(priority: AIAction['priority'], type: AIAction['type']): string {
   if (priority === 'critical') {
-    return 'Cette semaine';
+    return txt('Cette semaine', 'This week');
   }
 
   if (priority === 'high') {
     if (type === 'risk' || type === 'competitor') {
-      return 'Sous 5 jours';
+      return txt('Sous 5 jours', 'Within 5 days');
     }
-    return 'Sous 2 semaines';
+    return txt('Sous 2 semaines', 'Within 2 weeks');
   }
 
   if (priority === 'medium') {
-    return 'Ce mois';
+    return txt('Ce mois', 'This month');
   }
 
-  return 'Prochaine opportunité';
+  return txt('Prochaine opportunité', 'Next opportunity');
 }
 
 // ==========================================
@@ -434,62 +450,62 @@ export function generateIntelligentActions(
           : '';
 
         const previousProviderInfo = p.previousProvider
-          ? `Ancien prestataire connu : ${p.previousProvider}. Opportunité de reprise.`
-          : 'Aucun prestataire identifié — territoire vierge.';
+          ? txt(`Ancien prestataire connu : ${p.previousProvider}. Opportunité de reprise.`, `Known previous provider: ${p.previousProvider}. Takeover opportunity.`)
+          : txt('Aucun prestataire identifié — territoire vierge.', 'No provider identified — virgin territory.');
 
         actions.push({
           type,
           priority,
           practitionerId: p.id,
           title: isExplicitlyNew
-            ? `🆕 Nouveau praticien détecté — Contact prioritaire`
-            : `🆕 Nouveau praticien — Visite de découverte`,
+            ? txt(`🆕 Nouveau praticien détecté — Contact prioritaire`, `🆕 New practitioner detected — Priority contact`)
+            : txt(`🆕 Nouveau praticien — Visite de découverte`, `🆕 New practitioner — Discovery visit`),
           reason: isExplicitlyNew
-            ? `Détecté il y a ${detectedDaysAgo}j • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`
-            : `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`,
+            ? txt(`Détecté il y a ${detectedDaysAgo}j • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`, `Detected ${detectedDaysAgo}d ago • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`)
+            : txt(`${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`, `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) has never been visited`),
           aiJustification: {
             summary: isExplicitlyNew
-              ? `${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté il y a ${detectedDaysAgo} jour(s) sur le territoire de ${p.address.city}. ${p.specialty}${p.subSpecialty ? ` spécialisé(e) en ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an. ${previousProviderInfo} L'IA recommande un contact dans les 48h pour maximiser les chances de captation avant la concurrence.`
-              : `${p.title} ${p.firstName} ${p.lastName} est un praticien non visité sur le territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). Une première prise de contact est essentielle.`,
+              ? txt(`${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté il y a ${detectedDaysAgo} jour(s) sur le territoire de ${p.address.city}. ${p.specialty}${p.subSpecialty ? ` spécialisé(e) en ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an. ${previousProviderInfo} L'IA recommande un contact dans les 48h pour maximiser les chances de captation avant la concurrence.`, `${p.title} ${p.firstName} ${p.lastName} is a new practitioner detected ${detectedDaysAgo} day(s) ago in the ${p.address.city} territory. ${p.specialty}${p.subSpecialty ? ` specializing in ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), estimated volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year. ${previousProviderInfo} AI recommends contact within 48h to maximize chances before competition.`)
+              : txt(`${p.title} ${p.firstName} ${p.lastName} est un praticien non visité sur le territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). Une première prise de contact est essentielle.`, `${p.title} ${p.firstName} ${p.lastName} is an unvisited practitioner in the ${p.address.city} territory (Vingtile ${p.metrics.vingtile}, estimated volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year). A first contact is essential.`),
             metrics: [
-              `Volume estimé: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
+              txt(`Volume estimé: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`, `Estimated volume: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year`),
               `Vingtile ${p.metrics.vingtile}/20 (Top ${p.metrics.vingtile * 5}%)`,
-              `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`,
-              `Potentiel de croissance: +${p.metrics.potentialGrowth}%`,
-              isExplicitlyNew ? `Détecté il y a ${detectedDaysAgo} jour(s)` : `Aucune visite enregistrée`,
-              ...(p.previousProvider ? [`Ancien prestataire: ${p.previousProvider}`] : []),
+              txt(`${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`, `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identified' : p.specialty}`),
+              txt(`Potentiel de croissance: +${p.metrics.potentialGrowth}%`, `Growth potential: +${p.metrics.potentialGrowth}%`),
+              isExplicitlyNew ? txt(`Détecté il y a ${detectedDaysAgo} jour(s)`, `Detected ${detectedDaysAgo} day(s) ago`) : txt(`Aucune visite enregistrée`, `No visit recorded`),
+              ...(p.previousProvider ? [txt(`Ancien prestataire: ${p.previousProvider}`, `Previous provider: ${p.previousProvider}`)] : []),
             ],
             risks: [
               isExplicitlyNew
-                ? `URGENT : Chaque jour de retard augmente le risque de captation par un concurrent`
-                : `Risque d'être capté en premier par un concurrent (Vivisol, Linde)`,
-              `Pas de relation établie — aucun levier de fidélisation en place`,
-              `Volume potentiel non capté: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`,
+                ? txt(`URGENT : Chaque jour de retard augmente le risque de captation par un concurrent`, `URGENT: Each day of delay increases the risk of capture by a competitor`)
+                : txt(`Risque d'être capté en premier par un concurrent (Vivisol, Linde)`, `Risk of being captured first by a competitor (Vivisol, Linde)`),
+              txt(`Pas de relation établie — aucun levier de fidélisation en place`, `No established relationship — no loyalty leverage in place`),
+              txt(`Volume potentiel non capté: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`, `Uncaptured potential volume: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year`),
               ...(p.previousProvider
-                ? [`${p.previousProvider} pourrait tenter de le reconquérir rapidement`]
-                : [`Les concurrents locaux pourraient aussi l'avoir identifié`]),
+                ? [txt(`${p.previousProvider} pourrait tenter de le reconquérir rapidement`, `${p.previousProvider} may try to win them back quickly`)]
+                : [txt(`Les concurrents locaux pourraient aussi l'avoir identifié`, `Local competitors may have also identified them`)]),
             ],
             opportunities: [
-              `Être le premier prestataire à prendre contact — avantage compétitif décisif`,
+              txt(`Être le premier prestataire à prendre contact — avantage compétitif décisif`, `Be the first provider to make contact — decisive competitive advantage`),
               p.metrics.isKOL
-                ? `KOL identifié — fort potentiel d'influence sur ${p.address.city} et sa zone`
-                : `Développer un nouveau prescripteur stratégique sur le territoire`,
-              `Présenter la gamme complète Air Liquide Santé dès la première visite`,
-              ...(recentNews.length > 0 ? [`Actualité récente : utiliser comme point d'accroche`] : []),
-              `Proposer un kit de bienvenue avec documentation et démonstration produits`,
+                ? txt(`KOL identifié — fort potentiel d'influence sur ${p.address.city} et sa zone`, `KOL identified — strong influence potential in ${p.address.city} and surrounding area`)
+                : txt(`Développer un nouveau prescripteur stratégique sur le territoire`, `Develop a new strategic prescriber in the territory`),
+              txt(`Présenter la gamme complète Air Liquide Santé dès la première visite`, `Present the full Air Liquide Healthcare range from the first visit`),
+              ...(recentNews.length > 0 ? [txt(`Actualité récente : utiliser comme point d'accroche`, `Recent news: use as conversation starter`)] : []),
+              txt(`Proposer un kit de bienvenue avec documentation et démonstration produits`, `Offer a welcome kit with documentation and product demonstration`),
             ],
             suggestedApproach: isExplicitlyNew && recentNews.length > 0
-              ? `Contact urgent dans les 48h. Préparez une visite de découverte personnalisée en utilisant l'actualité récente du praticien comme accroche. ${newsContext ? `\n\nActualités du praticien :\n${newsContext}` : ''}\n\nApportez le kit de démonstration complet adapté à ${p.specialty === 'Pneumologue' ? 'un pneumologue' : 'un médecin généraliste'}, la documentation LPPR, et si possible un cas patient anonymisé montrant les bénéfices du télésuivi. L'objectif est d'établir Air Liquide comme partenaire de référence AVANT la concurrence.`
-              : `Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`,
+              ? txt(`Contact urgent dans les 48h. Préparez une visite de découverte personnalisée en utilisant l'actualité récente du praticien comme accroche. ${newsContext ? `\n\nActualités du praticien :\n${newsContext}` : ''}\n\nApportez le kit de démonstration complet adapté à ${p.specialty === 'Pneumologue' ? 'un pneumologue' : 'un médecin généraliste'}, la documentation LPPR, et si possible un cas patient anonymisé montrant les bénéfices du télésuivi. L'objectif est d'établir Air Liquide comme partenaire de référence AVANT la concurrence.`, `Urgent contact within 48h. Prepare a personalized discovery visit using the practitioner's recent news as a hook. ${newsContext ? `\n\nPractitioner news:\n${newsContext}` : ''}\n\nBring the complete demo kit adapted for ${p.specialty === 'Pneumologue' ? 'a pulmonologist' : 'a general practitioner'}, LPPR documentation, and if possible an anonymized patient case showing telemonitoring benefits. The goal is to establish Air Liquide as the reference partner BEFORE the competition.`)
+              : txt(`Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`, `Prepare a complete discovery visit: Air Liquide Healthcare presentation, product range adapted to the specialty (${p.specialty}), and proposal to set up a first test patient. Bring the demo kit and LPPR documentation. The goal is to build a trusted relationship and position Air Liquide as the reference partner.`),
             competitorAlert: p.previousProvider
-              ? `⚠️ Ancien prestataire : ${p.previousProvider}. Préparez des arguments différenciants spécifiques. Le praticien connaît déjà l'offre concurrente — focalisez sur nos avantages uniques.`
-              : `⚠️ Nouveau praticien non affilié — les concurrents pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`,
+              ? txt(`⚠️ Ancien prestataire : ${p.previousProvider}. Préparez des arguments différenciants spécifiques. Le praticien connaît déjà l'offre concurrente — focalisez sur nos avantages uniques.`, `⚠️ Previous provider: ${p.previousProvider}. Prepare specific differentiating arguments. The practitioner already knows the competitor's offering — focus on our unique advantages.`)
+              : txt(`⚠️ Nouveau praticien non affilié — les concurrents pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`, `⚠️ Unaffiliated new practitioner — competitors may have also identified them. Speed of action recommended.`),
             contextualNews: recentNews.length > 0
-              ? `📰 Actualité récente : ${recentNews[0].title}. ${recentNews[0].relevance || ''}`
+              ? txt(`📰 Actualité récente : ${recentNews[0].title}. ${recentNews[0].relevance || ''}`, `📰 Recent news: ${recentNews[0].title}. ${recentNews[0].relevance || ''}`)
               : undefined,
           },
           scores,
-          suggestedDate: priority === 'critical' ? 'Cette semaine' : 'Sous 2 semaines',
+          suggestedDate: priority === 'critical' ? txt('Cette semaine', 'This week') : txt('Sous 2 semaines', 'Within 2 weeks'),
         });
       }
     }
@@ -508,8 +524,8 @@ export function generateIntelligentActions(
           type,
           priority,
           practitionerId: p.id,
-          title: `Visite KOL prioritaire`,
-          reason: `${context.daysSinceVisit} jours depuis dernière visite`,
+          title: txt(`Visite KOL prioritaire`, `Priority KOL visit`),
+          reason: txt(`${context.daysSinceVisit} jours depuis dernière visite`, `${context.daysSinceVisit} days since last visit`),
           aiJustification: generateAIJustification(type, p, context, scores),
           scores,
           suggestedDate: generateSuggestedDate(priority, type),
@@ -532,8 +548,8 @@ export function generateIntelligentActions(
           type,
           priority,
           practitionerId: p.id,
-          title: `Risque de perte détecté`,
-          reason: `Fidélité ${p.metrics.loyaltyScore}/10 - Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L`,
+          title: txt(`Risque de perte détecté`, `Churn risk detected`),
+          reason: txt(`Fidélité ${p.metrics.loyaltyScore}/10 - Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L`, `Loyalty ${p.metrics.loyaltyScore}/10 - Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L`),
           aiJustification: generateAIJustification(type, p, context, scores),
           scores,
           suggestedDate: generateSuggestedDate(priority, type),
@@ -555,11 +571,11 @@ export function generateIntelligentActions(
           type,
           priority: 'high',
           practitionerId: p.id,
-          title: `Alerte concurrence`,
-          reason: `${context.competitorMentions.join(', ')} mentionné(s)`,
+          title: txt(`Alerte concurrence`, `Competitor alert`),
+          reason: txt(`${context.competitorMentions.join(', ')} mentionné(s)`, `${context.competitorMentions.join(', ')} mentioned`),
           aiJustification: generateAIJustification(type, p, context, scores),
           scores,
-          suggestedDate: 'Sous 5 jours',
+          suggestedDate: txt('Sous 5 jours', 'Within 5 days'),
         });
       }
     }
@@ -578,8 +594,8 @@ export function generateIntelligentActions(
           type,
           priority,
           practitionerId: p.id,
-          title: `Visite Top 15% à planifier`,
-          reason: `Vingtile ${p.metrics.vingtile} - ${context.daysSinceVisit}j sans visite`,
+          title: txt(`Visite Top 15% à planifier`, `Top 15% visit to plan`),
+          reason: txt(`Vingtile ${p.metrics.vingtile} - ${context.daysSinceVisit}j sans visite`, `Vingtile ${p.metrics.vingtile} - ${context.daysSinceVisit}d without visit`),
           aiJustification: generateAIJustification(type, p, context, scores),
           scores,
           suggestedDate: generateSuggestedDate(priority, type),
@@ -601,8 +617,8 @@ export function generateIntelligentActions(
           type,
           priority,
           practitionerId: p.id,
-          title: `Opportunité de croissance`,
-          reason: `+${p.metrics.potentialGrowth}% potentiel identifié`,
+          title: txt(`Opportunité de croissance`, `Growth opportunity`),
+          reason: txt(`+${p.metrics.potentialGrowth}% potentiel identifié`, `+${p.metrics.potentialGrowth}% potential identified`),
           aiJustification: generateAIJustification(type, p, context, scores),
           scores,
           suggestedDate: generateSuggestedDate(priority, type),
@@ -629,11 +645,11 @@ export function generateIntelligentActions(
           type,
           priority,
           practitionerId: p.id,
-          title: `Suivi à effectuer`,
-          reason: recentNotesWithAction[0].nextAction || 'Action en attente',
+          title: txt(`Suivi à effectuer`, `Follow-up required`),
+          reason: recentNotesWithAction[0].nextAction || txt('Action en attente', 'Action pending'),
           aiJustification: generateAIJustification(type, p, context, scores),
           scores,
-          suggestedDate: 'Cette semaine',
+          suggestedDate: txt('Cette semaine', 'This week'),
         });
       }
     }

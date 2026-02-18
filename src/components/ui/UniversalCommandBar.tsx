@@ -23,6 +23,7 @@ import { quickSearch } from '../../services/universalSearch';
 import { useGroq } from '../../hooks/useGroq';
 import { DataService } from '../../services/dataService';
 import type { PractitionerProfile } from '../../types/database';
+import { useTranslation, useLanguage } from '../../i18n';
 
 interface CommandResult {
   type: 'practitioner' | 'action' | 'navigation' | 'answer' | 'loading';
@@ -38,72 +39,6 @@ interface UniversalCommandBarProps {
   className?: string;
 }
 
-// Actions rapides disponibles
-const QUICK_ACTIONS = [
-  {
-    id: 'pitch',
-    keywords: ['pitch', 'génère', 'genere', 'créer', 'creer', 'présentation', 'presentation'],
-    title: 'Générer un pitch',
-    icon: <FileText className="w-4 h-4" />,
-    path: '/pitch',
-    requiresPractitioner: true
-  },
-  {
-    id: 'tour',
-    keywords: ['tournée', 'tournee', 'route', 'trajet', 'optimiser', 'planifier'],
-    title: 'Planifier une tournée',
-    icon: <Route className="w-4 h-4" />,
-    path: '/tour-optimization'
-  },
-  {
-    id: 'coach',
-    keywords: ['coach', 'question', 'aide', 'conseil', 'analyse', 'analyser'],
-    title: 'Poser une question au Coach IA',
-    icon: <Brain className="w-4 h-4" />,
-    path: '/coach'
-  },
-  {
-    id: 'report',
-    keywords: ['compte', 'rendu', 'rapport', 'visite', 'enregistrer', 'noter'],
-    title: 'Faire un compte-rendu de visite',
-    icon: <ClipboardList className="w-4 h-4" />,
-    path: '/visit-report'
-  },
-  {
-    id: 'actions',
-    keywords: ['actions', 'priorité', 'priorite', 'faire', 'todo', 'tâches', 'taches'],
-    title: 'Voir mes actions prioritaires',
-    icon: <Zap className="w-4 h-4" />,
-    path: '/next-actions'
-  },
-  {
-    id: 'kol',
-    keywords: ['kol', 'leader', 'opinion', 'clé', 'cle'],
-    title: 'Planification KOL',
-    icon: <User className="w-4 h-4" />,
-    path: '/kol-planning'
-  },
-  {
-    id: 'map',
-    keywords: ['carte', 'map', 'territoire', 'géographie', 'geographie'],
-    title: 'Voir la carte du territoire',
-    icon: <MapPin className="w-4 h-4" />,
-    path: '/map'
-  }
-];
-
-// Commandes vocales de navigation
-const VOICE_COMMANDS = [
-  { pattern: /ouvre?r?\s+(?:le\s+)?profil\s+(?:du?\s+)?(?:dr\.?\s+)?(.+)/i, type: 'profile' },
-  { pattern: /(?:montre|voir|affiche)\s+(?:les?\s+)?praticiens?\s+(?:de\s+|à\s+)?(.+)/i, type: 'city' },
-  { pattern: /génère?\s+(?:un\s+)?pitch\s+(?:pour\s+)?(?:le?\s+)?(?:dr\.?\s+)?(.+)/i, type: 'pitch' },
-  { pattern: /(?:va\s+)?(?:sur\s+)?(?:le\s+)?dashboard/i, type: 'nav', path: '/dashboard' },
-  { pattern: /(?:va\s+)?(?:sur\s+)?(?:le\s+)?coach/i, type: 'nav', path: '/coach' },
-  { pattern: /(?:planifier?|organiser?)\s+(?:une?\s+)?tournée/i, type: 'nav', path: '/tour-optimization' },
-  { pattern: /compte[- ]?rendu|rapport\s+(?:de\s+)?visite/i, type: 'nav', path: '/visit-report' },
-  { pattern: /(?:mes\s+)?actions?\s+(?:prioritaires?)?/i, type: 'nav', path: '/next-actions' },
-];
-
 export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ className = '' }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -118,6 +53,83 @@ export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ classN
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { complete } = useGroq();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
+
+  // Quick actions available — titles use translation keys
+  const QUICK_ACTIONS = [
+    {
+      id: 'pitch',
+      keywords: ['pitch', 'génère', 'genere', 'créer', 'creer', 'présentation', 'presentation', 'generate'],
+      title: t('common.commandBar.generatePitch'),
+      icon: <FileText className="w-4 h-4" />,
+      path: '/pitch',
+      requiresPractitioner: true
+    },
+    {
+      id: 'tour',
+      keywords: ['tournée', 'tournee', 'route', 'trajet', 'optimiser', 'planifier', 'tour', 'plan', 'optimize'],
+      title: t('common.commandBar.planTour'),
+      icon: <Route className="w-4 h-4" />,
+      path: '/tour-optimization'
+    },
+    {
+      id: 'coach',
+      keywords: ['coach', 'question', 'aide', 'conseil', 'analyse', 'analyser', 'help', 'ask', 'analyze'],
+      title: t('common.commandBar.askCoachQuestion'),
+      icon: <Brain className="w-4 h-4" />,
+      path: '/coach'
+    },
+    {
+      id: 'report',
+      keywords: ['compte', 'rendu', 'rapport', 'visite', 'enregistrer', 'noter', 'report', 'visit', 'record'],
+      title: t('common.commandBar.makeVisitReport'),
+      icon: <ClipboardList className="w-4 h-4" />,
+      path: '/visit-report'
+    },
+    {
+      id: 'actions',
+      keywords: ['actions', 'priorité', 'priorite', 'faire', 'todo', 'tâches', 'taches', 'priority', 'tasks'],
+      title: t('common.commandBar.seePriorityActions'),
+      icon: <Zap className="w-4 h-4" />,
+      path: '/next-actions'
+    },
+    {
+      id: 'kol',
+      keywords: ['kol', 'leader', 'opinion', 'clé', 'cle', 'key'],
+      title: t('common.commandBar.kolPlanning'),
+      icon: <User className="w-4 h-4" />,
+      path: '/kol-planning'
+    },
+    {
+      id: 'map',
+      keywords: ['carte', 'map', 'territoire', 'géographie', 'geographie', 'territory'],
+      title: t('common.commandBar.seeMap'),
+      icon: <MapPin className="w-4 h-4" />,
+      path: '/map'
+    }
+  ];
+
+  // Voice navigation commands
+  const VOICE_COMMANDS = [
+    { pattern: /ouvre?r?\s+(?:le\s+)?profil\s+(?:du?\s+)?(?:dr\.?\s+)?(.+)/i, type: 'profile' },
+    { pattern: /(?:montre|voir|affiche)\s+(?:les?\s+)?praticiens?\s+(?:de\s+|à\s+)?(.+)/i, type: 'city' },
+    { pattern: /génère?\s+(?:un\s+)?pitch\s+(?:pour\s+)?(?:le?\s+)?(?:dr\.?\s+)?(.+)/i, type: 'pitch' },
+    { pattern: /(?:va\s+)?(?:sur\s+)?(?:le\s+)?dashboard/i, type: 'nav' as const, path: '/dashboard' },
+    { pattern: /(?:va\s+)?(?:sur\s+)?(?:le\s+)?coach/i, type: 'nav' as const, path: '/coach' },
+    { pattern: /(?:planifier?|organiser?)\s+(?:une?\s+)?tournée/i, type: 'nav' as const, path: '/tour-optimization' },
+    { pattern: /compte[- ]?rendu|rapport\s+(?:de\s+)?visite/i, type: 'nav' as const, path: '/visit-report' },
+    { pattern: /(?:mes\s+)?actions?\s+(?:prioritaires?)?/i, type: 'nav' as const, path: '/next-actions' },
+    // English voice commands
+    { pattern: /open\s+(?:the\s+)?profile\s+(?:of\s+|for\s+)?(?:dr\.?\s+)?(.+)/i, type: 'profile' },
+    { pattern: /(?:show|display)\s+(?:the\s+)?practitioners?\s+(?:in\s+|from\s+)?(.+)/i, type: 'city' },
+    { pattern: /generate\s+(?:a\s+)?pitch\s+(?:for\s+)?(?:dr\.?\s+)?(.+)/i, type: 'pitch' },
+    { pattern: /(?:go\s+)?(?:to\s+)?(?:the\s+)?dashboard/i, type: 'nav' as const, path: '/dashboard' },
+    { pattern: /(?:go\s+)?(?:to\s+)?(?:the\s+)?coach/i, type: 'nav' as const, path: '/coach' },
+    { pattern: /(?:plan|optimize)\s+(?:a\s+)?tour/i, type: 'nav' as const, path: '/tour-optimization' },
+    { pattern: /visit\s+report/i, type: 'nav' as const, path: '/visit-report' },
+    { pattern: /(?:my\s+)?(?:priority\s+)?actions?/i, type: 'nav' as const, path: '/next-actions' },
+  ];
 
   // Initialize speech recognition
   useEffect(() => {
@@ -126,7 +138,7 @@ export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ classN
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'fr-FR';
+      recognitionRef.current.lang = language === 'en' ? 'en-US' : 'fr-FR';
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -145,7 +157,7 @@ export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ classN
     return () => {
       if (recognitionRef.current) recognitionRef.current.stop();
     };
-  }, []);
+  }, [language]);
 
   // Handle clicks outside
   useEffect(() => {
@@ -219,14 +231,17 @@ export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ classN
     if (isQuestion(normalizedTranscript)) {
       await handleQuestion(transcript);
     }
-  }, [navigate]);
+  }, [navigate, language]);
 
   // Check if query is a question
   const isQuestion = (q: string): boolean => {
     const questionPatterns = [
+      // French
       /^(qui|que|quoi|comment|combien|quel|quelle|quels|quelles|où|pourquoi)/i,
       /\?$/,
       /^(est-ce|y a-t-il|puis-je)/i,
+      // English
+      /^(who|what|how|when|where|why|which|can|could|is|are|do|does)/i,
     ];
     return questionPatterns.some(p => p.test(q));
   };
@@ -237,17 +252,29 @@ export const UniversalCommandBar: React.FC<UniversalCommandBarProps> = ({ classN
     setAiAnswer(null);
 
     try {
-      // Build context
+      // Build context - adapt system prompt based on language
       const stats = DataService.getGlobalStats();
-      const context = `Tu es ARIA, l'assistant IA d'Air Liquide Healthcare.
+      const systemPromptFr = `Tu es ARIA, l'assistant IA d'Air Liquide Healthcare.
 
-DONNÉES TERRITOIRE:
-- ${stats.totalPractitioners} praticiens (${stats.pneumologues} pneumologues, ${stats.generalistes} généralistes)
+DONNEES TERRITOIRE:
+- ${stats.totalPractitioners} praticiens (${stats.pneumologues} pneumologues, ${stats.generalistes} generalistes)
 - ${stats.totalKOLs} KOLs
 - Volume total: ${(stats.totalVolume / 1000).toFixed(0)}K L/an
-- Fidélité moyenne: ${stats.averageLoyalty.toFixed(1)}/10
+- Fidelite moyenne: ${stats.averageLoyalty.toFixed(1)}/10
 
-Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
+Reponds de maniere TRES CONCISE (1-2 phrases max). Question: ${question}`;
+
+      const systemPromptEn = `You are ARIA, Air Liquide Healthcare's AI assistant.
+
+TERRITORY DATA:
+- ${stats.totalPractitioners} practitioners (${stats.pneumologues} pulmonologists, ${stats.generalistes} GPs)
+- ${stats.totalKOLs} KOLs
+- Total volume: ${(stats.totalVolume / 1000).toFixed(0)}K L/year
+- Average loyalty: ${stats.averageLoyalty.toFixed(1)}/10
+
+Answer VERY CONCISELY (1-2 sentences max). Question: ${question}`;
+
+      const context = language === 'en' ? systemPromptEn : systemPromptFr;
 
       const response = await complete([{ role: 'user', content: context }]);
       if (response) {
@@ -255,7 +282,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
       }
     } catch {
       // Fallback to local
-      setAiAnswer("Je peux répondre à cette question dans le Coach IA. Voulez-vous y aller ?");
+      setAiAnswer(t('common.commandBar.fallbackAnswer'));
     } finally {
       setIsProcessing(false);
     }
@@ -279,7 +306,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
         type: 'practitioner',
         id: p.id,
         title: `${p.title} ${p.firstName} ${p.lastName}`,
-        subtitle: `${p.specialty} • ${p.address.city}${p.metrics.isKOL ? ' • KOL' : ''}`,
+        subtitle: `${p.specialty} \u2022 ${p.address.city}${p.metrics.isKOL ? ' \u2022 KOL' : ''}`,
         icon: <User className="w-4 h-4" />,
         action: () => {
           navigate(`/practitioner/${p.id}`);
@@ -298,7 +325,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
           type: 'action',
           id: action.id,
           title: action.title,
-          subtitle: 'Action rapide',
+          subtitle: t('common.commandBar.quickAction'),
           icon: action.icon,
           action: () => {
             if (action.requiresPractitioner && practitioners.length > 0) {
@@ -318,7 +345,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
       newResults.push({
         type: 'action',
         id: 'ask-ai',
-        title: 'Demander au Coach IA',
+        title: t('common.commandBar.askCoachIA'),
         subtitle: `"${query}"`,
         icon: <Brain className="w-4 h-4" />,
         action: () => {
@@ -331,7 +358,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
 
     setResults(newResults);
     setSelectedIndex(0);
-  }, [query, navigate, aiAnswer, isProcessing]);
+  }, [query, navigate, aiAnswer, isProcessing, t, language]);
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -353,13 +380,15 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('Reconnaissance vocale non supportée. Utilisez Chrome ou Edge.');
+      alert(t('common.commandBar.voiceNotSupported'));
       return;
     }
 
     if (isListening) {
       recognitionRef.current.stop();
     } else {
+      // Update lang on each start in case language changed
+      recognitionRef.current.lang = language === 'en' ? 'en-US' : 'fr-FR';
       recognitionRef.current.start();
       setIsListening(true);
       setIsOpen(true);
@@ -398,7 +427,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={isListening ? "Écoute en cours..." : "Rechercher ou parler à ARIA... (⌘K)"}
+          placeholder={isListening ? t('common.commandBar.listening') : t('common.commandBar.searchOrSpeak')}
           className={`w-full pl-11 pr-24 py-2.5 bg-slate-50 border border-slate-200 rounded-xl
                      text-sm focus:outline-none focus:border-al-blue-500 focus:bg-white
                      transition-all placeholder:text-slate-400 ${
@@ -422,7 +451,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
                 ? 'bg-red-500 text-white animate-pulse'
                 : 'hover:bg-al-blue-100 text-al-blue-600'
             }`}
-            title={isListening ? "Arrêter l'écoute" : "Parler à ARIA"}
+            title={isListening ? t('common.commandBar.stopListening') : t('common.commandBar.speakToAria')}
           >
             {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
@@ -450,8 +479,8 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
                     <Mic className="w-5 h-5 text-white" />
                   </motion.div>
                   <div>
-                    <p className="font-medium text-red-700">Écoute en cours...</p>
-                    <p className="text-sm text-red-600">Parlez maintenant</p>
+                    <p className="font-medium text-red-700">{t('common.commandBar.listening')}</p>
+                    <p className="text-sm text-red-600">{t('common.commandBar.speakNow')}</p>
                   </div>
                 </div>
               </div>
@@ -462,7 +491,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
               <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100">
                 <div className="flex items-center gap-3">
                   <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
-                  <p className="text-purple-700">ARIA analyse votre question...</p>
+                  <p className="text-purple-700">{t('common.commandBar.ariaAnalyzing')}</p>
                 </div>
               </div>
             )}
@@ -475,7 +504,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-emerald-600 font-medium mb-1">Réponse ARIA</p>
+                    <p className="text-xs text-emerald-600 font-medium mb-1">{t('common.commandBar.ariaResponse')}</p>
                     <p className="text-slate-700 text-sm leading-relaxed">{aiAnswer}</p>
                     <button
                       onClick={() => {
@@ -485,7 +514,7 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
                       }}
                       className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
                     >
-                      Continuer dans le Coach IA <ChevronRight className="w-3 h-3" />
+                      {t('common.commandBar.continueInCoach')} <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
@@ -496,14 +525,14 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
             {!query && !isListening && (
               <div className="p-3 border-b border-slate-100">
                 <p className="text-xs text-slate-500 font-medium mb-2 flex items-center gap-1">
-                  <Command className="w-3 h-3" /> Essayez de dire ou taper :
+                  <Command className="w-3 h-3" /> {t('common.commandBar.trySayOrType')}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {[
                     "Dr Martin",
-                    "Praticiens à Lyon",
-                    "Génère un pitch",
-                    "Mes actions prioritaires"
+                    language === 'en' ? "Practitioners in Lyon" : "Praticiens \u00e0 Lyon",
+                    language === 'en' ? "Generate a pitch" : "G\u00e9n\u00e8re un pitch",
+                    language === 'en' ? "My priority actions" : "Mes actions prioritaires"
                   ].map((suggestion, i) => (
                     <button
                       key={i}
@@ -557,12 +586,12 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
             {query && results.length === 0 && !isProcessing && !aiAnswer && (
               <div className="p-6 text-center">
                 <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 text-sm">Aucun résultat pour "{query}"</p>
+                <p className="text-slate-500 text-sm">{t('common.commandBar.noResults', { query })}</p>
                 <button
                   onClick={() => handleQuestion(query)}
                   className="mt-3 text-sm text-al-blue-600 hover:text-al-blue-700 font-medium"
                 >
-                  Demander au Coach IA →
+                  {t('common.commandBar.askCoachArrow')}
                 </button>
               </div>
             )}
@@ -570,14 +599,14 @@ Réponds de manière TRÈS CONCISE (1-2 phrases max). Question: ${question}`;
             {/* Footer */}
             <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <span className="flex items-center gap-2">
-                <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">↑↓</kbd>
-                naviguer
-                <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">↵</kbd>
-                sélectionner
+                <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">&uarr;&darr;</kbd>
+                {t('common.commandBar.navigate')}
+                <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">&crarr;</kbd>
+                {t('common.commandBar.select')}
               </span>
               <span className="flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-purple-400" />
-                Propulsé par ARIA
+                {t('common.poweredByAria')}
               </span>
             </div>
           </motion.div>

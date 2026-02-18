@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTimePeriod } from '../../contexts/TimePeriodContext';
 import { getPerformanceDataForPeriod } from '../../services/metricsCalculator';
+import { useTranslation } from '../../i18n';
 
 export const PerformanceChart: React.FC = () => {
   const { timePeriod, periodLabelShort } = useTimePeriod();
+  const { t } = useTranslation();
 
   // Get performance data for the selected period
   const performanceData = useMemo(() => {
@@ -26,20 +28,20 @@ export const PerformanceChart: React.FC = () => {
     >
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-bold text-slate-800">
-          Performance {periodLabelShort}
+          {t('dashboard.performanceTitle', { period: periodLabelShort })}
         </h2>
         <div className="flex gap-3 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-al-blue-500" />
-            <span className="text-slate-600">Vos volumes</span>
+            <span className="text-slate-600">{t('dashboard.yourVolumes')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500" />
-            <span className="text-slate-600">Objectif</span>
+            <span className="text-slate-600">{t('dashboard.objectiveLabel')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-slate-400" />
-            <span className="text-slate-600">Moyenne équipe</span>
+            <span className="text-slate-600">{t('dashboard.teamAverage')}</span>
           </div>
         </div>
       </div>
@@ -74,7 +76,7 @@ export const PerformanceChart: React.FC = () => {
             stroke="#0066B3"
             strokeWidth={3}
             fill="url(#colorVolumes)"
-            name="Vos volumes"
+            name={t('dashboard.yourVolumes')}
           />
           <Area
             type="monotone"
@@ -83,7 +85,7 @@ export const PerformanceChart: React.FC = () => {
             strokeWidth={2}
             strokeDasharray="8 4"
             fill="none"
-            name="Objectif"
+            name={t('dashboard.objectiveLabel')}
           />
           <Area
             type="monotone"
@@ -92,20 +94,20 @@ export const PerformanceChart: React.FC = () => {
             strokeWidth={2}
             strokeDasharray="4 4"
             fill="none"
-            name="Moyenne équipe"
+            name={t('dashboard.teamAverage')}
           />
         </AreaChart>
       </ResponsiveContainer>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="text-center">
-          <p className="text-xs text-slate-600 mb-0.5">Volume total</p>
+          <p className="text-xs text-slate-600 mb-0.5">{t('dashboard.totalVolume')}</p>
           <p className="text-base font-bold text-slate-800">
             {(periodVolume / 1000).toFixed(0)}K L
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-slate-600 mb-0.5">Vs Objectif</p>
+          <p className="text-xs text-slate-600 mb-0.5">{t('dashboard.vsObjective')}</p>
           <p className="text-base font-bold text-success">
             {(() => {
               const objective = performanceData.reduce((acc, d) => acc + (d.objective || 0), 0);
@@ -116,7 +118,7 @@ export const PerformanceChart: React.FC = () => {
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-slate-600 mb-0.5">Vs Équipe</p>
+          <p className="text-xs text-slate-600 mb-0.5">{t('dashboard.vsTeam')}</p>
           <p className="text-base font-bold text-al-blue-500">
             {(() => {
               const teamAvg = performanceData.reduce((acc, d) => acc + (d.teamAverage || 0), 0);

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wind, Sparkles } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 const Welcome: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number; duration: number }>>([]);
 
   useEffect(() => {
@@ -80,13 +82,12 @@ const Welcome: React.FC = () => {
 
         {/* Sous-titre */}
         <p className="text-2xl md:text-3xl text-white/90 mb-4 font-light tracking-wide">
-          Air Liquide Intelligent Assistant
+          {t('welcome.mainSubtitle')}
         </p>
 
         {/* Description */}
         <p className="text-lg text-white/70 mb-12 max-w-2xl mx-auto leading-relaxed">
-          Votre assistant intelligent pour optimiser vos relations avec les praticiens
-          et maximiser l'impact de vos visites médicales.
+          {t('welcome.description')}
         </p>
 
         {/* CTA Button */}
@@ -95,7 +96,7 @@ const Welcome: React.FC = () => {
           className="group relative inline-flex items-center justify-center px-12 py-5 text-lg font-semibold text-al-navy bg-white rounded-full overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-al-sky/50 cursor-pointer"
         >
           <span className="relative z-10 flex items-center space-x-3">
-            <span>Lancer l'expérience</span>
+            <span>{t('welcome.launchExperience')}</span>
             <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
           </span>
 
@@ -106,18 +107,18 @@ const Welcome: React.FC = () => {
         {/* Points clés */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-white/80">
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-al-sky mb-2">IA Générative</div>
-            <p className="text-sm">Pitch personnalisés et insights intelligents</p>
+            <div className="text-3xl font-bold text-al-sky mb-2">{t('welcome.features.generativeAI')}</div>
+            <p className="text-sm">{t('welcome.features.generativeAIDesc')}</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-al-teal mb-2">Analyse Prédictive</div>
-            <p className="text-sm">Identification des opportunités prioritaires</p>
+            <div className="text-3xl font-bold text-al-teal mb-2">{t('welcome.features.predictiveAnalysis')}</div>
+            <p className="text-sm">{t('welcome.features.predictiveAnalysisDesc')}</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-white mb-2">Coach Virtuel</div>
-            <p className="text-sm">Recommandations stratégiques en temps réel</p>
+            <div className="text-3xl font-bold text-white mb-2">{t('welcome.features.virtualCoach')}</div>
+            <p className="text-sm">{t('welcome.features.virtualCoachDesc')}</p>
           </div>
         </div>
       </div>

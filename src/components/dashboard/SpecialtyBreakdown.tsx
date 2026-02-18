@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAppStore } from '../../stores/useAppStore';
 import { Stethoscope, Users2, Home, Building2, Building } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 export const SpecialtyBreakdown: React.FC = () => {
   const { practitioners } = useAppStore();
+  const { t } = useTranslation();
 
   // Calculate specialty breakdown
   const pneumologues = practitioners.filter(p => p.specialty === 'Pneumologue');
@@ -24,14 +26,14 @@ export const SpecialtyBreakdown: React.FC = () => {
 
   // Data for pie chart (by count)
   const countData = [
-    { name: 'Pneumologues', value: pneumologues.length, color: '#0066B3' },
-    { name: 'Généralistes', value: generalistes.length, color: '#00B5AD' }
+    { name: t('dashboard.pneumologists'), value: pneumologues.length, color: '#0066B3' },
+    { name: t('common.specialty.generalistes'), value: generalistes.length, color: '#00B5AD' }
   ];
 
   // Data for volume pie chart
   const volumeData = [
-    { name: 'Pneumologues', value: pneumoVolume, color: '#0066B3' },
-    { name: 'Généralistes', value: genVolume, color: '#00B5AD' }
+    { name: t('dashboard.pneumologists'), value: pneumoVolume, color: '#0066B3' },
+    { name: t('common.specialty.generalistes'), value: genVolume, color: '#00B5AD' }
   ];
 
   // Custom label renderer for pie charts
@@ -64,14 +66,14 @@ export const SpecialtyBreakdown: React.FC = () => {
     >
       <h2 className="text-base font-bold text-slate-800 mb-3 flex items-center space-x-2">
         <Stethoscope className="w-4 h-4 text-al-blue-500" />
-        <span>Répartition par Spécialité</span>
+        <span>{t('dashboard.specialtyBreakdown')}</span>
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Count Pie Chart */}
         <div>
           <h3 className="text-xs font-semibold text-slate-600 text-center mb-2">
-            Nombre de Praticiens
+            {t('dashboard.practitionerCount')}
           </h3>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
@@ -103,11 +105,11 @@ export const SpecialtyBreakdown: React.FC = () => {
           <div className="flex justify-center gap-4 mt-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-al-blue-500"></div>
-              <span className="text-xs text-slate-600">Pneumo ({pneumologues.length})</span>
+              <span className="text-xs text-slate-600">{t('dashboard.pneumoShort')} ({pneumologues.length})</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-al-teal"></div>
-              <span className="text-xs text-slate-600">Généralistes ({generalistes.length})</span>
+              <span className="text-xs text-slate-600">{t('common.specialty.generalistes')} ({generalistes.length})</span>
             </div>
           </div>
         </div>
@@ -115,7 +117,7 @@ export const SpecialtyBreakdown: React.FC = () => {
         {/* Volume Pie Chart */}
         <div>
           <h3 className="text-xs font-semibold text-slate-600 text-center mb-2">
-            Volume Total (Litres)
+            {t('dashboard.totalVolumeLiters')}
           </h3>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
@@ -148,11 +150,11 @@ export const SpecialtyBreakdown: React.FC = () => {
           <div className="flex justify-center gap-4 mt-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-al-blue-500"></div>
-              <span className="text-xs text-slate-600">Pneumo ({(pneumoVolume / 1000000).toFixed(1)}M L)</span>
+              <span className="text-xs text-slate-600">{t('dashboard.pneumoShort')} ({(pneumoVolume / 1000000).toFixed(1)}M L)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-al-teal"></div>
-              <span className="text-xs text-slate-600">Généralistes ({(genVolume / 1000000).toFixed(1)}M L)</span>
+              <span className="text-xs text-slate-600">{t('common.specialty.generalistes')} ({(genVolume / 1000000).toFixed(1)}M L)</span>
             </div>
           </div>
         </div>
@@ -163,11 +165,11 @@ export const SpecialtyBreakdown: React.FC = () => {
         <table className="w-full text-xs sm:text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-slate-700">Spécialité</th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">Prat.</th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">KOL</th>
-              <th className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-slate-700">Volume Total</th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">Moy.</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-slate-700">{t('dashboard.specialtyCol')}</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">{t('dashboard.practCol')}</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">{t('dashboard.kolCol')}</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-center font-semibold text-slate-700">{t('dashboard.totalVolumeCol')}</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-700">{t('dashboard.avgCol')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -175,7 +177,7 @@ export const SpecialtyBreakdown: React.FC = () => {
               <td className="px-2 sm:px-4 py-2 sm:py-3">
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-al-blue-500 flex-shrink-0"></div>
-                  <span className="font-medium text-slate-800 text-xs sm:text-sm">Pneumologues</span>
+                  <span className="font-medium text-slate-800 text-xs sm:text-sm">{t('dashboard.pneumologists')}</span>
                 </div>
               </td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-800">{pneumologues.length}</td>
@@ -195,7 +197,7 @@ export const SpecialtyBreakdown: React.FC = () => {
               <td className="px-2 sm:px-4 py-2 sm:py-3">
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-al-teal flex-shrink-0"></div>
-                  <span className="font-medium text-slate-800 text-xs sm:text-sm">Médecins généralistes</span>
+                  <span className="font-medium text-slate-800 text-xs sm:text-sm">{t('dashboard.generalPractitioners')}</span>
                 </div>
               </td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-slate-800">{generalistes.length}</td>
@@ -212,7 +214,7 @@ export const SpecialtyBreakdown: React.FC = () => {
               </td>
             </tr>
             <tr className="bg-slate-50 font-semibold">
-              <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-800">Total</td>
+              <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-800">{t('dashboard.totalRow')}</td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center text-slate-800">{practitioners.length}</td>
               <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-900">
@@ -237,17 +239,17 @@ export const SpecialtyBreakdown: React.FC = () => {
         <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100 text-center">
           <Home className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
           <p className="text-lg font-bold text-emerald-700">{praticienVille.length}</p>
-          <p className="text-[10px] text-emerald-600 font-medium">Ville</p>
+          <p className="text-[10px] text-emerald-600 font-medium">{t('common.practiceType.ville')}</p>
         </div>
         <div className="p-2 rounded-lg bg-blue-50 border border-blue-100 text-center">
           <Building2 className="w-4 h-4 text-blue-600 mx-auto mb-1" />
           <p className="text-lg font-bold text-blue-700">{praticienHospitalier.length}</p>
-          <p className="text-[10px] text-blue-600 font-medium">Hospitalier</p>
+          <p className="text-[10px] text-blue-600 font-medium">{t('common.practiceType.hospitalier')}</p>
         </div>
         <div className="p-2 rounded-lg bg-purple-50 border border-purple-100 text-center">
           <Building className="w-4 h-4 text-purple-600 mx-auto mb-1" />
           <p className="text-lg font-bold text-purple-700">{praticienMixte.length}</p>
-          <p className="text-[10px] text-purple-600 font-medium">Mixte</p>
+          <p className="text-[10px] text-purple-600 font-medium">{t('common.practiceType.mixte')}</p>
         </div>
       </div>
 
@@ -256,12 +258,13 @@ export const SpecialtyBreakdown: React.FC = () => {
         <div className="flex items-start space-x-2">
           <Users2 className="w-4 h-4 text-al-blue-500 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-xs font-semibold text-slate-800">Insight clé</p>
+            <p className="text-xs font-semibold text-slate-800">{t('dashboard.keyInsight')}</p>
             <p className="text-xs text-slate-600 mt-0.5">
-              Les pneumologues représentent {((pneumologues.length / practitioners.length) * 100).toFixed(1)}%
-              des praticiens mais génèrent {((pneumoVolume / (pneumoVolume + genVolume)) * 100).toFixed(1)}%
-              du volume total - un ratio de {(pneumoVolume / pneumologues.length / (genVolume / generalistes.length)).toFixed(1)}x
-              supérieur aux généralistes.
+              {t('dashboard.specialtyInsightText', {
+                practPercent: ((pneumologues.length / practitioners.length) * 100).toFixed(1),
+                volumePercent: ((pneumoVolume / (pneumoVolume + genVolume)) * 100).toFixed(1),
+                ratio: (pneumoVolume / pneumologues.length / (genVolume / generalistes.length)).toFixed(1),
+              })}
             </p>
           </div>
         </div>

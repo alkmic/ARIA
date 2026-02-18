@@ -25,6 +25,7 @@ import {
   ExternalLink,
   ChevronDown,
   Globe,
+  Languages,
 } from 'lucide-react';
 import { useWebLLM } from '../hooks/useWebLLM';
 import { WEBLLM_MODELS } from '../services/webLlmService';
@@ -40,6 +41,9 @@ import {
   type LLMProviderType,
   type ApiKeyTestResult,
 } from '../services/apiKeyService';
+import { useTranslation } from '../i18n';
+import { useLanguage } from '../i18n';
+import type { Language } from '../i18n';
 
 // ── Org color mapping for WebLLM models ──
 const ORG_COLORS: Record<string, string> = {
@@ -64,6 +68,9 @@ export function Settings() {
     loadModel,
     unloadModel,
   } = useWebLLM();
+
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
 
   // ── LLM Config state ──
   const [selectedProvider, setSelectedProvider] = useState<LLMProviderType>('groq');
@@ -150,8 +157,6 @@ export function Settings() {
     try {
       const result = await testLLMConfig(config);
       setTestResult(result);
-      // Auto-save on successful test so the Coach and all other services
-      // can use this config immediately (matches the UI message promise)
       if (result.success) {
         saveLLMConfig(config);
         setHasKey(true);
@@ -159,14 +164,14 @@ export function Settings() {
     } catch {
       setTestResult({
         success: false,
-        provider: currentProviderDef?.name || 'Inconnu',
+        provider: currentProviderDef?.name || t('settings.llm.unknownProvider'),
         latencyMs: 0,
-        error: 'Erreur inattendue lors du test',
+        error: t('settings.llm.unexpectedError'),
       });
     } finally {
       setIsTesting(false);
     }
-  }, [buildConfig, currentProviderDef]);
+  }, [buildConfig, currentProviderDef, t]);
 
   const handleSaveAndTest = useCallback(async () => {
     const config = buildConfig();
@@ -201,12 +206,59 @@ export function Settings() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2 flex items-center space-x-3">
           <SettingsIcon className="w-8 h-8 text-al-blue-500" />
-          <span>Paramètres</span>
+          <span>{t('settings.title')}</span>
         </h1>
         <p className="text-slate-600">
-          Configurez l'intelligence artificielle et vos préférences
+          {t('settings.subtitle')}
         </p>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* SECTION 0 — Language / Langue */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.02 }}
+        className="glass-card p-6 border-2 border-indigo-200"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl">
+            <Languages className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">{t('settings.language.title')}</h2>
+            <p className="text-sm text-slate-500">{t('settings.language.subtitle')}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {([
+            { code: 'fr' as Language, label: t('settings.language.french'), flag: '🇫🇷' },
+            { code: 'en' as Language, label: t('settings.language.english'), flag: '🇬🇧' },
+          ]).map(({ code, label, flag }) => (
+            <button
+              key={code}
+              onClick={() => setLanguage(code)}
+              className={`p-4 rounded-xl text-left transition-all border-2 cursor-pointer ${
+                language === code
+                  ? 'border-indigo-400 bg-indigo-50 shadow-md shadow-indigo-200/50'
+                  : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{flag}</span>
+                <div>
+                  <p className="font-semibold text-slate-800">{label}</p>
+                  <p className="text-xs text-slate-500">{code.toUpperCase()}</p>
+                </div>
+                {language === code && (
+                  <CheckCircle className="w-5 h-5 text-indigo-500 ml-auto" />
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* SECTION 1 — Configuration LLM */}
@@ -223,29 +275,29 @@ export function Settings() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-800">Configuration LLM</h2>
+              <h2 className="text-xl font-bold text-slate-800">{t('settings.llm.title')}</h2>
               {hasKey && hasExternalLLMKey() && (
                 <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[11px] font-medium">
                   <CheckCircle className="w-3 h-3" />
-                  Active
+                  {t('settings.llm.active')}
                 </span>
               )}
             </div>
             <p className="text-sm text-slate-500">
-              Connectez n'importe quel LLM externe — choisissez votre service, modèle et clé API
+              {t('settings.llm.subtitle')}
             </p>
           </div>
         </div>
 
         {/* Current provider status */}
         <div className="mb-5 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <p className="text-xs font-medium text-slate-500 mb-1">Provider LLM actuel</p>
+          <p className="text-xs font-medium text-slate-500 mb-1">{t('settings.llm.currentProvider')}</p>
           <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
             <Cpu className="w-4 h-4 text-al-blue-500" />
             {getLLMProviderName()}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            Chaîne de fallback : API externe &rarr; WebLLM navigateur
+            {t('settings.llm.fallbackChain')}
           </p>
         </div>
 
@@ -255,7 +307,7 @@ export function Settings() {
           {/* 1. Provider select */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Service / Provider
+              {t('settings.llm.providerLabel')}
             </label>
             <div className="relative">
               <select
@@ -279,7 +331,7 @@ export function Settings() {
                 className="inline-flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-700 mt-1"
               >
                 <ExternalLink className="w-3 h-3" />
-                Obtenir une clé API sur {currentProviderDef.name}
+                {t('settings.llm.getApiKey', { provider: currentProviderDef.name })}
               </a>
             )}
           </div>
@@ -287,7 +339,7 @@ export function Settings() {
           {/* 2. API Key */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Clé API
+              {t('settings.llm.apiKey')}
             </label>
             <div className="relative">
               <input
@@ -297,7 +349,7 @@ export function Settings() {
                   setApiKeyInput(e.target.value);
                   setTestResult(null);
                 }}
-                placeholder={currentProviderDef?.apiKeyPlaceholder || 'Collez votre clé API'}
+                placeholder={currentProviderDef?.apiKeyPlaceholder || t('settings.llm.apiKeyPlaceholder')}
                 className="input-field pr-10 font-mono text-sm w-full"
               />
               <button
@@ -313,7 +365,7 @@ export function Settings() {
           {/* 3. Model */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Modèle
+              {t('settings.llm.model')}
             </label>
             {currentProviderDef && currentProviderDef.models.length > 0 && !isCustomModel ? (
               <div className="space-y-2">
@@ -334,7 +386,7 @@ export function Settings() {
                     {currentProviderDef.models.map(m => (
                       <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
                     ))}
-                    <option value="__custom__">Autre modèle (saisie libre)...</option>
+                    <option value="__custom__">{t('settings.llm.otherModel')}</option>
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
@@ -348,7 +400,7 @@ export function Settings() {
                     setModelInput(e.target.value);
                     setTestResult(null);
                   }}
-                  placeholder="Nom du modèle (ex: gpt-4o-mini, llama-3.3-70b-versatile)"
+                  placeholder={t('settings.llm.modelPlaceholder')}
                   className="input-field font-mono text-sm w-full"
                 />
                 {currentProviderDef && currentProviderDef.models.length > 0 && (
@@ -360,7 +412,7 @@ export function Settings() {
                     }}
                     className="text-[11px] text-blue-500 hover:text-blue-700"
                   >
-                    Revenir à la liste des modèles suggérés
+                    {t('settings.llm.backToSuggested')}
                   </button>
                 )}
               </div>
@@ -372,7 +424,7 @@ export function Settings() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 <Globe className="w-3.5 h-3.5 inline mr-1" />
-                {selectedProvider === 'azure' ? 'Endpoint Azure' : `URL de l'API`} {!currentProviderDef?.needsBaseUrl && '(optionnel)'}
+                {selectedProvider === 'azure' ? t('settings.llm.azureEndpoint') : t('settings.llm.apiUrl')} {!currentProviderDef?.needsBaseUrl && t('settings.llm.optional')}
               </label>
               <input
                 type="text"
@@ -389,10 +441,10 @@ export function Settings() {
               />
               <p className="text-[11px] text-slate-400 mt-1">
                 {selectedProvider === 'azure'
-                  ? 'Obligatoire — l\'endpoint de votre ressource Azure AI Foundry (ex: https://xxx.cognitiveservices.azure.com).'
+                  ? t('settings.llm.azureEndpointHelp')
                   : currentProviderDef?.needsBaseUrl
-                    ? 'Obligatoire — renseignez l\'URL complète de votre endpoint.'
-                    : `Par défaut : ${currentProviderDef?.defaultBaseUrl || '—'}`
+                    ? t('settings.llm.requiredUrl')
+                    : t('settings.llm.defaultUrl', { url: currentProviderDef?.defaultBaseUrl || '—' })
                 }
               </p>
             </div>
@@ -405,7 +457,7 @@ export function Settings() {
               }}
               className="text-[11px] text-slate-400 hover:text-blue-500 transition-colors"
             >
-              Options avancées (URL personnalisée)...
+              {t('settings.llm.advancedOptions')}
             </button>
           )}
 
@@ -414,11 +466,11 @@ export function Settings() {
             <div className="space-y-4 p-4 bg-blue-50/50 rounded-xl border border-blue-200">
               <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5" />
-                Configuration Azure OpenAI
+                {t('settings.llm.azureConfig')}
               </p>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Nom du déploiement (deployment)
+                  {t('settings.llm.deploymentName')}
                 </label>
                 <input
                   type="text"
@@ -431,12 +483,12 @@ export function Settings() {
                   className="input-field font-mono text-sm w-full"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Le nom de votre déploiement dans Azure AI Foundry (peut différer du nom du modèle).
+                  {t('settings.llm.deploymentHelp')}
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Version d'API
+                  {t('settings.llm.apiVersion')}
                 </label>
                 <input
                   type="text"
@@ -449,7 +501,7 @@ export function Settings() {
                   className="input-field font-mono text-sm w-full"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Version de l'API Azure OpenAI (ex: 2024-12-01-preview).
+                  {t('settings.llm.apiVersionHelp')}
                 </p>
               </div>
             </div>
@@ -463,7 +515,7 @@ export function Settings() {
               className="px-4 py-2 flex items-center gap-1.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
             >
               <Save className="w-4 h-4" />
-              Sauvegarder & Tester
+              {t('settings.llm.saveAndTest')}
             </button>
             <button
               onClick={runTest}
@@ -473,12 +525,12 @@ export function Settings() {
               {isTesting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Test en cours...
+                  {t('settings.llm.testing')}
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  Tester la connexion
+                  {t('settings.llm.testConnection')}
                 </>
               )}
             </button>
@@ -488,7 +540,7 @@ export function Settings() {
                 className="px-3 py-2 flex items-center gap-1.5 rounded-lg text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
               >
                 <X className="w-4 h-4" />
-                Supprimer
+                {t('settings.llm.delete')}
               </button>
             )}
           </div>
@@ -508,20 +560,20 @@ export function Settings() {
               <div>
                 {testResult.success ? (
                   <>
-                    <p className="font-semibold">Connexion réussie !</p>
+                    <p className="font-semibold">{t('settings.llm.connectionSuccess')}</p>
                     <p className="text-xs mt-1">
-                      Provider : <strong>{testResult.provider}</strong> — Modèle : <strong>{testResult.model}</strong> — Latence : <strong>{testResult.latencyMs}ms</strong>
+                      {t('settings.llm.providerInfo', { provider: testResult.provider || '', model: testResult.model || '', latency: String(testResult.latencyMs) })}
                     </p>
                     <p className="text-xs mt-1 text-green-600">
-                      Tous les services IA d'ARIA utiliseront cette configuration automatiquement.
+                      {t('settings.llm.allServicesWillUse')}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="font-semibold">Échec de connexion</p>
+                    <p className="font-semibold">{t('settings.llm.connectionFailed')}</p>
                     <p className="text-xs mt-1">{testResult.error}</p>
                     <p className="text-xs mt-1 text-red-500">
-                      Vérifiez la clé, le modèle, et (si applicable) l'URL de l'API.
+                      {t('settings.llm.checkConfig')}
                     </p>
                   </>
                 )}
@@ -531,8 +583,8 @@ export function Settings() {
 
           {/* Help text */}
           <div className="text-[11px] text-slate-400 space-y-1 pt-1">
-            <p>La configuration est stockée uniquement dans votre navigateur (localStorage).</p>
-            <p>{LLM_PROVIDERS.length} services supportés : {LLM_PROVIDERS.filter(p => p.id !== 'custom').map(p => p.name).join(', ')} + endpoint personnalisé.</p>
+            <p>{t('settings.llm.storedLocally')}</p>
+            <p>{t('settings.llm.supportedServices', { count: String(LLM_PROVIDERS.length), list: LLM_PROVIDERS.filter(p => p.id !== 'custom').map(p => p.name).join(', ') })}</p>
           </div>
         </div>
       </motion.div>
@@ -552,17 +604,17 @@ export function Settings() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-800">IA locale dans le navigateur</h2>
+              <h2 className="text-xl font-bold text-slate-800">{t('settings.webllm.title')}</h2>
               <span className="text-[11px] px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">WebLLM</span>
             </div>
             <p className="text-sm text-slate-500">
-              Exécutez un LLM dans votre navigateur via WebGPU — zéro installation, zéro serveur
+              {t('settings.webllm.subtitle')}
             </p>
           </div>
           {isReady && (
             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
               <CheckCircle className="w-4 h-4" />
-              Prêt
+              {t('settings.webllm.ready')}
             </span>
           )}
         </div>
@@ -570,7 +622,7 @@ export function Settings() {
         {hasKey && hasExternalLLMKey() && (
           <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-xs text-blue-700">
-              <strong>Note :</strong> Une clé API externe est configurée. WebLLM sert de solution de secours si l'API est indisponible.
+              <strong>Note :</strong> {t('settings.webllm.externalKeyNote')}
             </p>
           </div>
         )}
@@ -579,10 +631,9 @@ export function Settings() {
           <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-800">WebGPU non disponible</p>
+              <p className="text-sm font-medium text-amber-800">{t('settings.webllm.webgpuNotAvailable')}</p>
               <p className="text-xs text-amber-600 mt-1">
-                Votre navigateur ne supporte pas WebGPU. Utilisez Chrome 113+, Edge 113+ ou un navigateur compatible.
-                Configurez plutôt une clé API ci-dessus.
+                {t('settings.webllm.webgpuNotAvailableDesc')}
               </p>
             </div>
           </div>
@@ -590,7 +641,7 @@ export function Settings() {
           <>
             <div className="space-y-3 mb-4">
               <p className="text-sm font-medium text-slate-700">
-                Choisir un modèle ({WEBLLM_MODELS.length} modèles de {uniqueOrgs.length} éditeurs) :
+                {t('settings.webllm.chooseModel', { count: String(WEBLLM_MODELS.length), orgs: String(uniqueOrgs.length) })}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {WEBLLM_MODELS.map((model) => {
@@ -616,13 +667,13 @@ export function Settings() {
                           {model.org}
                         </span>
                         {model.vramMB >= 5000 && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-500 rounded-full">GPU puissant</span>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-500 rounded-full">{t('settings.webllm.powerfulGpu')}</span>
                         )}
                       </div>
                       {isSelected && (
                         <div className="mt-2 flex items-center gap-1 text-[11px] text-green-600 font-medium">
                           <CheckCircle className="w-3 h-3" />
-                          Chargé et actif
+                          {t('settings.webllm.loadedActive')}
                         </div>
                       )}
                     </button>
@@ -635,7 +686,7 @@ export function Settings() {
               <div className="mb-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
-                  <span className="text-sm font-medium text-purple-800">Chargement du modèle...</span>
+                  <span className="text-sm font-medium text-purple-800">{t('settings.webllm.loadingModel')}</span>
                   <span className="text-sm font-bold text-purple-600 ml-auto">{(progress.progress * 100).toFixed(0)}%</span>
                 </div>
                 <div className="w-full bg-purple-200 rounded-full h-2.5 mb-2">
@@ -647,7 +698,7 @@ export function Settings() {
                 <p className="text-[11px] text-purple-600 truncate">{progress.text}</p>
                 {progress.progress > 0 && progress.progress < 1 && (
                   <p className="text-[11px] text-purple-500 mt-1">
-                    Premier chargement : les poids sont téléchargés et mis en cache. Les prochains chargements seront quasi-instantanés.
+                    {t('settings.webllm.firstLoad')}
                   </p>
                 )}
               </div>
@@ -658,7 +709,7 @@ export function Settings() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-red-800 mb-1">Erreur de chargement</p>
+                    <p className="text-sm font-medium text-red-800 mb-1">{t('settings.webllm.loadError')}</p>
                     <p className="text-sm text-red-700">{error}</p>
                     <div className="mt-3 flex gap-2">
                       <button
@@ -666,7 +717,7 @@ export function Settings() {
                         className="text-xs px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center gap-1"
                       >
                         <RefreshCw className="w-3 h-3" />
-                        Réessayer
+                        {language === 'fr' ? 'Réessayer' : 'Retry'}
                       </button>
                     </div>
                   </div>
@@ -681,7 +732,7 @@ export function Settings() {
                   className="px-6 py-2.5 flex items-center gap-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 transition-all shadow-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Charger {currentModelInfo?.name || 'le modèle'}
+                  {t('settings.webllm.loadModelBtn', { name: currentModelInfo?.name || 'model' })}
                 </button>
               )}
               {isReady && (
@@ -690,7 +741,7 @@ export function Settings() {
                   className="px-4 py-2 flex items-center gap-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Décharger le modèle
+                  {t('settings.webllm.unloadModel')}
                 </button>
               )}
             </div>
@@ -699,9 +750,9 @@ export function Settings() {
               <div className="flex items-start gap-2">
                 <Shield className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] text-slate-400 space-y-1">
-                  <p>Les modèles sont compilés au format MLC et distribués via le CDN HuggingFace. Le runtime WASM est hébergé sur GitHub (mlc-ai).</p>
-                  <p>Les poids sont téléchargés une seule fois puis mis en cache dans IndexedDB — les chargements suivants sont instantanés.</p>
-                  <p>Pendant l'inférence, tout s'exécute localement sur votre GPU — aucune donnée n'est envoyée à l'extérieur.</p>
+                  <p>{t('settings.webllm.mlcInfo')}</p>
+                  <p>{t('settings.webllm.cacheInfo')}</p>
+                  <p>{t('settings.webllm.privacyInfo')}</p>
                 </div>
               </div>
             </div>
@@ -725,22 +776,22 @@ export function Settings() {
               <User className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Profil</h2>
-              <p className="text-sm text-slate-500">Informations personnelles</p>
+              <h2 className="text-xl font-bold text-slate-800">{t('settings.profile.title')}</h2>
+              <p className="text-sm text-slate-500">{t('settings.profile.subtitle')}</p>
             </div>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Nom complet</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{t('settings.profile.fullName')}</label>
               <input type="text" defaultValue="Marie Dupont" className="input-field" disabled />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{t('settings.profile.email')}</label>
               <input type="email" defaultValue="marie.dupont@airliquide.com" className="input-field" disabled />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Rôle</label>
-              <input type="text" defaultValue="Déléguée Pharmaceutique" className="input-field" disabled />
+              <label className="block text-sm font-medium text-slate-700 mb-2">{t('settings.profile.role')}</label>
+              <input type="text" defaultValue={language === 'fr' ? 'Déléguée Pharmaceutique' : 'Pharmaceutical Representative'} className="input-field" disabled />
             </div>
           </div>
         </motion.div>
@@ -757,25 +808,25 @@ export function Settings() {
               <Bell className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Notifications</h2>
-              <p className="text-sm text-slate-500">Préférences d'alertes</p>
+              <h2 className="text-xl font-bold text-slate-800">{t('settings.notifications.title')}</h2>
+              <p className="text-sm text-slate-500">{t('settings.notifications.subtitle')}</p>
             </div>
           </div>
           <div className="space-y-4">
             <label className="flex items-center justify-between">
-              <span className="text-sm text-slate-700">Visites à planifier</span>
+              <span className="text-sm text-slate-700">{t('settings.notifications.visitsToSchedule')}</span>
               <input type="checkbox" defaultChecked className="w-5 h-5 text-al-blue-500 rounded" />
             </label>
             <label className="flex items-center justify-between">
-              <span className="text-sm text-slate-700">KOLs non visités</span>
+              <span className="text-sm text-slate-700">{t('settings.notifications.unvisitedKols')}</span>
               <input type="checkbox" defaultChecked className="w-5 h-5 text-al-blue-500 rounded" />
             </label>
             <label className="flex items-center justify-between">
-              <span className="text-sm text-slate-700">Objectifs atteints</span>
+              <span className="text-sm text-slate-700">{t('settings.notifications.goalsReached')}</span>
               <input type="checkbox" defaultChecked className="w-5 h-5 text-al-blue-500 rounded" />
             </label>
             <label className="flex items-center justify-between">
-              <span className="text-sm text-slate-700">Rappels quotidiens</span>
+              <span className="text-sm text-slate-700">{t('settings.notifications.dailyReminders')}</span>
               <input type="checkbox" className="w-5 h-5 text-al-blue-500 rounded" />
             </label>
           </div>
@@ -793,14 +844,13 @@ export function Settings() {
               <Lock className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Sécurité</h2>
-              <p className="text-sm text-slate-500">Paramètres de sécurité</p>
+              <h2 className="text-xl font-bold text-slate-800">{t('settings.security.title')}</h2>
+              <p className="text-sm text-slate-500">{t('settings.security.subtitle')}</p>
             </div>
           </div>
           <div className="space-y-4">
-            <button className="btn-primary w-full" disabled>Changer le mot de passe</button>
-            <button className="btn-secondary w-full" disabled>Activer 2FA</button>
-            <div className="text-xs text-slate-500 text-center pt-2">Fonctionnalité disponible prochainement</div>
+            <button className="btn-primary w-full" disabled>{t('settings.security.changePassword')}</button>
+            <button className="btn-secondary w-full" disabled>{t('settings.security.enable2fa')}</button>
           </div>
         </motion.div>
 
@@ -816,15 +866,14 @@ export function Settings() {
               <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Données</h2>
-              <p className="text-sm text-slate-500">Gestion des données</p>
+              <h2 className="text-xl font-bold text-slate-800">{t('settings.data.title')}</h2>
+              <p className="text-sm text-slate-500">{t('settings.data.subtitle')}</p>
             </div>
           </div>
           <div className="space-y-4">
-            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" disabled>Exporter mes données</button>
-            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" disabled>Politique de confidentialité</button>
-            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" disabled>Conditions d'utilisation</button>
-            <div className="text-xs text-slate-500 text-center pt-2">Fonctionnalité disponible prochainement</div>
+            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" disabled>{t('settings.data.exportData')}</button>
+            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" disabled>{t('settings.data.privacyPolicy')}</button>
+            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" disabled>{t('settings.data.terms')}</button>
           </div>
         </motion.div>
       </div>
@@ -841,20 +890,20 @@ export function Settings() {
             <HelpCircle className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Aide & Support</h2>
-            <p className="text-sm text-slate-500">Besoin d'assistance ?</p>
+            <h2 className="text-xl font-bold text-slate-800">{t('settings.help.title')}</h2>
+            <p className="text-sm text-slate-500">{t('settings.help.subtitle')}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
-          <button className="btn-secondary" disabled>Documentation</button>
-          <button className="btn-secondary" disabled>Tutoriels vidéo</button>
-          <button className="btn-secondary" disabled>Contacter le support</button>
+          <button className="btn-secondary" disabled>{t('settings.help.documentation')}</button>
+          <button className="btn-secondary" disabled>{t('settings.help.videoTutorials')}</button>
+          <button className="btn-secondary" disabled>{t('settings.help.contactSupport')}</button>
         </div>
       </motion.div>
 
       {/* Version Info */}
       <div className="text-center text-sm text-slate-500">
-        ARIA v1.0.0 · Démonstrateur Air Liquide Santé
+        {t('settings.version')}
       </div>
     </motion.div>
   );

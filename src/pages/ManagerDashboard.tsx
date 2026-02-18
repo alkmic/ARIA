@@ -13,6 +13,7 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
+import { useTranslation } from '../i18n';
 
 // Mock team data - in real app would come from backend
 const teamMembers = [
@@ -42,6 +43,7 @@ const projectionData = [
 ];
 
 export default function ManagerDashboard() {
+  const { t } = useTranslation();
   const { practitioners, upcomingVisits } = useAppStore();
   const { timePeriod } = useTimePeriod();
 
@@ -181,25 +183,25 @@ export default function ManagerDashboard() {
       id: 1,
       type: 'warning' as const,
       icon: AlertTriangle,
-      title: `${metrics.atRisk} praticiens à risque`,
-      description: 'Fidélité faible + Volume élevé',
-      action: 'Analyser',
+      title: t('manager.alerts.atRisk', { count: metrics.atRisk }),
+      description: t('manager.alerts.atRiskDesc'),
+      action: t('manager.alerts.analyze'),
     },
     {
       id: 2,
       type: 'danger' as const,
       icon: Clock,
-      title: `${metrics.undervisitedKOLs} KOL non visités >60j`,
-      description: 'Planifier des visites urgentes',
-      action: 'Planifier',
+      title: t('manager.alerts.kolUnvisited', { count: metrics.undervisitedKOLs }),
+      description: t('manager.alerts.kolUnvisitedDesc'),
+      action: t('manager.alerts.plan'),
     },
     {
       id: 3,
       type: 'info' as const,
       icon: TrendingUp,
-      title: 'Projection T4 optimiste',
-      description: '+15% vs objectif si tendance maintenue',
-      action: 'Voir détails',
+      title: t('manager.alerts.projection'),
+      description: t('manager.alerts.projectionDesc'),
+      action: t('manager.alerts.seeDetails'),
     },
   ];
 
@@ -208,9 +210,9 @@ export default function ManagerDashboard() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold gradient-text">Dashboard Directeur Régional</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text">{t('manager.title')}</h1>
           <p className="text-sm sm:text-base text-slate-500 mt-1">
-            Région Auvergne-Rhône-Alpes • {teamMembers.length} commerciaux • {metrics.totalPractitioners} praticiens
+            {t('manager.subtitle', { teamCount: teamMembers.length, practitionerCount: metrics.totalPractitioners })}
           </p>
         </div>
         <div className="flex items-center gap-2 w-full lg:w-auto">
@@ -222,7 +224,7 @@ export default function ManagerDashboard() {
       <div className="glass-card p-4 sm:p-6">
         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-amber-500" />
-          Alertes & Actions Prioritaires
+          {t('manager.alerts.title')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           {alerts.map((alert, index) => (
@@ -285,7 +287,7 @@ export default function ManagerDashboard() {
             </span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{totalVisits}</p>
-          <p className="text-slate-500 text-xs sm:text-sm">Visites totales</p>
+          <p className="text-slate-500 text-xs sm:text-sm">{t('manager.totalVisits')}</p>
           <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-al-blue-500 to-al-sky rounded-full"
@@ -313,7 +315,7 @@ export default function ManagerDashboard() {
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">
             {(metrics.totalVolume / 1000000).toFixed(1)}M
           </p>
-          <p className="text-slate-500 text-xs sm:text-sm">Volume total (L)</p>
+          <p className="text-slate-500 text-xs sm:text-sm">{t('manager.totalVolume')}</p>
         </motion.div>
 
         <motion.div
@@ -325,11 +327,11 @@ export default function ManagerDashboard() {
           <div className="flex items-center justify-between mb-2">
             <Target className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />
             <span className={`text-xs sm:text-sm font-medium ${avgProgress >= 80 ? 'text-green-500' : 'text-amber-500'}`}>
-              {avgProgress >= 80 ? 'On track' : 'À suivre'}
+              {avgProgress >= 80 ? t('manager.onTrack') : t('manager.toFollow')}
             </span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{avgProgress}%</p>
-          <p className="text-slate-500 text-xs sm:text-sm">Taux d'atteinte</p>
+          <p className="text-slate-500 text-xs sm:text-sm">{t('manager.achievementRate')}</p>
         </motion.div>
 
         <motion.div
@@ -348,7 +350,7 @@ export default function ManagerDashboard() {
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">
             {teamPerformance.reduce((sum, m) => sum + m.newPrescribers, 0)}
           </p>
-          <p className="text-slate-500 text-xs sm:text-sm">Nouveaux prescripteurs</p>
+          <p className="text-slate-500 text-xs sm:text-sm">{t('manager.newPrescribers')}</p>
         </motion.div>
 
         <motion.div
@@ -362,9 +364,9 @@ export default function ManagerDashboard() {
             <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{metrics.kolCount}</p>
-          <p className="text-slate-500 text-xs sm:text-sm">KOLs dans le réseau</p>
+          <p className="text-slate-500 text-xs sm:text-sm">{t('manager.kolsInNetwork')}</p>
           <p className="text-xs sm:text-xs text-amber-600 mt-1">
-            {metrics.undervisitedKOLs} non visités {'>'}60j
+            {t('manager.kolsUnvisited', { count: metrics.undervisitedKOLs })}
           </p>
         </motion.div>
 
@@ -378,8 +380,8 @@ export default function ManagerDashboard() {
             <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-al-navy">{metrics.atRisk}</p>
-          <p className="text-slate-500 text-xs sm:text-sm">Praticiens à risque</p>
-          <p className="text-xs sm:text-xs text-slate-400 mt-1">Fidélité faible</p>
+          <p className="text-slate-500 text-xs sm:text-sm">{t('manager.atRiskPractitioners')}</p>
+          <p className="text-xs sm:text-xs text-slate-400 mt-1">{t('manager.lowLoyalty')}</p>
         </motion.div>
       </div>
 
@@ -388,7 +390,7 @@ export default function ManagerDashboard() {
         {/* Performance mensuelle + projection */}
         <div className="col-span-1 lg:col-span-2 glass-card p-4 sm:p-6">
           <h3 className="font-semibold text-base sm:text-lg mb-4">
-            Performance & Projection
+            {t('manager.performanceProjection')}
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={[...monthlyPerformance, ...projectionData]}>
@@ -414,7 +416,7 @@ export default function ManagerDashboard() {
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorActual)"
-                name="Réalisé"
+                name={t('manager.achieved')}
               />
               <Area
                 type="monotone"
@@ -424,7 +426,7 @@ export default function ManagerDashboard() {
                 strokeDasharray="5 5"
                 fillOpacity={1}
                 fill="url(#colorForecast)"
-                name="Projection"
+                name={t('manager.projection')}
               />
               <Line
                 type="monotone"
@@ -432,7 +434,7 @@ export default function ManagerDashboard() {
                 stroke="#F59E0B"
                 strokeDasharray="8 4"
                 strokeWidth={2}
-                name="Objectif"
+                name={t('manager.objective')}
               />
               <Line
                 type="monotone"
@@ -440,7 +442,7 @@ export default function ManagerDashboard() {
                 stroke="#94A3B8"
                 strokeDasharray="3 3"
                 strokeWidth={1.5}
-                name="N-1"
+                name={t('manager.previousYear')}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -448,7 +450,7 @@ export default function ManagerDashboard() {
 
         {/* Répartition par spécialité */}
         <div className="glass-card p-4 sm:p-6">
-          <h3 className="font-semibold text-base sm:text-lg mb-4">Par spécialité</h3>
+          <h3 className="font-semibold text-base sm:text-lg mb-4">{t('manager.bySpecialty')}</h3>
           <ResponsiveContainer width="100%" height={220}>
             <RechartsPie>
               <Pie
@@ -489,7 +491,7 @@ export default function ManagerDashboard() {
       <div className="glass-card p-4 sm:p-6">
         <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-al-blue-500" />
-          Comparaison par Territoire (Top 5)
+          {t('manager.territoryComparison')}
         </h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={territoryComparison}>
@@ -509,20 +511,20 @@ export default function ManagerDashboard() {
       <div className="glass-card p-4 sm:p-6">
         <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-500" />
-          Classement de l'Équipe
+          {t('manager.teamRanking')}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-slate-200">
-                <th className="text-left py-3 px-2 sm:px-4 font-semibold text-slate-700">Rang</th>
-                <th className="text-left py-3 px-2 sm:px-4 font-semibold text-slate-700">Commercial</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Territoire</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Visites</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Volume</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Progression</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">KOLs</th>
-                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">Satisfaction</th>
+                <th className="text-left py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.rank')}</th>
+                <th className="text-left py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.commercial')}</th>
+                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.territory')}</th>
+                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.visitsCol')}</th>
+                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.volumeCol')}</th>
+                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.progression')}</th>
+                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.kolsCol')}</th>
+                <th className="text-center py-3 px-2 sm:px-4 font-semibold text-slate-700">{t('manager.satisfaction')}</th>
               </tr>
             </thead>
             <tbody>
@@ -614,17 +616,16 @@ export default function ManagerDashboard() {
       <div className="glass-card p-4 sm:p-6">
         <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
           <BarChart2 className="w-5 h-5 text-al-blue-500" />
-          Insights Clés
+          {t('manager.keyInsights')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
             <div className="flex items-start gap-3">
               <TrendingUp className="w-5 h-5 text-green-600 mt-0.5" />
               <div>
-                <p className="font-semibold text-slate-800 text-sm">Performance au-dessus des objectifs</p>
+                <p className="font-semibold text-slate-800 text-sm">{t('manager.insightPerformance')}</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  L'équipe atteint {avgProgress}% des objectifs ce mois. Si la tendance se maintient,
-                  projection de +15% au T4.
+                  {t('manager.insightPerformanceDesc', { pct: avgProgress })}
                 </p>
               </div>
             </div>
@@ -634,10 +635,9 @@ export default function ManagerDashboard() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
               <div>
-                <p className="font-semibold text-slate-800 text-sm">Attention aux KOLs</p>
+                <p className="font-semibold text-slate-800 text-sm">{t('manager.insightKols')}</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  {metrics.undervisitedKOLs} KOLs n'ont pas été visités depuis plus de 60 jours.
-                  Prioriser leur visite dans les 2 prochaines semaines.
+                  {t('manager.insightKolsDesc', { count: metrics.undervisitedKOLs })}
                 </p>
               </div>
             </div>
@@ -647,9 +647,9 @@ export default function ManagerDashboard() {
             <div className="flex items-start gap-3">
               <Droplets className="w-5 h-5 text-cyan-600 mt-0.5" />
               <div>
-                <p className="font-semibold text-slate-800 text-sm">Croissance volume exceptionnelle</p>
+                <p className="font-semibold text-slate-800 text-sm">{t('manager.insightVolume')}</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  +18% de volume vs N-1. Les pneumologues représentent 75% de cette croissance.
+                  {t('manager.insightVolumeDesc')}
                 </p>
               </div>
             </div>

@@ -1,0 +1,170 @@
+export const common = {
+  save: 'Sauvegarder',
+  cancel: 'Annuler',
+  delete: 'Supprimer',
+  back: 'Retour',
+  close: 'Fermer',
+  search: 'Rechercher...',
+  loading: 'Chargement...',
+  confirm: 'Confirmer',
+  apply: 'Appliquer',
+  reset: 'Réinitialiser',
+  export: 'Exporter',
+  copy: 'Copier',
+  copied: 'Copié !',
+  seeAll: 'Voir tout',
+  seeMore: 'Voir plus',
+  seeDetails: 'Voir les détails',
+  retry: 'Réessayer',
+  clear: 'Effacer',
+  none: 'Aucun',
+  all: 'Tous',
+  yes: 'Oui',
+  no: 'Non',
+  or: 'ou',
+  and: 'et',
+  from: 'de',
+  to: 'à',
+  days: 'jours',
+  day: 'jour',
+  minutes: 'min',
+  hours: 'h',
+  km: 'km',
+  // Priority labels
+  priority: {
+    critical: 'Critique',
+    high: 'Haute',
+    medium: 'Moyenne',
+    low: 'Faible',
+  },
+  // Risk labels
+  risk: {
+    high: 'Risque élevé',
+    medium: 'Risque moyen',
+    low: 'Risque faible',
+    label: 'Risque',
+  },
+  // Trend labels
+  trend: {
+    up: 'En hausse',
+    down: 'En baisse',
+    stable: 'Stable',
+  },
+  // Period labels
+  period: {
+    thisMonth: 'Ce mois',
+    thisQuarter: 'Ce trimestre',
+    thisYear: 'Cette année',
+    monthly: 'mensuel',
+    quarterly: 'trimestriel',
+    yearly: 'annuel',
+  },
+  // Practitioner type
+  practiceType: {
+    ville: 'Ville',
+    hospitalier: 'Hospitalier',
+    mixte: 'Mixte',
+  },
+  // Specialties
+  specialty: {
+    pneumologue: 'Pneumologue',
+    generaliste: 'Médecin généraliste',
+    pneumologues: 'Pneumologues',
+    generalistes: 'Généralistes',
+    allSpecialties: 'Toutes spécialités',
+  },
+  // Sentiment
+  sentiment: {
+    positive: 'Positif',
+    negative: 'Négatif',
+    neutral: 'Neutre',
+  },
+  // Months short
+  months: {
+    jan: 'Jan',
+    feb: 'Fév',
+    mar: 'Mar',
+    apr: 'Avr',
+    may: 'Mai',
+    jun: 'Jun',
+    jul: 'Jul',
+    aug: 'Aoû',
+    sep: 'Sep',
+    oct: 'Oct',
+    nov: 'Nov',
+    dec: 'Déc',
+  },
+  // Note contact types
+  contactType: {
+    visit: 'Visite',
+    phone: 'Téléphone',
+    email: 'Email',
+    observation: 'Observation',
+  },
+  // Loyalty
+  loyalty: {
+    excellent: 'Excellent',
+    good: 'Bon',
+    toImprove: 'À améliorer',
+  },
+  // User role
+  role: {
+    pharmaDelegate: 'Déléguée Pharmaceutique',
+  },
+  // News types
+  newsType: {
+    publication: 'Publication',
+    conference: 'Conférence',
+    certification: 'Certification',
+    distinction: 'Distinction',
+    event: 'Événement',
+  },
+  // Action statuses
+  actionStatus: {
+    pending: 'À faire',
+    completed: 'Terminé',
+    snoozed: 'Reporté',
+    dismissed: 'Ignoré',
+  },
+  // Delete confirmation
+  deleteNoteConfirm: 'Supprimer cette note ?',
+  // Relevance
+  relevance: 'Pertinence',
+  source: 'Source',
+  // Misc
+  score: 'Score',
+  vingtile: 'Vingtile',
+  kol: 'KOL',
+  volume: 'Volume',
+  patients: 'Patients',
+  poweredByAria: 'Propulsé par ARIA',
+  vsPreviousPeriod: 'vs période préc.',
+  comingSoon: 'Fonctionnalité disponible prochainement',
+  // Command bar
+  commandBar: {
+    searchOrSpeak: 'Rechercher ou parler à ARIA... (\u2318K)',
+    listening: 'Écoute en cours...',
+    speakNow: 'Parlez maintenant',
+    stopListening: "Arrêter l'écoute",
+    speakToAria: 'Parler à ARIA',
+    ariaAnalyzing: 'ARIA analyse votre question...',
+    ariaResponse: 'Réponse ARIA',
+    continueInCoach: 'Continuer dans le Coach IA',
+    askCoachIA: 'Demander au Coach IA',
+    quickAction: 'Action rapide',
+    noResults: 'Aucun résultat pour "{{query}}"',
+    askCoachArrow: 'Demander au Coach IA \u2192',
+    navigate: 'naviguer',
+    select: 'sélectionner',
+    trySayOrType: 'Essayez de dire ou taper :',
+    voiceNotSupported: 'Reconnaissance vocale non supportée. Utilisez Chrome ou Edge.',
+    fallbackAnswer: "Je peux répondre à cette question dans le Coach IA. Voulez-vous y aller ?",
+    generatePitch: 'Générer un pitch',
+    planTour: 'Planifier une tournée',
+    askCoachQuestion: 'Poser une question au Coach IA',
+    makeVisitReport: 'Faire un compte-rendu de visite',
+    seePriorityActions: 'Voir mes actions prioritaires',
+    kolPlanning: 'Planification KOL',
+    seeMap: 'Voir la carte du territoire',
+  },
+};

@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, ChevronRight, Calendar, AlertTriangle, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { AIInsight } from '../../types';
+import { useTranslation } from '../../i18n';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface NotificationDrawerProps {
 
 export function NotificationDrawer({ isOpen, onClose, notifications }: NotificationDrawerProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleNotificationClick = (notification: AIInsight) => {
     if (notification.practitionerId) {
@@ -78,7 +80,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-airLiquide-primary to-airLiquide-teal flex items-center justify-center">
                     <Bell className="w-5 h-5 text-white" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{t('notifications.title')}</h2>
                 </div>
                 <button
                   onClick={onClose}
@@ -88,7 +90,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
                 </button>
               </div>
               <p className="text-sm text-gray-600">
-                {notifications.filter(n => n.priority === 'high').length} alertes prioritaires
+                {notifications.filter(n => n.priority === 'high').length} {t('notifications.priorityAlerts')}
               </p>
             </div>
 
@@ -97,9 +99,9 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                   <Bell className="w-16 h-16 text-gray-300 mb-4" />
-                  <p className="text-gray-600 font-medium mb-2">Aucune notification</p>
+                  <p className="text-gray-600 font-medium mb-2">{t('notifications.noNotifications')}</p>
                   <p className="text-sm text-gray-500">
-                    Vous êtes à jour avec toutes vos tâches
+                    {t('notifications.allUpToDate')}
                   </p>
                 </div>
               ) : (
@@ -147,7 +149,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
                 }}
                 className="w-full py-2 text-sm text-airLiquide-primary hover:bg-airLiquide-primary/10 rounded-lg transition-colors font-medium"
               >
-                Gérer les notifications
+                {t('notifications.manageNotifications')}
               </button>
             </div>
           </motion.div>

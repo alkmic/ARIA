@@ -1,0 +1,17 @@
+export const nav = {
+  dashboard: 'Dashboard',
+  practitioners: 'Practitioners',
+  visits: 'Visits',
+  territory: 'Territory',
+  optimization: 'Optimization',
+  myActions: 'My Actions',
+  visitReport: 'Visit Report',
+  pitchIA: 'AI Pitch',
+  coachIA: 'AI Coach',
+  teamView: 'Team View',
+  kolPlanning: 'KOL Planning',
+  settings: 'Settings',
+  aiIntelligence: 'AI Intelligence',
+  manager: 'Manager',
+  speakOrType: 'Speak or type your commands',
+};

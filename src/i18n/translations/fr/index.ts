@@ -1,0 +1,15 @@
+export { common } from './common';
+export { nav } from './nav';
+export { dashboard } from './dashboard';
+export { practitioners } from './practitioners';
+export { visits } from './visits';
+export { pitch } from './pitch';
+export { coach } from './coach';
+export { settings } from './settings';
+export { map } from './map';
+export { manager } from './manager';
+export { tour } from './tour';
+export { voiceReport } from './voiceReport';
+export { nextActions } from './nextActions';
+export { welcome } from './welcome';
+export { notifications } from './notifications';

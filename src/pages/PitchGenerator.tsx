@@ -28,6 +28,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
+import { useTranslation } from '../i18n';
 import { useGroq } from '../hooks/useGroq';
 import { useSpeech } from '../hooks/useSpeech';
 import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary, SECTION_ID_TO_TAG, generateLocalPitch } from '../services/pitchPromptsEnhanced';
@@ -84,6 +85,7 @@ export function PitchGenerator() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const practitioners = useAppStore((state) => state.practitioners);
+  const { t } = useTranslation();
 
   const practitionerId = searchParams.get('practitionerId');
   const practitioner = practitioners.find((p) => p.id === practitionerId);
@@ -361,10 +363,10 @@ export function PitchGenerator() {
 
   // Step progress indicator
   const STEPS = [
-    { key: 'select', label: 'Praticien', num: 1 },
-    { key: 'preview', label: 'Apercu', num: 2 },
-    { key: 'configure', label: 'Config.', num: 3 },
-    { key: 'generate', label: 'Pitch', num: 4 },
+    { key: 'select', label: t('pitch.steps.practitioner'), num: 1 },
+    { key: 'preview', label: t('pitch.steps.preview'), num: 2 },
+    { key: 'configure', label: t('pitch.steps.config'), num: 3 },
+    { key: 'generate', label: t('pitch.steps.pitch'), num: 4 },
   ] as const;
 
   const currentStepIndex = STEPS.findIndex(s => s.key === step);
@@ -419,10 +421,10 @@ export function PitchGenerator() {
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  Generateur de Pitch IA
+                  {t('pitch.title')}
                 </span>
               </h1>
-              <p className="text-slate-600 mt-1">Selectionnez un praticien pour generer un pitch personnalise</p>
+              <p className="text-slate-600 mt-1">{t('pitch.subtitle')}</p>
             </div>
           </div>
 
@@ -434,7 +436,7 @@ export function PitchGenerator() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Rechercher par nom, ville..."
+                    placeholder={t('pitch.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -447,9 +449,9 @@ export function PitchGenerator() {
                 onChange={(e) => setFilterSpecialty(e.target.value)}
                 className="px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                <option value="all">Toutes specialites</option>
-                <option value="Pneumologue">Pneumologues</option>
-                <option value="Medecin generaliste">Generalistes</option>
+                <option value="all">{t('pitch.allSpecialties')}</option>
+                <option value="Pneumologue">{t('pitch.pneumologists')}</option>
+                <option value="Medecin generaliste">{t('pitch.generalists')}</option>
               </select>
 
               <select
@@ -457,9 +459,9 @@ export function PitchGenerator() {
                 onChange={(e) => setFilterKOL(e.target.value === 'all' ? null : e.target.value === 'kol')}
                 className="px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                <option value="all">Tous</option>
-                <option value="kol">KOLs uniquement</option>
-                <option value="non-kol">Non KOLs</option>
+                <option value="all">{t('pitch.allTypes')}</option>
+                <option value="kol">{t('pitch.kolsOnly')}</option>
+                <option value="non-kol">{t('pitch.nonKols')}</option>
               </select>
             </div>
           </div>
@@ -556,9 +558,9 @@ export function PitchGenerator() {
             </button>
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-slate-800">
-                Pitch pour {selectedPractitioner.title} {selectedPractitioner.lastName}
+                {t('pitch.pitchFor', { name: `${selectedPractitioner.title} ${selectedPractitioner.lastName}` })}
               </h1>
-              <p className="text-slate-600">Verifiez les donnees disponibles avant de configurer le pitch</p>
+              <p className="text-slate-600">{t('pitch.checkData')}</p>
             </div>
           </div>
 
@@ -592,19 +594,19 @@ export function PitchGenerator() {
 
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">Volume annuel</div>
+                  <div className="text-xs text-slate-500">{t('pitch.annualVolume')}</div>
                   <div className="text-lg font-bold text-slate-800">{(selectedPractitioner.volumeL / 1000).toFixed(0)}K L</div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">Fidelite</div>
+                  <div className="text-xs text-slate-500">{t('pitch.loyalty')}</div>
                   <div className="text-lg font-bold text-slate-800">{selectedPractitioner.loyaltyScore}/10</div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">Vingtile</div>
+                  <div className="text-xs text-slate-500">{t('pitch.vingtile')}</div>
                   <div className="text-lg font-bold text-slate-800">V{selectedPractitioner.vingtile}</div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">Tendance</div>
+                  <div className="text-xs text-slate-500">{t('pitch.trend')}</div>
                   <div className="flex items-center gap-1">
                     {selectedPractitioner.trend === 'up' ? (
                       <TrendingUp className="w-5 h-5 text-green-500" />
@@ -624,7 +626,7 @@ export function PitchGenerator() {
                 }`}>
                   <AlertTriangle className="w-4 h-4" />
                   <span className="text-sm font-medium">
-                    Risque de churn {profile?.metrics.churnRisk === 'high' ? 'eleve' : 'moyen'}
+                    {t('pitch.churnRisk', { level: profile?.metrics.churnRisk === 'high' ? t('pitch.churnHigh') : t('pitch.churnMedium') })}
                   </span>
                 </div>
               )}
@@ -636,7 +638,7 @@ export function PitchGenerator() {
               <div className="glass-card p-4">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
                   <BookOpen className="w-5 h-5 text-purple-500" />
-                  Publications ({pubCount})
+                  {t('pitch.publications', { count: String(pubCount) })}
                 </h3>
                 {pubCount > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -648,7 +650,7 @@ export function PitchGenerator() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 italic">Aucune publication referencee</p>
+                  <p className="text-sm text-slate-500 italic">{t('pitch.noPublications')}</p>
                 )}
               </div>
 
@@ -656,7 +658,7 @@ export function PitchGenerator() {
               <div className="glass-card p-4">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
                   <FileText className="w-5 h-5 text-blue-500" />
-                  Notes recentes ({noteCount})
+                  {t('pitch.recentNotes', { count: String(noteCount) })}
                 </h3>
                 {noteCount > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -668,7 +670,7 @@ export function PitchGenerator() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 italic">Aucune note de visite</p>
+                  <p className="text-sm text-slate-500 italic">{t('pitch.noNotes')}</p>
                 )}
               </div>
 
@@ -676,7 +678,7 @@ export function PitchGenerator() {
               <div className="glass-card p-4">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
                   <Clock className="w-5 h-5 text-green-500" />
-                  Historique des visites ({visitCount})
+                  {t('pitch.visitHistory', { count: String(visitCount) })}
                 </h3>
                 {visitCount > 0 ? (
                   <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -697,7 +699,7 @@ export function PitchGenerator() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 italic">Aucune visite enregistree</p>
+                  <p className="text-sm text-slate-500 italic">{t('pitch.noVisits')}</p>
                 )}
               </div>
             </div>
@@ -712,13 +714,13 @@ export function PitchGenerator() {
               }}
               className="btn-secondary"
             >
-              Choisir un autre praticien
+              {t('pitch.chooseAnother')}
             </button>
             <button
               onClick={() => setStep('configure')}
               className="btn-primary flex items-center gap-2"
             >
-              Configurer le pitch
+              {t('pitch.configurePitch')}
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -747,9 +749,9 @@ export function PitchGenerator() {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-slate-800">
-                Configuration du pitch
+                {t('pitch.config.title')}
               </h1>
-              <p className="text-slate-600">Pour {selectedPractitioner.title} {selectedPractitioner.lastName}</p>
+              <p className="text-slate-600">{t('pitch.config.forPractitioner', { name: `${selectedPractitioner.title} ${selectedPractitioner.lastName}` })}</p>
             </div>
           </div>
 
@@ -760,7 +762,7 @@ export function PitchGenerator() {
               <div className="glass-card p-6">
                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
                   <Target className="w-5 h-5 text-purple-500" />
-                  Focus du pitch
+                  {t('pitch.config.pitchFocus')}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   {FOCUS_OPTIONS.map((opt) => (
@@ -785,12 +787,12 @@ export function PitchGenerator() {
               <div className="glass-card p-6">
                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
                   <Settings className="w-5 h-5 text-blue-500" />
-                  Format
+                  {t('pitch.config.format')}
                 </h3>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Longueur</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">{t('pitch.config.length')}</label>
                     <div className="grid grid-cols-3 gap-2">
                       {(['short', 'medium', 'long'] as const).map((len) => (
                         <button
@@ -802,14 +804,14 @@ export function PitchGenerator() {
                               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
-                          {len === 'short' ? 'Court' : len === 'medium' ? 'Moyen' : 'Long'}
+                          {len === 'short' ? t('pitch.config.short') : len === 'medium' ? t('pitch.config.medium') : t('pitch.config.long')}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Ton</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">{t('pitch.config.tone')}</label>
                     <div className="space-y-2">
                       {(['formal', 'conversational', 'technical'] as const).map((tone) => (
                         <button
@@ -821,7 +823,7 @@ export function PitchGenerator() {
                               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
-                          {tone === 'formal' ? 'Formel' : tone === 'conversational' ? 'Conversationnel' : 'Technique'}
+                          {tone === 'formal' ? t('pitch.config.formal') : tone === 'conversational' ? t('pitch.config.conversational') : t('pitch.config.technical')}
                         </button>
                       ))}
                     </div>
@@ -831,7 +833,7 @@ export function PitchGenerator() {
 
               {/* Options supplementaires */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Sections supplementaires</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">{t('pitch.config.additionalSections')}</h3>
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -841,8 +843,8 @@ export function PitchGenerator() {
                       className="w-5 h-5 text-purple-500 rounded"
                     />
                     <div>
-                      <div className="font-medium">Gestion des objections</div>
-                      <div className="text-xs text-slate-500">Anticipe les objections courantes avec des reponses preparees</div>
+                      <div className="font-medium">{t('pitch.config.objectionHandling')}</div>
+                      <div className="text-xs text-slate-500">{t('pitch.config.objectionDesc')}</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -853,8 +855,8 @@ export function PitchGenerator() {
                       className="w-5 h-5 text-purple-500 rounded"
                     />
                     <div>
-                      <div className="font-medium">Points de discussion</div>
-                      <div className="text-xs text-slate-500">Liste des sujets cles a aborder pendant l'entretien</div>
+                      <div className="font-medium">{t('pitch.config.discussionPoints')}</div>
+                      <div className="text-xs text-slate-500">{t('pitch.config.discussionDesc')}</div>
                     </div>
                   </label>
                 </div>
@@ -865,7 +867,7 @@ export function PitchGenerator() {
             <div className="space-y-6">
               {/* Produits */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Produits a mettre en avant</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">{t('pitch.config.productsToHighlight')}</h3>
                 <div className="space-y-2">
                   {PRODUCTS.map((product) => (
                     <label key={product.id} className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-slate-50">
@@ -892,7 +894,7 @@ export function PitchGenerator() {
 
               {/* Concurrents */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Concurrents a adresser</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">{t('pitch.config.competitorsToAddress')}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {COMPETITORS.map((competitor) => (
                     <label key={competitor.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50">
@@ -916,11 +918,11 @@ export function PitchGenerator() {
 
               {/* Instructions additionnelles */}
               <div className="glass-card p-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">Instructions speciales</h3>
+                <h3 className="font-bold text-lg text-slate-800 mb-4">{t('pitch.config.specialInstructions')}</h3>
                 <textarea
                   value={config.additionalInstructions}
                   onChange={(e) => setConfig({ ...config, additionalInstructions: e.target.value })}
-                  placeholder="Ex: Insister sur le service 24/7, mentionner la nouvelle etude clinique, eviter de parler du prix..."
+                  placeholder={t('pitch.config.specialInstructionsPlaceholder')}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   rows={4}
                 />
@@ -933,8 +935,8 @@ export function PitchGenerator() {
             <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-blue-800">Mode hors-ligne</p>
-                <p className="text-sm text-blue-600">Le pitch sera genere a partir des donnees reelles du praticien (notes, publications, historique, metriques). Pour une generation IA avancee, ajoutez une cle API dans .env (VITE_LLM_API_KEY).</p>
+                <p className="font-medium text-blue-800">{t('pitch.offlineMode')}</p>
+                <p className="text-sm text-blue-600">{t('pitch.offlineModeDesc')}</p>
               </div>
             </div>
           )}
@@ -946,14 +948,14 @@ export function PitchGenerator() {
               className="btn-secondary"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour
+              {t('common.back')}
             </button>
             <button
               onClick={generatePitch}
               className="btn-primary flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5" />
-              {hasValidApiKey ? 'Generer le pitch (IA)' : 'Generer le pitch'}
+              {hasValidApiKey ? t('pitch.generateIA') : t('pitch.generate')}
             </button>
           </div>
         </motion.div>
@@ -984,7 +986,7 @@ export function PitchGenerator() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                Pitch genere
+                {t('pitch.pitchGenerated')}
               </h1>
               <p className="text-slate-600">
                 Pour {selectedPractitioner?.title} {selectedPractitioner?.firstName} {selectedPractitioner?.lastName}
@@ -1003,17 +1005,17 @@ export function PitchGenerator() {
                     {isSpeaking && !isPaused ? (
                       <>
                         <Pause className="w-4 h-4" />
-                        Pause
+                        {t('pitch.pause')}
                       </>
                     ) : isSpeaking && isPaused ? (
                       <>
                         <Volume2 className="w-4 h-4" />
-                        Reprendre
+                        {t('pitch.resume')}
                       </>
                     ) : (
                       <>
                         <Volume2 className="w-4 h-4" />
-                        Ecouter
+                        {t('pitch.listen')}
                       </>
                     )}
                   </button>
@@ -1034,12 +1036,12 @@ export function PitchGenerator() {
                 {copied ? (
                   <>
                     <Check className="w-4 h-4" />
-                    Copie!
+                    {t('common.copied')}
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4" />
-                    Copier
+                    {t('common.copy')}
                   </>
                 )}
               </button>
@@ -1048,7 +1050,7 @@ export function PitchGenerator() {
                 className="btn-primary flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                Regenerer
+                {t('pitch.regenerate')}
               </button>
             </div>
           )}
@@ -1089,7 +1091,7 @@ export function PitchGenerator() {
               <div className="flex items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
                 <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
                 <div>
-                  <p className="font-medium text-purple-800">Generation en cours...</p>
+                  <p className="font-medium text-purple-800">{t('pitch.generating')}</p>
                   <p className="text-sm text-purple-600">{hasValidApiKey ? "L'IA cree votre pitch ultra-personnalise" : 'Generation du pitch a partir des donnees du praticien...'}</p>
                 </div>
               </div>
@@ -1153,12 +1155,12 @@ export function PitchGenerator() {
                     {editingSection === section.id ? (
                       <div className="space-y-3 bg-slate-50 -mx-6 -mb-6 p-6 rounded-b-xl border-t border-slate-200">
                         <label className="block text-sm font-medium text-slate-700">
-                          Comment souhaitez-vous modifier cette section ?
+                          {t('pitch.howToModify')}
                         </label>
                         <textarea
                           value={editInstruction}
                           onChange={(e) => setEditInstruction(e.target.value)}
-                          placeholder="Ex: Rendre plus percutant, ajouter des chiffres, raccourcir, etre plus technique..."
+                          placeholder={t('pitch.modifyPlaceholder')}
                           className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           rows={3}
                           autoFocus
@@ -1172,12 +1174,12 @@ export function PitchGenerator() {
                             {groqLoading ? (
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Regeneration...
+                                {t('pitch.regenerating')}
                               </>
                             ) : (
                               <>
                                 <RefreshCw className="w-4 h-4" />
-                                Appliquer les modifications
+                                {t('pitch.applyChanges')}
                               </>
                             )}
                           </button>
@@ -1188,7 +1190,7 @@ export function PitchGenerator() {
                             }}
                             className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50"
                           >
-                            Annuler
+                            {t('common.cancel')}
                           </button>
                         </div>
                       </div>
@@ -1223,9 +1225,9 @@ export function PitchGenerator() {
                     <Check className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-green-800">Pitch pret a l'emploi !</h3>
+                    <h3 className="font-bold text-lg text-green-800">{t('pitch.pitchReady')}</h3>
                     <p className="text-sm text-green-700">
-                      {sections.length} sections generees pour {selectedPractitioner?.title} {selectedPractitioner?.lastName}
+                      {t('pitch.sectionsGenerated', { count: String(sections.length), name: `${selectedPractitioner?.title} ${selectedPractitioner?.lastName}` })}
                     </p>
                   </div>
                 </div>
@@ -1242,14 +1244,14 @@ export function PitchGenerator() {
                     }}
                     className="btn-secondary flex-1 sm:flex-none"
                   >
-                    Nouveau pitch
+                    {t('pitch.newPitch')}
                   </button>
                   <button
                     onClick={copyToClipboard}
                     className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'Copie!' : 'Copier tout'}
+                    {copied ? t('common.copied') : t('pitch.copyAll')}
                   </button>
                 </div>
               </div>
@@ -1257,28 +1259,28 @@ export function PitchGenerator() {
 
             {/* Next Steps CTA */}
             <div className="glass-card p-4 bg-gradient-to-r from-al-blue-50 to-sky-50 border border-al-blue-200">
-              <p className="text-sm font-semibold text-al-navy mb-3">Prochaines etapes</p>
+              <p className="text-sm font-semibold text-al-navy mb-3">{t('pitch.nextSteps')}</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => navigate(`/visit-report?practitionerId=${selectedPractitioner?.id}`)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700 transition-all"
                 >
                   <Clock className="w-4 h-4" />
-                  Faire le compte-rendu apres la visite
+                  {t('pitch.makeReport')}
                 </button>
                 <button
                   onClick={() => navigate(`/practitioner/${selectedPractitioner?.id}`)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-al-blue-50 hover:border-al-blue-200 hover:text-al-blue-700 transition-all"
                 >
                   <FileText className="w-4 h-4" />
-                  Voir le profil complet
+                  {t('pitch.seeFullProfile')}
                 </button>
                 <button
                   onClick={() => navigate('/next-actions')}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-all"
                 >
                   <Zap className="w-4 h-4" />
-                  Voir mes autres actions
+                  {t('pitch.seeOtherActions')}
                 </button>
               </div>
             </div>

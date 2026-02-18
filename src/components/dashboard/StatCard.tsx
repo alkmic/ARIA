@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { AnimatedNumber } from '../shared/AnimatedNumber';
-
 interface StatCardProps {
   icon: LucideIcon;
   label: string;
