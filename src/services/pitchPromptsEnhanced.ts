@@ -873,21 +873,7 @@ ${config.additionalInstructions ? `INSTRUCTIONS: ${config.additionalInstructions
 Generate the pitch following the required structure.`;
   }
 
-  const isEn = lang === 'en';
-  return isEn ? `Generate a personalized pitch for this practitioner:
-
-PROFILE:
-- ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
-- ${practitioner.specialty} — ${practitioner.city}
-- Volume: ${practitioner.volumeL.toLocaleString()} L | KOL: ${practitioner.isKOL ? 'Yes' : 'No'}
-- Last visit: ${practitioner.lastVisitDate || 'Never'} | Trend: ${practitioner.trend}
-- Loyalty: ${practitioner.loyaltyScore}/10
-
-HISTORY:
-${conversationHistory}
-
-AI SYNTHESIS:
-${practitioner.aiSummary}` : `Génère un pitch personnalisé pour ce praticien:
+  return `Génère un pitch personnalisé pour ce praticien:
 
 PROFIL:
 - ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
