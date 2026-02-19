@@ -10,7 +10,7 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { getTopPractitioners } from '../services/metricsCalculator';
 import { useTranslation } from '../i18n';
-import { localizeSpecialty } from '../utils/localizeData';
+import { localizeSpecialty, localizeAiSummary } from '../utils/localizeData';
 import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
@@ -169,7 +169,7 @@ export const HCPProfile: React.FC = () => {
 
               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                 <p className="text-xs text-slate-600 line-clamp-2 flex-1">
-                  {practitioner.aiSummary}
+                  {localizeAiSummary(practitioner.aiSummary)}
                 </p>
                 <button
                   onClick={(e) => {

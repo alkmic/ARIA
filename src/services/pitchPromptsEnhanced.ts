@@ -19,19 +19,41 @@ const LENGTH_WORDS = {
   long: 700,
 };
 
-const TONE_DESCRIPTIONS = {
+const TONE_DESCRIPTIONS_FR = {
   formal: 'professionnel et institutionnel, vouvoiement strict, langage soigné',
   conversational: 'chaleureux et naturel, tout en restant professionnel, permet de créer un lien',
   technical: 'précis et technique, avec des données cliniques et scientifiques',
 };
 
-const FOCUS_DESCRIPTIONS = {
+const TONE_DESCRIPTIONS_EN = {
+  formal: 'professional and institutional, formal register, polished language',
+  conversational: 'warm and natural while remaining professional, builds rapport',
+  technical: 'precise and technical, with clinical and scientific data',
+};
+
+const FOCUS_DESCRIPTIONS_FR = {
   general: 'équilibre entre tous les aspects',
   service: 'qualité du service client, disponibilité 24/7, accompagnement',
   innovation: 'innovations technologiques, télésuivi, solutions connectées',
   price: 'rapport qualité-prix, optimisation des coûts pour le patient',
   loyalty: 'fidélisation, partenariat long terme, programme de suivi',
 };
+
+const FOCUS_DESCRIPTIONS_EN = {
+  general: 'balance across all aspects',
+  service: 'customer service quality, 24/7 availability, support',
+  innovation: 'technological innovations, remote monitoring, connected solutions',
+  price: 'value for money, cost optimization for the patient',
+  loyalty: 'retention, long-term partnership, follow-up program',
+};
+
+function getToneDescriptions(): Record<string, string> {
+  return getLanguage() === 'en' ? TONE_DESCRIPTIONS_EN : TONE_DESCRIPTIONS_FR;
+}
+
+function getFocusDescriptions(): Record<string, string> {
+  return getLanguage() === 'en' ? FOCUS_DESCRIPTIONS_EN : FOCUS_DESCRIPTIONS_FR;
+}
 
 /** Mapping section IDs → tag names used in generated pitch text */
 export const SECTION_ID_TO_TAG: Record<string, string> = {
@@ -49,6 +71,16 @@ const VISIT_TYPE_FR: Record<string, string> = {
   scheduled: 'Planifiée',
   cancelled: 'Annulée',
 };
+
+const VISIT_TYPE_EN: Record<string, string> = {
+  completed: 'Completed',
+  scheduled: 'Scheduled',
+  cancelled: 'Cancelled',
+};
+
+function getVisitTypeLabels(): Record<string, string> {
+  return getLanguage() === 'en' ? VISIT_TYPE_EN : VISIT_TYPE_FR;
+}
 
 /** Shared helper: compute product frequency from visit history */
 function getProductFrequency(profile: PractitionerProfile): [string, number][] {
@@ -181,8 +213,12 @@ function getEnrichedPractitionerData(practitionerId: string): PractitionerProfil
  * Analyse les patterns de visites pour identifier ce qui fonctionne
  */
 function analyzeVisitPatterns(profile: PractitionerProfile): string {
+  const lang = getLanguage();
+
   if (!profile.visitHistory || profile.visitHistory.length === 0) {
-    return 'Premier contact — aucune visite enregistrée. Approche de découverte recommandée.';
+    return lang === 'en'
+      ? 'First contact — no visits recorded. Discovery approach recommended.'
+      : 'Premier contact — aucune visite enregistrée. Approche de découverte recommandée.';
   }
 
   const visits = profile.visitHistory;
@@ -197,24 +233,41 @@ function analyzeVisitPatterns(profile: PractitionerProfile): string {
   let analysis = '';
 
   if (daysSinceLastVisit !== null) {
-    if (daysSinceLastVisit > 90) {
-      analysis += `⚠ ATTENTION: Dernière visite il y a ${daysSinceLastVisit} jours — contact "froid", il faut recréer le lien.\n`;
-    } else if (daysSinceLastVisit > 45) {
-      analysis += `Dernière visite il y a ${daysSinceLastVisit} jours — opportunité de relance.\n`;
+    if (lang === 'en') {
+      if (daysSinceLastVisit > 90) {
+        analysis += `⚠ WARNING: Last visit ${daysSinceLastVisit} days ago — "cold" contact, need to rebuild the relationship.\n`;
+      } else if (daysSinceLastVisit > 45) {
+        analysis += `Last visit ${daysSinceLastVisit} days ago — follow-up opportunity.\n`;
+      } else {
+        analysis += `Recent contact (${daysSinceLastVisit}d) — continuity and follow-up.\n`;
+      }
     } else {
-      analysis += `Contact récent (${daysSinceLastVisit}j) — continuité et suivi.\n`;
+      if (daysSinceLastVisit > 90) {
+        analysis += `⚠ ATTENTION: Dernière visite il y a ${daysSinceLastVisit} jours — contact "froid", il faut recréer le lien.\n`;
+      } else if (daysSinceLastVisit > 45) {
+        analysis += `Dernière visite il y a ${daysSinceLastVisit} jours — opportunité de relance.\n`;
+      } else {
+        analysis += `Contact récent (${daysSinceLastVisit}j) — continuité et suivi.\n`;
+      }
     }
   }
 
   if (topProducts.length > 0) {
-    analysis += `Produits les plus discutés: ${topProducts.map(([p, n]) => `${p} (${n}×)`).join(', ')}.\n`;
-    analysis += `→ CAPITALISER sur ces produits connus, proposer montée en gamme ou complémentarité.\n`;
+    if (lang === 'en') {
+      analysis += `Most discussed products: ${topProducts.map(([p, n]) => `${p} (${n}×)`).join(', ')}.\n`;
+      analysis += `→ CAPITALIZE on these known products, propose upgrades or complementary solutions.\n`;
+    } else {
+      analysis += `Produits les plus discutés: ${topProducts.map(([p, n]) => `${p} (${n}×)`).join(', ')}.\n`;
+      analysis += `→ CAPITALISER sur ces produits connus, proposer montée en gamme ou complémentarité.\n`;
+    }
   }
 
   if (visits.length >= 3) {
     const successRate = Math.round((completedCount / visits.length) * 100);
     if (successRate < 50) {
-      analysis += `Taux de visites réalisées: ${successRate}% — identifier les freins.\n`;
+      analysis += lang === 'en'
+        ? `Completed visit rate: ${successRate}% — identify barriers.\n`
+        : `Taux de visites réalisées: ${successRate}% — identifier les freins.\n`;
     }
   }
 
@@ -225,8 +278,12 @@ function analyzeVisitPatterns(profile: PractitionerProfile): string {
  * Extrait les thèmes clés et insights des notes de visite
  */
 function extractNoteInsights(profile: PractitionerProfile): string {
+  const lang = getLanguage();
+
   if (!profile.notes || profile.notes.length === 0) {
-    return 'Aucune note disponible — poser des questions ouvertes pour découvrir le praticien.';
+    return lang === 'en'
+      ? 'No notes available — ask open-ended questions to discover the practitioner.'
+      : 'Aucune note disponible — poser des questions ouvertes pour découvrir le praticien.';
   }
 
   const notes = profile.notes.slice(0, 5);
@@ -236,26 +293,50 @@ function extractNoteInsights(profile: PractitionerProfile): string {
 
   const matchWord = (pattern: string) => new RegExp(`\\b${pattern}\\b`, 'i').test(allContent);
 
-  if (matchWord('prix') || matchWord('coût') || matchWord('coûteu') || matchWord('tarif') || matchWord('cher|chère') || matchWord('économi')) {
-    themes.push('Sensibilité prix/coûts');
-  }
-  if (matchWord('concurrent') || matchWord('vivisol') || matchWord('linde') || matchWord('sos oxygène') || matchWord('bastide')) {
-    themes.push('Veille concurrentielle active');
-  }
-  if (matchWord('télésuivi') || matchWord('connecté') || matchWord('digital') || matchWord('appli') || matchWord('plateforme')) {
-    themes.push('Intérêt pour le digital/télésuivi');
-  }
-  if (matchWord('observance') || matchWord('compliance') || matchWord('adhésion') || matchWord('fidél.*traitement')) {
-    themes.push('Focus sur l\'observance patient');
-  }
-  if (matchWord('satisfait') || matchWord('très bien') || matchWord('excellent') || matchWord('ravi') || matchWord('apprécié')) {
-    themes.push('Globalement satisfait du service');
-  }
-  if (matchWord('problème') || matchWord('plainte') || matchWord('retard') || matchWord('insatisf') || matchWord('déçu') || matchWord('mécontent')) {
-    themes.push('Points d\'insatisfaction signalés');
-  }
-  if (matchWord('formation') || matchWord('éducation thérapeutique') || matchWord('dpc') || matchWord('congrès')) {
-    themes.push('Intérêt pour la formation/DPC');
+  if (lang === 'en') {
+    if (matchWord('prix') || matchWord('coût') || matchWord('coûteu') || matchWord('tarif') || matchWord('cher|chère') || matchWord('économi')) {
+      themes.push('Price/cost sensitivity');
+    }
+    if (matchWord('concurrent') || matchWord('vivisol') || matchWord('linde') || matchWord('sos oxygène') || matchWord('bastide')) {
+      themes.push('Active competitive monitoring');
+    }
+    if (matchWord('télésuivi') || matchWord('connecté') || matchWord('digital') || matchWord('appli') || matchWord('plateforme')) {
+      themes.push('Interest in digital/remote monitoring');
+    }
+    if (matchWord('observance') || matchWord('compliance') || matchWord('adhésion') || matchWord('fidél.*traitement')) {
+      themes.push('Focus on patient compliance');
+    }
+    if (matchWord('satisfait') || matchWord('très bien') || matchWord('excellent') || matchWord('ravi') || matchWord('apprécié')) {
+      themes.push('Generally satisfied with service');
+    }
+    if (matchWord('problème') || matchWord('plainte') || matchWord('retard') || matchWord('insatisf') || matchWord('déçu') || matchWord('mécontent')) {
+      themes.push('Dissatisfaction points reported');
+    }
+    if (matchWord('formation') || matchWord('éducation thérapeutique') || matchWord('dpc') || matchWord('congrès')) {
+      themes.push('Interest in training/CPD');
+    }
+  } else {
+    if (matchWord('prix') || matchWord('coût') || matchWord('coûteu') || matchWord('tarif') || matchWord('cher|chère') || matchWord('économi')) {
+      themes.push('Sensibilité prix/coûts');
+    }
+    if (matchWord('concurrent') || matchWord('vivisol') || matchWord('linde') || matchWord('sos oxygène') || matchWord('bastide')) {
+      themes.push('Veille concurrentielle active');
+    }
+    if (matchWord('télésuivi') || matchWord('connecté') || matchWord('digital') || matchWord('appli') || matchWord('plateforme')) {
+      themes.push('Intérêt pour le digital/télésuivi');
+    }
+    if (matchWord('observance') || matchWord('compliance') || matchWord('adhésion') || matchWord('fidél.*traitement')) {
+      themes.push('Focus sur l\'observance patient');
+    }
+    if (matchWord('satisfait') || matchWord('très bien') || matchWord('excellent') || matchWord('ravi') || matchWord('apprécié')) {
+      themes.push('Globalement satisfait du service');
+    }
+    if (matchWord('problème') || matchWord('plainte') || matchWord('retard') || matchWord('insatisf') || matchWord('déçu') || matchWord('mécontent')) {
+      themes.push('Points d\'insatisfaction signalés');
+    }
+    if (matchWord('formation') || matchWord('éducation thérapeutique') || matchWord('dpc') || matchWord('congrès')) {
+      themes.push('Intérêt pour la formation/DPC');
+    }
   }
 
   notes.forEach(note => {
@@ -264,19 +345,33 @@ function extractNoteInsights(profile: PractitionerProfile): string {
 
   let insights = '';
 
-  if (themes.length > 0) {
-    insights += `Thèmes identifiés: ${themes.join(', ')}.\n`;
+  if (lang === 'en') {
+    if (themes.length > 0) {
+      insights += `Identified themes: ${themes.join(', ')}.\n`;
+    }
+    if (nextActions.length > 0) {
+      insights += `Pending actions: ${nextActions.slice(0, 3).join(' | ')}.\n`;
+      insights += `→ MENTION these actions to demonstrate follow-through and reliability.\n`;
+    }
+    insights += `\nLatest notes (conversational context):\n`;
+    notes.slice(0, 3).forEach(note => {
+      const date = new Date(note.date).toLocaleDateString('en-US');
+      insights += `- [${date}] ${note.content.substring(0, 150)}${note.content.length > 150 ? '...' : ''}\n`;
+    });
+  } else {
+    if (themes.length > 0) {
+      insights += `Thèmes identifiés: ${themes.join(', ')}.\n`;
+    }
+    if (nextActions.length > 0) {
+      insights += `Actions en attente: ${nextActions.slice(0, 3).join(' | ')}.\n`;
+      insights += `→ MENTIONNER ces actions pour montrer le suivi et la fiabilité.\n`;
+    }
+    insights += `\nDernières notes (contexte conversationnel):\n`;
+    notes.slice(0, 3).forEach(note => {
+      const date = new Date(note.date).toLocaleDateString('fr-FR');
+      insights += `- [${date}] ${note.content.substring(0, 150)}${note.content.length > 150 ? '...' : ''}\n`;
+    });
   }
-  if (nextActions.length > 0) {
-    insights += `Actions en attente: ${nextActions.slice(0, 3).join(' | ')}.\n`;
-    insights += `→ MENTIONNER ces actions pour montrer le suivi et la fiabilité.\n`;
-  }
-
-  insights += `\nDernières notes (contexte conversationnel):\n`;
-  notes.slice(0, 3).forEach(note => {
-    const date = new Date(note.date).toLocaleDateString('fr-FR');
-    insights += `- [${date}] ${note.content.substring(0, 150)}${note.content.length > 150 ? '...' : ''}\n`;
-  });
 
   return insights;
 }
@@ -285,40 +380,48 @@ function extractNoteInsights(profile: PractitionerProfile): string {
  * Formate les publications avec analyse thématique
  */
 function formatPublicationsForPitch(profile: PractitionerProfile): string {
+  const lang = getLanguage();
+  const dateFmt = lang === 'en' ? 'en-US' : 'fr-FR';
   const publications = profile.news?.filter(n => n.type === 'publication') || [];
   const conferences = profile.news?.filter(n => n.type === 'conference') || [];
   const awards = profile.news?.filter(n => n.type === 'award') || [];
   const certifications = profile.news?.filter(n => n.type === 'certification') || [];
 
   if (publications.length === 0 && conferences.length === 0 && awards.length === 0) {
-    return 'Aucune publication/actualité référencée. Utiliser la spécialité et la localisation pour personnaliser l\'accroche.';
+    return lang === 'en'
+      ? 'No publications/news referenced. Use specialty and location to personalize the opening.'
+      : 'Aucune publication/actualité référencée. Utiliser la spécialité et la localisation pour personnaliser l\'accroche.';
   }
 
   let result = '';
 
   if (publications.length > 0) {
-    result += `PUBLICATIONS (${publications.length}) — A CITER DANS L'ACCROCHE:\n`;
+    result += lang === 'en'
+      ? `PUBLICATIONS (${publications.length}) — MUST CITE IN THE OPENING:\n`
+      : `PUBLICATIONS (${publications.length}) — A CITER DANS L'ACCROCHE:\n`;
     publications.slice(0, 3).forEach(pub => {
-      result += `- "${pub.title}" (${new Date(pub.date).toLocaleDateString('fr-FR')})\n`;
-      if (pub.content) result += `  Résumé: ${pub.content}\n`;
+      result += `- "${pub.title}" (${new Date(pub.date).toLocaleDateString(dateFmt)})\n`;
+      if (pub.content) result += lang === 'en' ? `  Summary: ${pub.content}\n` : `  Résumé: ${pub.content}\n`;
     });
-    result += `→ OBLIGATOIRE: Mentionner la publication la plus récente dans l'accroche pour montrer que vous suivez son travail.\n\n`;
+    result += lang === 'en'
+      ? `→ MANDATORY: Mention the most recent publication in the opening to show you follow their work.\n\n`
+      : `→ OBLIGATOIRE: Mentionner la publication la plus récente dans l'accroche pour montrer que vous suivez son travail.\n\n`;
   }
 
   if (conferences.length > 0) {
     result += `CONFERENCES (${conferences.length}):\n`;
     conferences.slice(0, 2).forEach(conf => {
-      result += `- "${conf.title}" (${new Date(conf.date).toLocaleDateString('fr-FR')})\n`;
+      result += `- "${conf.title}" (${new Date(conf.date).toLocaleDateString(dateFmt)})\n`;
     });
     result += '\n';
   }
 
   if (awards.length > 0) {
-    result += `DISTINCTIONS:\n`;
+    result += lang === 'en' ? `AWARDS:\n` : `DISTINCTIONS:\n`;
     awards.forEach(award => {
-      result += `- ${award.title} (${new Date(award.date).toLocaleDateString('fr-FR')})\n`;
+      result += `- ${award.title} (${new Date(award.date).toLocaleDateString(dateFmt)})\n`;
     });
-    result += `→ Féliciter pour cette reconnaissance.\n\n`;
+    result += lang === 'en' ? `→ Congratulate for this recognition.\n\n` : `→ Féliciter pour cette reconnaissance.\n\n`;
   }
 
   if (certifications.length > 0) {
@@ -336,15 +439,24 @@ function formatPublicationsForPitch(profile: PractitionerProfile): string {
  * Formate l'historique complet des visites
  */
 function formatVisitHistory(profile: PractitionerProfile): string {
+  const lang = getLanguage();
+  const dateFmt = lang === 'en' ? 'en-US' : 'fr-FR';
+
   if (!profile.visitHistory || profile.visitHistory.length === 0) {
-    return 'Aucune visite enregistrée — c\'est un premier contact.';
+    return lang === 'en'
+      ? 'No visits recorded — this is a first contact.'
+      : 'Aucune visite enregistrée — c\'est un premier contact.';
   }
 
+  const typeLabels = getVisitTypeLabels();
+
   return profile.visitHistory.slice(0, 5).map(visit => {
-    const date = new Date(visit.date).toLocaleDateString('fr-FR');
-    const products = visit.productsDiscussed?.join(', ') || 'Non renseigné';
-    const typeFr = VISIT_TYPE_FR[visit.type] || visit.type;
-    return `- [${date}] ${typeFr} (${visit.duration || '?'} min)\n  Produits: ${products}${visit.notes ? `\n  Notes: ${visit.notes}` : ''}`;
+    const date = new Date(visit.date).toLocaleDateString(dateFmt);
+    const productsLabel = lang === 'en' ? 'Products' : 'Produits';
+    const notesLabel = lang === 'en' ? 'Notes' : 'Notes';
+    const products = visit.productsDiscussed?.join(', ') || (lang === 'en' ? 'Not specified' : 'Non renseigné');
+    const typeLabel = typeLabels[visit.type] || visit.type;
+    return `- [${date}] ${typeLabel} (${visit.duration || '?'} min)\n  ${productsLabel}: ${products}${visit.notes ? `\n  ${notesLabel}: ${visit.notes}` : ''}`;
   }).join('\n');
 }
 
@@ -356,13 +468,65 @@ function formatVisitHistory(profile: PractitionerProfile): string {
  * Construit le prompt système enrichi avec connaissances RAG ciblées
  */
 export function buildEnhancedSystemPrompt(config: PitchConfig, practitioner?: Practitioner): string {
-  const sections = ['[ACCROCHE]', '[PROPOSITION]', '[CONCURRENCE]', '[CALL_TO_ACTION]'];
-  if (config.includeObjections) sections.push('[OBJECTIONS]');
-  if (config.includeTalkingPoints) sections.push('[TALKING_POINTS]');
-  sections.push('[FOLLOW_UP]');
+  const lang = getLanguage();
+  const toneDesc = getToneDescriptions();
+  const focusDesc = getFocusDescriptions();
 
   // Récupérer les connaissances RAG ciblées
   const ragKnowledge = practitioner ? getRelevantRAGKnowledge(practitioner, config) : '';
+
+  if (lang === 'en') {
+    return `You are an expert Pharmaceutical Sales Representative for Air Liquide Healthcare (through its subsidiaries Orkyn' and ALMS), the French leader in home healthcare services for respiratory patients.
+
+You generate ULTRA-PERSONALIZED sales pitches. Every sentence must be specific to THIS practitioner. DO NOT generate generic phrases like "we have a comprehensive range" or "our service is excellent". Use the real data provided.
+
+═══════════════════════════════════════════════════════════════
+AIR LIQUIDE HEALTHCARE PRODUCT & SERVICE RANGE (quick reference)
+═══════════════════════════════════════════════════════════════
+**O2:** VitalAire Confort+ (concentrator <39dB, connected) | FreeStyle Comfort (portable 2.1kg, 8h) | O2 liquid Helios (mobility) | Extractor station (economical, >99.5%)
+**Remote monitoring:** O2 Connect via EOVE (SpO2, flow rate, real-time compliance) — included, no extra cost
+**NIV/CPAP:** DreamStation BiLevel (hypercapnic COPD) | ResMed AirSense 11 (connected CPAP)
+**Services:** 24/7 on-call (<4h) | HAS-certified therapeutic education | Practitioner platform | Accredited CPD
+**LPPR 2025:** LTOT tier 1 ~12€/day | tier 3 ~18€/day | NIV ~14€/day (100% covered if ALD)
+**Advantages vs competitors:** National coverage (vs Vivisol regional) | Native remote monitoring (vs Linde without) | Respiratory specialist (vs Bastide generalist) | In-house innovation (vs SOS dependent on third parties)
+${ragKnowledge}
+
+MANDATORY RULES:
+- Tone: ${toneDesc[config.tone]}
+- Target length: approximately ${LENGTH_WORDS[config.length]} words total
+- Main focus: ${focusDesc[config.focusArea]}
+- Always use formal address with the practitioner
+- USE the real data provided to personalize (publications, notes, last visit, trends)
+- NEVER invent statistics not provided
+- If the practitioner has publications: CITE the exact title of the most recent one in the opening
+- If notes mention a competitor, a problem, or a specific interest: ADDRESS that point
+- Cite clinical data if the tone is technical or if the practitioner is a pulmonologist
+
+MANDATORY STRUCTURE:
+
+[ACCROCHE]
+VERY personalized opening (2-3 sentences). MANDATORY: build on a concrete and recent element — a publication, conference, visit note, event. If the practitioner has publications, CITE the exact title. If they are a KOL, highlight their expertise. If never visited, mention a specific fact (their specialty in their city, a conference in their field).
+
+[PROPOSITION]
+Presentation of Air Liquide's value proposition linked to needs IDENTIFIED in notes/history. If products have already been discussed, propose upgrades or complementary solutions. If the practitioner is interested in digital, push remote monitoring. If price sensitive, push value for money and reimbursement. Focus: ${focusDesc[config.focusArea]}.
+
+[CONCURRENCE]
+FACTUAL differentiation from competitors. If notes mention a specific competitor, address it first. Concrete arguments without disparagement.
+
+[CALL_TO_ACTION]
+Concrete proposal based on history. If there are pending actions (identified in notes), reference them.
+${config.includeObjections ? `
+[OBJECTIONS]
+4-5 SPECIFIC objections for this practitioner (based on notes, churn risk, trend). Format: "**Objection:** ... → **Response:** ..."
+` : ''}${config.includeTalkingPoints ? `
+[TALKING_POINTS]
+6-8 key points to structure the meeting: (1) personalized opening, (2) follow-up on previous actions, (3) flagship product, (4) clinical data if relevant, (5) open-ended question, (6) concrete proposal.
+` : ''}
+[FOLLOW_UP]
+Post-visit follow-up plan in 3 steps (D+1, D+7, D+30) with personalized concrete actions.
+
+Generate the complete pitch following this exact structure. Write the entire pitch in English.`;
+  }
 
   return `Tu es un Délégué Pharmaceutique expert pour Air Liquide Santé (via ses filiales Orkyn' et ALMS), leader français des prestations de santé à domicile pour les patients respiratoires.
 
@@ -380,9 +544,9 @@ GAMME PRODUITS & SERVICES AIR LIQUIDE SANTÉ (référence rapide)
 ${ragKnowledge}
 
 RÈGLES IMPÉRATIVES:
-- Ton: ${TONE_DESCRIPTIONS[config.tone]}
+- Ton: ${toneDesc[config.tone]}
 - Longueur cible: environ ${LENGTH_WORDS[config.length]} mots au total
-- Focus principal: ${FOCUS_DESCRIPTIONS[config.focusArea]}
+- Focus principal: ${focusDesc[config.focusArea]}
 - Toujours vouvoyer le praticien
 - UTILISER les données réelles fournies pour personnaliser (publications, notes, dernière visite, tendances)
 - Ne JAMAIS inventer de statistiques non fournies
@@ -396,7 +560,7 @@ STRUCTURE OBLIGATOIRE:
 Ouverture TRÈS personnalisée (2-3 phrases). OBLIGATOIRE: s'appuyer sur un élément concret et récent — une publication, une conférence, une note de visite, un événement. Si le praticien a des publications, CITER le titre exact. Si c'est un KOL, valoriser son expertise. Si jamais visité, mentionner un fait précis (sa spécialité dans sa ville, un colloque de sa discipline).
 
 [PROPOSITION]
-Présentation de la valeur ajoutée Air Liquide reliée aux besoins IDENTIFIÉS dans les notes/l'historique. Si des produits ont déjà été discutés, proposer montée en gamme ou complémentarité. Si le praticien s'intéresse au digital, pousser le télésuivi. Si sensibilité prix, pousser le rapport qualité-prix et le remboursement. Focus: ${FOCUS_DESCRIPTIONS[config.focusArea]}.
+Présentation de la valeur ajoutée Air Liquide reliée aux besoins IDENTIFIÉS dans les notes/l'historique. Si des produits ont déjà été discutés, proposer montée en gamme ou complémentarité. Si le praticien s'intéresse au digital, pousser le télésuivi. Si sensibilité prix, pousser le rapport qualité-prix et le remboursement. Focus: ${focusDesc[config.focusArea]}.
 
 [CONCURRENCE]
 Différenciation FACTUELLE par rapport aux concurrents. Si les notes mentionnent un concurrent précis, l'adresser en priorité. Arguments concrets sans dénigrement.
@@ -413,7 +577,7 @@ ${config.includeObjections ? `
 [FOLLOW_UP]
 Plan de suivi post-visite en 3 étapes (J+1, J+7, J+30) avec actions concrètes personnalisées.
 
-Génère le pitch complet en suivant cette structure exacte.${getLanguage() === 'en' ? '\n\nIMPORTANT: The user interface is in English. Generate the entire pitch in English. All sections, arguments, objections, and follow-up plans must be written in English.' : ''}`;
+Génère le pitch complet en suivant cette structure exacte.`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -447,6 +611,169 @@ export function buildEnhancedUserPrompt(practitioner: Practitioner, config: Pitc
   const topProductsRaw = getProductFrequency(profile).slice(0, 3);
   const topProducts = topProductsRaw.map(([product, count]) => `${product} (${count}x)`);
 
+  const lang = getLanguage();
+  const toneDesc = getToneDescriptions();
+  const focusDesc = getFocusDescriptions();
+  const dateFmt = lang === 'en' ? 'en-US' : 'fr-FR';
+
+  // Practice type label
+  const practiceTypeLabel = lang === 'en'
+    ? (profile.practiceType === 'ville' ? 'Private practice' : profile.practiceType === 'hospitalier' ? 'Hospital practitioner' : 'Mixed practice (private + hospital)')
+    : (profile.practiceType === 'ville' ? 'Praticien de ville (libéral)' : profile.practiceType === 'hospitalier' ? 'Praticien hospitalier' : 'Praticien mixte (ville + hôpital)');
+
+  // Vingtile label
+  const vingtileLabel = lang === 'en'
+    ? (profile.metrics.vingtile <= 5 ? '→ TOP prescriber, VIP treatment' : profile.metrics.vingtile <= 10 ? '→ Important prescriber' : '→ Standard prescriber')
+    : (profile.metrics.vingtile <= 5 ? '→ TOP prescripteur, traitement VIP' : profile.metrics.vingtile <= 10 ? '→ Prescripteur important' : '→ Prescripteur standard');
+
+  // KOL label
+  const kolLabel = lang === 'en'
+    ? (profile.metrics.isKOL ? 'YES — Influential practitioner, recognized expertise' : 'No')
+    : (profile.metrics.isKOL ? 'OUI — Praticien influent, expertise reconnue' : 'Non');
+
+  // Churn risk label
+  const churnLabel = lang === 'en'
+    ? (profile.metrics.churnRisk === 'high' ? 'HIGH — Pitch must be defensive and reassuring' : profile.metrics.churnRisk === 'medium' ? 'Medium — Vigilance required' : 'Low — Stable relationship')
+    : (profile.metrics.churnRisk === 'high' ? 'ÉLEVÉ — Pitch doit être défensif et rassurant' : profile.metrics.churnRisk === 'medium' ? 'Moyen — Vigilance requise' : 'Faible — Relation stable');
+
+  // Visit reports section
+  let visitReportsSection = '';
+  if (enrichedContext && enrichedContext.userVisitReports.length > 0) {
+    const reportsTitle = lang === 'en' ? 'RECENT VISIT REPORTS (dynamic CRM data)' : 'COMPTES-RENDUS DE VISITE RÉCENTS (données CRM dynamiques)';
+    const reportsData = enrichedContext.userVisitReports.slice(0, 3).map((report, idx) => {
+      const date = new Date(report.date).toLocaleDateString(dateFmt);
+      let text = `${idx + 1}. [${date}] ${lang === 'en' ? 'Visit' : 'Visite'} — ${lang === 'en' ? 'Sentiment' : 'Sentiment'}: ${report.extractedInfo.sentiment}`;
+      if (report.extractedInfo.keyPoints.length > 0) text += `\n   ${lang === 'en' ? 'Key points' : 'Points clés'}: ${report.extractedInfo.keyPoints.join('; ')}`;
+      if (report.extractedInfo.productsDiscussed.length > 0) text += `\n   ${lang === 'en' ? 'Products discussed' : 'Produits discutés'}: ${report.extractedInfo.productsDiscussed.join(', ')}`;
+      if (report.extractedInfo.competitorsMentioned.length > 0) text += `\n   ${lang === 'en' ? 'Competitors mentioned' : 'Concurrents mentionnés'}: ${report.extractedInfo.competitorsMentioned.join(', ')}`;
+      if (report.extractedInfo.objections.length > 0) text += `\n   ${lang === 'en' ? 'Objections' : 'Objections'}: ${report.extractedInfo.objections.join('; ')}`;
+      if (report.extractedInfo.opportunities.length > 0) text += `\n   ${lang === 'en' ? 'Opportunities' : 'Opportunités'}: ${report.extractedInfo.opportunities.join('; ')}`;
+      if (report.extractedInfo.nextActions.length > 0) text += `\n   → ${lang === 'en' ? 'Actions' : 'Actions'}: ${report.extractedInfo.nextActions.join('; ')}`;
+      return text;
+    }).join('\n');
+    const reportsInstruction = lang === 'en'
+      ? '→ USE these recent reports to personalize the pitch (mention past discussions, address objections, capitalize on opportunities)'
+      : '→ UTILISER ces comptes-rendus récents pour personnaliser le pitch (mentionner les discussions passées, adresser les objections, capitaliser sur les opportunités)';
+    visitReportsSection = `═══════════════════════════════════════════════════════════════════════════
+${reportsTitle}
+═══════════════════════════════════════════════════════════════════════════
+${reportsData}
+${reportsInstruction}
+
+`;
+  }
+
+  // Personalization directives
+  let directive1: string;
+  if (profile.news?.filter(n => n.type === 'publication').length) {
+    directive1 = lang === 'en'
+      ? `1. OPENING: Cite the publication "${profile.news.filter(n => n.type === 'publication')[0].title}" in the opening.`
+      : `1. ACCROCHE: Citer la publication "${profile.news.filter(n => n.type === 'publication')[0].title}" dans l'ouverture.`;
+  } else if (daysSinceLastVisit !== null) {
+    directive1 = lang === 'en'
+      ? `1. OPENING: Reference the last visit (${daysSinceLastVisit} days ago) and what was discussed.`
+      : `1. ACCROCHE: Référencer la dernière visite (il y a ${daysSinceLastVisit} jours) et ce qui a été discuté.`;
+  } else {
+    directive1 = lang === 'en'
+      ? `1. OPENING: Mention expertise in ${profile.specialty} in ${profile.address.city}.`
+      : `1. ACCROCHE: Mentionner l'expertise en ${profile.specialty} à ${profile.address.city}.`;
+  }
+
+  let directive2: string;
+  if (profile.metrics.churnRisk === 'high') {
+    directive2 = lang === 'en'
+      ? '2. DEFENSIVE TONE: The practitioner is at churn risk — emphasize the relationship, address frustrations, propose concrete improvements.'
+      : '2. TON DÉFENSIF: Le praticien est à risque de churn — valoriser la relation, adresser les frustrations, proposer des améliorations concrètes.';
+  } else if (profile.metrics.isKOL) {
+    directive2 = lang === 'en'
+      ? '2. KOL RECOGNITION: Explicitly acknowledge their expert status and influence in the medical community.'
+      : '2. VALORISATION KOL: Reconnaître explicitement son statut d\'expert et son influence dans la communauté médicale.';
+  } else {
+    directive2 = lang === 'en'
+      ? `2. GROWTH: Potential of +${profile.metrics.potentialGrowth}% — identify development opportunities.`
+      : `2. CROISSANCE: Potentiel de +${profile.metrics.potentialGrowth}% — identifier des opportunités de développement.`;
+  }
+
+  let directive3: string;
+  if (topProducts.length > 0) {
+    directive3 = lang === 'en'
+      ? `3. PRODUCT CONTINUITY: Capitalize on ${topProducts[0]} already discussed, propose upgrades or complementary solutions.`
+      : `3. CONTINUITÉ PRODUIT: Capitaliser sur ${topProducts[0]} déjà discuté, proposer montée en gamme ou complémentarité.`;
+  } else {
+    directive3 = lang === 'en'
+      ? '3. DISCOVERY: First product contact — broad presentation then focus based on reactions.'
+      : '3. DÉCOUVERTE: Premier contact produit — présentation large puis focus selon les réactions.';
+  }
+
+  const directive4 = lang === 'en'
+    ? '4. EVERY SECTION must contain at least one SPECIFIC element drawn from the data above.'
+    : '4. CHAQUE SECTION doit contenir au moins un élément SPÉCIFIQUE tiré des données ci-dessus.';
+
+  if (lang === 'en') {
+    return `Generate an ULTRA-PERSONALIZED pitch for this practitioner. Every section must reference SPECIFIC elements from the data below. DO NOT remain generic.
+
+═══════════════════════════════════════════════════════════════════════════
+COMPLETE PRACTITIONER PROFILE
+═══════════════════════════════════════════════════════════════════════════
+
+**IDENTITY:**
+- Name: ${profile.title} ${profile.firstName} ${profile.lastName}
+- Specialty: ${profile.specialty}${profile.subSpecialty ? ` — ${profile.subSpecialty}` : ''}
+- Practice type: ${practiceTypeLabel}
+- City: ${profile.address.city} (${profile.address.postalCode})
+
+**BUSINESS METRICS:**
+- Annual volume: ${profile.metrics.volumeL.toLocaleString()} L (${(profile.metrics.volumeL / 1000).toFixed(0)}K L)
+- Loyalty: ${profile.metrics.loyaltyScore}/10
+- Vingtile: V${profile.metrics.vingtile} ${vingtileLabel}
+- KOL: ${kolLabel}
+- Growth potential: +${profile.metrics.potentialGrowth}%
+- Churn risk: ${churnLabel}
+
+═══════════════════════════════════════════════════════════════════════════
+VISIT ANALYSIS (automated insights)
+═══════════════════════════════════════════════════════════════════════════
+${visitPatterns}
+
+**Historical products:** ${topProducts.length > 0 ? topProducts.join(', ') : 'No products previously discussed'}
+
+═══════════════════════════════════════════════════════════════════════════
+PRACTITIONER NEWS AND PUBLICATIONS
+═══════════════════════════════════════════════════════════════════════════
+${publicationsFormatted}
+
+═══════════════════════════════════════════════════════════════════════════
+VISIT NOTE INSIGHTS (themes, actions, context)
+═══════════════════════════════════════════════════════════════════════════
+${noteInsights}
+
+═══════════════════════════════════════════════════════════════════════════
+RECENT VISIT HISTORY
+═══════════════════════════════════════════════════════════════════════════
+${visitHistory}
+
+${visitReportsSection}═══════════════════════════════════════════════════════════════════════════
+PITCH CONFIGURATION
+═══════════════════════════════════════════════════════════════════════════
+- Length: ${config.length} (~${LENGTH_WORDS[config.length]} words)
+- Tone: ${config.tone} (${toneDesc[config.tone]})
+- Focus: ${config.focusArea} (${focusDesc[config.focusArea]})
+- Products to highlight: ${config.products.length > 0 ? config.products.join(', ') : 'Full range'}
+- Competitors to address: ${config.competitors.length > 0 ? config.competitors.join(', ') : 'None specifically'}
+
+${config.additionalInstructions ? `**SPECIAL INSTRUCTIONS FROM THE REP:**\n${config.additionalInstructions}` : ''}
+
+═══════════════════════════════════════════════════════════════════════════
+PERSONALIZATION DIRECTIVES (MANDATORY)
+═══════════════════════════════════════════════════════════════════════════
+${directive1}
+${directive2}
+${directive3}
+${directive4}
+
+Generate the complete pitch now.`;
+  }
+
   return `Génère un pitch ULTRA-PERSONNALISÉ pour ce praticien. Chaque section doit mentionner des éléments SPÉCIFIQUES tirés des données ci-dessous. INTERDIT de rester générique.
 
 ═══════════════════════════════════════════════════════════════════════════
@@ -456,16 +783,16 @@ PROFIL COMPLET DU PRATICIEN
 **IDENTITÉ:**
 - Nom: ${profile.title} ${profile.firstName} ${profile.lastName}
 - Spécialité: ${profile.specialty}${profile.subSpecialty ? ` — ${profile.subSpecialty}` : ''}
-- Type d'exercice: ${profile.practiceType === 'ville' ? 'Praticien de ville (libéral)' : profile.practiceType === 'hospitalier' ? 'Praticien hospitalier' : 'Praticien mixte (ville + hôpital)'}
+- Type d'exercice: ${practiceTypeLabel}
 - Ville: ${profile.address.city} (${profile.address.postalCode})
 
 **MÉTRIQUES BUSINESS:**
 - Volume annuel: ${profile.metrics.volumeL.toLocaleString()} L (${(profile.metrics.volumeL / 1000).toFixed(0)}K L)
 - Fidélité: ${profile.metrics.loyaltyScore}/10
-- Vingtile: V${profile.metrics.vingtile} ${profile.metrics.vingtile <= 5 ? '→ TOP prescripteur, traitement VIP' : profile.metrics.vingtile <= 10 ? '→ Prescripteur important' : '→ Prescripteur standard'}
-- KOL: ${profile.metrics.isKOL ? 'OUI — Praticien influent, expertise reconnue' : 'Non'}
+- Vingtile: V${profile.metrics.vingtile} ${vingtileLabel}
+- KOL: ${kolLabel}
 - Potentiel de croissance: +${profile.metrics.potentialGrowth}%
-- Risque de churn: ${profile.metrics.churnRisk === 'high' ? 'ÉLEVÉ — Pitch doit être défensif et rassurant' : profile.metrics.churnRisk === 'medium' ? 'Moyen — Vigilance requise' : 'Faible — Relation stable'}
+- Risque de churn: ${churnLabel}
 
 ═══════════════════════════════════════════════════════════════════════════
 ANALYSE DES VISITES (insights automatiques)
@@ -489,28 +816,12 @@ HISTORIQUE DES VISITES RÉCENTES
 ═══════════════════════════════════════════════════════════════════════════
 ${visitHistory}
 
-${enrichedContext && enrichedContext.userVisitReports.length > 0 ? `═══════════════════════════════════════════════════════════════════════════
-COMPTES-RENDUS DE VISITE RÉCENTS (données CRM dynamiques)
-═══════════════════════════════════════════════════════════════════════════
-${enrichedContext.userVisitReports.slice(0, 3).map((report, idx) => {
-  const date = new Date(report.date).toLocaleDateString('fr-FR');
-  let text = `${idx + 1}. [${date}] Visite — Sentiment: ${report.extractedInfo.sentiment}`;
-  if (report.extractedInfo.keyPoints.length > 0) text += `\n   Points clés: ${report.extractedInfo.keyPoints.join('; ')}`;
-  if (report.extractedInfo.productsDiscussed.length > 0) text += `\n   Produits discutés: ${report.extractedInfo.productsDiscussed.join(', ')}`;
-  if (report.extractedInfo.competitorsMentioned.length > 0) text += `\n   Concurrents mentionnés: ${report.extractedInfo.competitorsMentioned.join(', ')}`;
-  if (report.extractedInfo.objections.length > 0) text += `\n   Objections: ${report.extractedInfo.objections.join('; ')}`;
-  if (report.extractedInfo.opportunities.length > 0) text += `\n   Opportunités: ${report.extractedInfo.opportunities.join('; ')}`;
-  if (report.extractedInfo.nextActions.length > 0) text += `\n   → Actions: ${report.extractedInfo.nextActions.join('; ')}`;
-  return text;
-}).join('\n')}
-→ UTILISER ces comptes-rendus récents pour personnaliser le pitch (mentionner les discussions passées, adresser les objections, capitaliser sur les opportunités)
-
-` : ''}═══════════════════════════════════════════════════════════════════════════
+${visitReportsSection}═══════════════════════════════════════════════════════════════════════════
 CONFIGURATION DU PITCH
 ═══════════════════════════════════════════════════════════════════════════
 - Longueur: ${config.length} (~${LENGTH_WORDS[config.length]} mots)
-- Ton: ${config.tone} (${TONE_DESCRIPTIONS[config.tone]})
-- Focus: ${config.focusArea} (${FOCUS_DESCRIPTIONS[config.focusArea]})
+- Ton: ${config.tone} (${toneDesc[config.tone]})
+- Focus: ${config.focusArea} (${focusDesc[config.focusArea]})
 - Produits à mettre en avant: ${config.products.length > 0 ? config.products.join(', ') : 'Gamme complète'}
 - Concurrents à adresser: ${config.competitors.length > 0 ? config.competitors.join(', ') : 'Aucun spécifiquement'}
 
@@ -519,10 +830,10 @@ ${config.additionalInstructions ? `**INSTRUCTIONS SPÉCIALES DU COMMERCIAL:**\n$
 ═══════════════════════════════════════════════════════════════════════════
 DIRECTIVES DE PERSONNALISATION (OBLIGATOIRES)
 ═══════════════════════════════════════════════════════════════════════════
-${profile.news?.filter(n => n.type === 'publication').length ? `1. ACCROCHE: Citer la publication "${profile.news.filter(n => n.type === 'publication')[0].title}" dans l'ouverture.` : daysSinceLastVisit !== null ? `1. ACCROCHE: Référencer la dernière visite (il y a ${daysSinceLastVisit} jours) et ce qui a été discuté.` : `1. ACCROCHE: Mentionner l'expertise en ${profile.specialty} à ${profile.address.city}.`}
-${profile.metrics.churnRisk === 'high' ? '2. TON DÉFENSIF: Le praticien est à risque de churn — valoriser la relation, adresser les frustrations, proposer des améliorations concrètes.' : profile.metrics.isKOL ? '2. VALORISATION KOL: Reconnaître explicitement son statut d\'expert et son influence dans la communauté médicale.' : `2. CROISSANCE: Potentiel de +${profile.metrics.potentialGrowth}% — identifier des opportunités de développement.`}
-${topProducts.length > 0 ? `3. CONTINUITÉ PRODUIT: Capitaliser sur ${topProducts[0]} déjà discuté, proposer montée en gamme ou complémentarité.` : '3. DÉCOUVERTE: Premier contact produit — présentation large puis focus selon les réactions.'}
-4. CHAQUE SECTION doit contenir au moins un élément SPÉCIFIQUE tiré des données ci-dessus.
+${directive1}
+${directive2}
+${directive3}
+${directive4}
 
 Génère maintenant le pitch complet.`;
 }
@@ -531,9 +842,36 @@ Génère maintenant le pitch complet.`;
  * Prompt de base si les données enrichies ne sont pas disponibles
  */
 function buildBasicUserPrompt(practitioner: Practitioner, config: PitchConfig): string {
+  const lang = getLanguage();
   const conversationHistory = practitioner.conversations?.slice(0, 2).map(c =>
     `- ${c.date}: ${c.summary}`
-  ).join('\n') || 'Aucun historique disponible';
+  ).join('\n') || (lang === 'en' ? 'No history available' : 'Aucun historique disponible');
+
+  if (lang === 'en') {
+    return `Generate a personalized pitch for this practitioner:
+
+PROFILE:
+- ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
+- ${practitioner.specialty} — ${practitioner.city}
+- Volume: ${practitioner.volumeL.toLocaleString()} L | KOL: ${practitioner.isKOL ? 'Yes' : 'No'}
+- Last visit: ${practitioner.lastVisitDate || 'Never'} | Trend: ${practitioner.trend}
+- Loyalty: ${practitioner.loyaltyScore}/10
+
+HISTORY:
+${conversationHistory}
+
+AI SUMMARY:
+${practitioner.aiSummary}
+
+CONFIGURATION:
+- Length: ${config.length} (~${LENGTH_WORDS[config.length]} words) | Tone: ${config.tone}
+- Products: ${config.products.join(', ') || 'Full range'}
+- Competitors: ${config.competitors.join(', ') || 'None'}
+
+${config.additionalInstructions ? `INSTRUCTIONS: ${config.additionalInstructions}` : ''}
+
+Generate the pitch following the required structure.`;
+  }
 
   return `Génère un pitch personnalisé pour ce praticien:
 
@@ -574,7 +912,9 @@ export function buildEnhancedRegenerateSectionPrompt(
   fullPitchContext: string,
   practitioner: Practitioner
 ): string {
-  const sectionNames: Record<string, string> = {
+  const lang = getLanguage();
+
+  const sectionNamesFr: Record<string, string> = {
     hook: "l'accroche",
     proposition: 'la proposition de valeur',
     competition: 'la différenciation concurrentielle',
@@ -584,13 +924,35 @@ export function buildEnhancedRegenerateSectionPrompt(
     follow_up: 'le suivi proposé',
   };
 
+  const sectionNamesEn: Record<string, string> = {
+    hook: 'the opening hook',
+    proposition: 'the value proposition',
+    competition: 'the competitive differentiation',
+    cta: 'the call to action',
+    objections: 'the objection handling',
+    talking_points: 'the talking points',
+    follow_up: 'the follow-up plan',
+  };
+
+  const sectionNames = lang === 'en' ? sectionNamesEn : sectionNamesFr;
+
   const profile = getEnrichedPractitionerData(practitioner.id);
   let additionalContext = '';
 
   if (profile) {
     const publications = profile.news?.filter(n => n.type === 'publication') || [];
     const lastNote = profile.notes?.[0];
-    additionalContext = `
+    if (lang === 'en') {
+      additionalContext = `
+PRACTITIONER CONTEXT:
+- ${profile.title} ${profile.firstName} ${profile.lastName} — ${profile.specialty} in ${profile.address.city}
+- KOL: ${profile.metrics.isKOL ? 'Yes' : 'No'} | V${profile.metrics.vingtile} | Loyalty: ${profile.metrics.loyaltyScore}/10
+- Churn risk: ${profile.metrics.churnRisk} | Potential: +${profile.metrics.potentialGrowth}%
+${publications.length > 0 ? `- Latest publication: "${publications[0].title}"` : ''}
+${lastNote ? `- Latest note: "${lastNote.content.substring(0, 120)}..."` : ''}
+`;
+    } else {
+      additionalContext = `
 CONTEXTE PRATICIEN:
 - ${profile.title} ${profile.firstName} ${profile.lastName} — ${profile.specialty} à ${profile.address.city}
 - KOL: ${profile.metrics.isKOL ? 'Oui' : 'Non'} | V${profile.metrics.vingtile} | Fidélité: ${profile.metrics.loyaltyScore}/10
@@ -598,6 +960,29 @@ CONTEXTE PRATICIEN:
 ${publications.length > 0 ? `- Dernière publication: "${publications[0].title}"` : ''}
 ${lastNote ? `- Dernière note: "${lastNote.content.substring(0, 120)}..."` : ''}
 `;
+    }
+  }
+
+  if (lang === 'en') {
+    return `You must rewrite only ${sectionNames[sectionId] || 'this section'} of the sales pitch.
+${additionalContext}
+FULL PITCH CONTEXT:
+${fullPitchContext}
+
+CURRENT CONTENT:
+${currentContent}
+
+INSTRUCTION:
+${userInstruction}
+
+RULES:
+- Same tone and style as the rest of the pitch
+- Same approximate length
+- Incorporate the sales rep's instruction
+- Use practitioner data to be SPECIFIC (names, dates, publications)
+- Generate ONLY the new content, without tags or titles
+
+New content:`;
   }
 
   return `Tu dois réécrire uniquement ${sectionNames[sectionId] || 'cette section'} du pitch commercial.
@@ -629,9 +1014,11 @@ Nouveau contenu:`;
  * Génère un résumé du praticien pour la prévisualisation
  */
 export function generatePractitionerSummary(practitionerId: string): string {
+  const lang = getLanguage();
+  const dateFmt = lang === 'en' ? 'en-US' : 'fr-FR';
   const profile = getEnrichedPractitionerData(practitionerId);
 
-  if (!profile) return 'Données non disponibles';
+  if (!profile) return lang === 'en' ? 'Data not available' : 'Données non disponibles';
 
   const pubCount = profile.news?.filter(n => n.type === 'publication').length || 0;
   const noteCount = profile.notes?.length || 0;
@@ -644,27 +1031,37 @@ export function generatePractitionerSummary(practitionerId: string): string {
   let summary = `**${profile.title} ${profile.firstName} ${profile.lastName}**\n`;
   summary += `${profile.specialty} | ${profile.address.city}\n\n`;
 
-  summary += `**Métriques:**\n`;
-  summary += `- Volume: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L/an | Vingtile: V${profile.metrics.vingtile}\n`;
-  summary += `- Fidélité: ${profile.metrics.loyaltyScore}/10 | Potentiel: +${profile.metrics.potentialGrowth}%\n`;
+  summary += lang === 'en' ? `**Metrics:**\n` : `**Métriques:**\n`;
+  summary += lang === 'en'
+    ? `- Volume: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L/yr | Vingtile: V${profile.metrics.vingtile}\n`
+    : `- Volume: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L/an | Vingtile: V${profile.metrics.vingtile}\n`;
+  summary += lang === 'en'
+    ? `- Loyalty: ${profile.metrics.loyaltyScore}/10 | Potential: +${profile.metrics.potentialGrowth}%\n`
+    : `- Fidélité: ${profile.metrics.loyaltyScore}/10 | Potentiel: +${profile.metrics.potentialGrowth}%\n`;
   if (profile.metrics.isKOL) summary += `- **Key Opinion Leader**\n`;
-  if (profile.metrics.churnRisk !== 'low') summary += `- Risque: ${profile.metrics.churnRisk === 'high' ? 'ÉLEVÉ' : 'Moyen'}\n`;
+  if (profile.metrics.churnRisk !== 'low') {
+    summary += lang === 'en'
+      ? `- Risk: ${profile.metrics.churnRisk === 'high' ? 'HIGH' : 'Medium'}\n`
+      : `- Risque: ${profile.metrics.churnRisk === 'high' ? 'ÉLEVÉ' : 'Moyen'}\n`;
+  }
 
-  summary += `\n**Données disponibles:**\n`;
-  summary += `- ${pubCount} publication(s) | ${noteCount} note(s) | ${visitCount} visite(s)\n`;
+  summary += lang === 'en' ? `\n**Available data:**\n` : `\n**Données disponibles:**\n`;
+  summary += `- ${pubCount} publication(s) | ${noteCount} note(s) | ${visitCount} ${lang === 'en' ? 'visit(s)' : 'visite(s)'}\n`;
   if (daysSinceLastVisit !== null) {
-    summary += `- Dernière visite: il y a ${daysSinceLastVisit} jours\n`;
+    summary += lang === 'en'
+      ? `- Last visit: ${daysSinceLastVisit} days ago\n`
+      : `- Dernière visite: il y a ${daysSinceLastVisit} jours\n`;
   }
 
   if (profile.news && profile.news.length > 0) {
     const latestNews = profile.news[0];
-    summary += `\n**Dernière actualité:**\n`;
-    summary += `_${latestNews.title}_ (${new Date(latestNews.date).toLocaleDateString('fr-FR')})\n`;
+    summary += lang === 'en' ? `\n**Latest news:**\n` : `\n**Dernière actualité:**\n`;
+    summary += `_${latestNews.title}_ (${new Date(latestNews.date).toLocaleDateString(dateFmt)})\n`;
   }
 
   if (profile.notes && profile.notes.length > 0) {
     const latestNote = profile.notes[0];
-    summary += `\n**Dernière note:**\n`;
+    summary += lang === 'en' ? `\n**Latest note:**\n` : `\n**Dernière note:**\n`;
     summary += `${latestNote.content.substring(0, 100)}...\n`;
   }
 
@@ -681,22 +1078,33 @@ export function generatePractitionerSummary(practitionerId: string): string {
  * Returns text in the same [SECTION] format as the LLM would produce.
  */
 export function generateLocalPitch(practitioner: Practitioner, config: PitchConfig): string {
+  const lang = getLanguage();
+  return lang === 'en'
+    ? generateLocalPitchEN(practitioner, config)
+    : generateLocalPitchFR(practitioner, config);
+}
+
+function getLocalPitchData(practitioner: Practitioner) {
   const profile = getEnrichedPractitionerData(practitioner.id);
   const publications = profile?.news?.filter(n => n.type === 'publication') || [];
   const conferences = profile?.news?.filter(n => n.type === 'conference') || [];
   const awards = profile?.news?.filter(n => n.type === 'award') || [];
   const notes = profile?.notes || [];
   const topProducts = profile ? getProductFrequency(profile).slice(0, 3) : [];
-
   const daysSinceLastVisit = profile?.lastVisitDate
     ? Math.floor((Date.now() - new Date(profile.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
     : null;
-
   const isKOL = profile?.metrics.isKOL || practitioner.isKOL;
   const isPneumo = practitioner.specialty === 'Pneumologue';
   const churnRisk = profile?.metrics.churnRisk || 'low';
   const city = profile?.address?.city || practitioner.city;
   const titre = `${practitioner.title} ${practitioner.lastName}`;
+  const pendingActions = notes.filter(n => n.nextAction).map(n => n.nextAction!);
+  return { profile, publications, conferences, awards, notes, topProducts, daysSinceLastVisit, isKOL, isPneumo, churnRisk, city, titre, pendingActions };
+}
+
+function generateLocalPitchFR(practitioner: Practitioner, config: PitchConfig): string {
+  const { publications, conferences, awards, notes, topProducts, daysSinceLastVisit, isKOL, isPneumo, churnRisk, city, titre, pendingActions } = getLocalPitchData(practitioner);
 
   // ── ACCROCHE ──
   let accroche = '';
@@ -741,109 +1149,63 @@ export function generateLocalPitch(practitioner: Practitioner, config: PitchConf
 
   if (config.focusArea === 'innovation' || selectedProducts.some(p => p.toLowerCase().includes('telesuivi'))) {
     proposition = `**Télésuivi O2 Connect** — Notre plateforme EOVE vous permet de suivre en temps réel l'observance et les paramètres (SpO2, débit) de vos patients, directement depuis votre espace praticien. `;
-    if (isPneumo) {
-      proposition += `Pour un pneumologue comme vous, c'est la possibilité de détecter précocement les exacerbations et d'ajuster le traitement à distance. `;
-    }
+    if (isPneumo) proposition += `Pour un pneumologue comme vous, c'est la possibilité de détecter précocement les exacerbations et d'ajuster le traitement à distance. `;
     proposition += `Le télésuivi est inclus sans surcoût dans nos forfaits — aucun frais supplémentaire pour le patient ni pour vous.\n\n`;
   }
-
   if (selectedProducts.some(p => p.toLowerCase().includes('vitalaire'))) {
-    proposition += `**VitalAire Confort+** — Notre concentrateur premium offre un niveau sonore inférieur à 39 dB, permettant un usage nocturne confortable. `;
-    proposition += `Connecté à notre plateforme de télésuivi, il remonte automatiquement les données d'observance.\n\n`;
+    proposition += `**VitalAire Confort+** — Notre concentrateur premium offre un niveau sonore inférieur à 39 dB, permettant un usage nocturne confortable. Connecté à notre plateforme de télésuivi, il remonte automatiquement les données d'observance.\n\n`;
   }
-
   if (selectedProducts.some(p => p.toLowerCase().includes('freestyle'))) {
     proposition += `**FreeStyle Comfort** — À seulement 2,1 kg avec 8 heures d'autonomie, c'est la solution idéale pour vos patients actifs qui ne veulent pas sacrifier leur mobilité.\n\n`;
   }
-
   if (selectedProducts.some(p => p.toLowerCase().includes('vni') || p.toLowerCase().includes('bilevel'))) {
     proposition += `**DreamStation BiLevel** — Pour vos patients BPCO hypercapniques, notre VNI avec algorithme auto-adaptatif offre un confort optimal et améliore significativement l'adhésion au traitement.\n\n`;
   }
-
   if (topProducts.length > 0 && proposition.length < 100) {
-    proposition += `Lors de nos échanges précédents, vous aviez montré de l'intérêt pour ${topProducts[0][0]}. `;
-    proposition += `Je vous propose aujourd'hui d'aller plus loin avec une offre complémentaire adaptée au profil de vos patients.\n\n`;
+    proposition += `Lors de nos échanges précédents, vous aviez montré de l'intérêt pour ${topProducts[0][0]}. Je vous propose aujourd'hui d'aller plus loin avec une offre complémentaire adaptée au profil de vos patients.\n\n`;
   }
-
   if (config.focusArea === 'service') {
-    proposition += `Notre engagement service se traduit par une **astreinte 24h/24, 7j/7** avec intervention d'un technicien en moins de 4 heures, partout en France. `;
-    proposition += `Votre tranquillité et celle de vos patients sont notre priorité absolue.`;
+    proposition += `Notre engagement service se traduit par une **astreinte 24h/24, 7j/7** avec intervention d'un technicien en moins de 4 heures, partout en France. Votre tranquillité et celle de vos patients sont notre priorité absolue.`;
   } else if (config.focusArea === 'price') {
-    proposition += `Côté remboursement, nos solutions sont intégralement prises en charge par l'Assurance Maladie pour les patients en ALD. `;
-    proposition += `Le forfait concentrateur (LPPR 2025) est à environ 12€/jour, et le télésuivi est inclus sans surcoût — un avantage significatif pour vos patients.`;
+    proposition += `Côté remboursement, nos solutions sont intégralement prises en charge par l'Assurance Maladie pour les patients en ALD. Le forfait concentrateur (LPPR 2025) est à environ 12€/jour, et le télésuivi est inclus sans surcoût — un avantage significatif pour vos patients.`;
   } else if (proposition.length < 100) {
-    proposition += `Chez Air Liquide Santé, nous mettons à votre disposition une gamme complète et intégrée : de l'oxygénothérapie fixe et portable au télésuivi connecté, en passant par l'éducation thérapeutique certifiée HAS. `;
-    proposition += `Tout est pensé pour simplifier votre quotidien et améliorer l'observance de vos patients.`;
+    proposition += `Chez Air Liquide Santé, nous mettons à votre disposition une gamme complète et intégrée : de l'oxygénothérapie fixe et portable au télésuivi connecté, en passant par l'éducation thérapeutique certifiée HAS. Tout est pensé pour simplifier votre quotidien et améliorer l'observance de vos patients.`;
   }
 
   // ── CONCURRENCE ──
   let competition = '';
   if (config.competitors.length > 0) {
     competition = `Face à ${config.competitors.join(' et ')}, Air Liquide Santé se distingue sur plusieurs points concrets :\n\n`;
-    if (config.competitors.some(c => c.toLowerCase().includes('vivisol'))) {
-      competition += `- **vs Vivisol** : Notre couverture nationale garantit un service homogène sur tout le territoire, avec un SAV en moins de 4h (contre 8h en moyenne pour Vivisol). Notre plateforme de télésuivi, développée en interne, est nativement intégrée à nos équipements.\n`;
-    }
-    if (config.competitors.some(c => c.toLowerCase().includes('linde'))) {
-      competition += `- **vs Linde Healthcare** : Notre gamme portable (FreeStyle Comfort 2,1 kg) surpasse leur offre en termes d'autonomie et de légèreté. Notre espace praticien digital est un outil unique sur le marché.\n`;
-    }
-    if (config.competitors.some(c => c.toLowerCase().includes('sos'))) {
-      competition += `- **vs SOS Oxygène** : En tant qu'acteur global, nous maîtrisons l'ensemble de la chaîne — de la production d'oxygène à la maintenance des équipements — là où SOS Oxygène dépend de fournisseurs tiers.\n`;
-    }
-    if (config.competitors.some(c => c.toLowerCase().includes('bastide'))) {
-      competition += `- **vs Bastide Medical** : Notre spécialisation respiratoire nous permet d'offrir une expertise que les généralistes du MAD ne peuvent pas égaler, avec des techniciens formés exclusivement aux pathologies respiratoires.\n`;
-    }
+    if (config.competitors.some(c => c.toLowerCase().includes('vivisol'))) competition += `- **vs Vivisol** : Notre couverture nationale garantit un service homogène sur tout le territoire, avec un SAV en moins de 4h (contre 8h en moyenne pour Vivisol). Notre plateforme de télésuivi, développée en interne, est nativement intégrée à nos équipements.\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('linde'))) competition += `- **vs Linde Healthcare** : Notre gamme portable (FreeStyle Comfort 2,1 kg) surpasse leur offre en termes d'autonomie et de légèreté. Notre espace praticien digital est un outil unique sur le marché.\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('sos'))) competition += `- **vs SOS Oxygène** : En tant qu'acteur global, nous maîtrisons l'ensemble de la chaîne — de la production d'oxygène à la maintenance des équipements — là où SOS Oxygène dépend de fournisseurs tiers.\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('bastide'))) competition += `- **vs Bastide Medical** : Notre spécialisation respiratoire nous permet d'offrir une expertise que les généralistes du MAD ne peuvent pas égaler, avec des techniciens formés exclusivement aux pathologies respiratoires.\n`;
   } else {
-    // Check notes for competitor mentions
     const noteContent = notes.map(n => n.content).join(' ').toLowerCase();
     if (noteContent.includes('vivisol') || noteContent.includes('concurrent')) {
       competition = `Nous savons que d'autres acteurs vous sollicitent. Ce qui différencie Air Liquide Santé :\n\n`;
-      competition += `- **Couverture nationale** avec techniciens dédiés respiratoire — intervention en moins de 4h\n`;
-      competition += `- **Télésuivi natif** intégré sans surcoût dans tous nos équipements connectés\n`;
-      competition += `- **Programme d'éducation thérapeutique** certifié HAS, unique dans le secteur\n`;
-      competition += `- **Innovation continue** : nous investissons 300M€/an en R&D santé\n`;
+      competition += `- **Couverture nationale** avec techniciens dédiés respiratoire — intervention en moins de 4h\n- **Télésuivi natif** intégré sans surcoût dans tous nos équipements connectés\n- **Programme d'éducation thérapeutique** certifié HAS, unique dans le secteur\n- **Innovation continue** : nous investissons 300M€/an en R&D santé\n`;
     } else {
       competition = `Ce qui fait la force d'Air Liquide Santé par rapport aux autres prestataires :\n\n`;
-      competition += `- **Leader français** de l'assistance respiratoire à domicile, avec plus de 50 ans d'expérience\n`;
-      competition += `- **Astreinte 24/7** avec engagement d'intervention sous 4 heures\n`;
-      competition += `- **Télésuivi intégré** sans surcoût : monitoring en temps réel de l'observance\n`;
-      competition += `- **Éducation thérapeutique** certifiée HAS, dispensée par des professionnels dédiés\n`;
+      competition += `- **Leader français** de l'assistance respiratoire à domicile, avec plus de 50 ans d'expérience\n- **Astreinte 24/7** avec engagement d'intervention sous 4 heures\n- **Télésuivi intégré** sans surcoût : monitoring en temps réel de l'observance\n- **Éducation thérapeutique** certifiée HAS, dispensée par des professionnels dédiés\n`;
     }
   }
 
   // ── CTA ──
   let cta = '';
-  const pendingActions = notes.filter(n => n.nextAction).map(n => n.nextAction!);
-
-  if (pendingActions.length > 0) {
-    cta = `Lors de notre dernier échange, nous avions convenu de : « ${pendingActions[0]} ». `;
-    cta += `Je vous propose de concrétiser cela dès maintenant.\n\n`;
-  }
-
-  if (config.focusArea === 'innovation') {
-    cta += `**Proposition concrète** : Je peux organiser une démonstration de notre plateforme de télésuivi directement dans votre cabinet, avec un cas patient simulé. Cela vous permettra de voir en 15 minutes comment suivre l'observance de vos patients en temps réel. Seriez-vous disponible la semaine prochaine ?`;
-  } else if (config.focusArea === 'service') {
-    cta += `**Proposition concrète** : Je vous propose de planifier une rencontre avec notre responsable qualité régional pour vous présenter notre nouveau protocole de prise en charge et répondre à toutes vos questions sur notre engagement de service. Quel créneau vous conviendrait ?`;
-  } else if (churnRisk === 'high') {
-    cta += `**Proposition concrète** : Votre satisfaction est notre priorité absolue. Je souhaite organiser un point complet sur votre expérience avec nos services, identifier les axes d'amélioration et vous présenter les évolutions récentes que nous avons mises en place. Pouvons-nous nous voir cette semaine ?`;
-  } else {
-    cta += `**Proposition concrète** : Je vous propose ${isPneumo ? 'un rendez-vous de 30 minutes pour approfondir les solutions les plus adaptées à votre patientèle' : 'une présentation ciblée de 20 minutes sur les solutions qui correspondent le mieux à vos besoins'}. Je peux m'adapter à votre agenda — quel jour vous conviendrait le mieux ?`;
-  }
+  if (pendingActions.length > 0) { cta = `Lors de notre dernier échange, nous avions convenu de : « ${pendingActions[0]} ». Je vous propose de concrétiser cela dès maintenant.\n\n`; }
+  if (config.focusArea === 'innovation') { cta += `**Proposition concrète** : Je peux organiser une démonstration de notre plateforme de télésuivi directement dans votre cabinet, avec un cas patient simulé. Cela vous permettra de voir en 15 minutes comment suivre l'observance de vos patients en temps réel. Seriez-vous disponible la semaine prochaine ?`; }
+  else if (config.focusArea === 'service') { cta += `**Proposition concrète** : Je vous propose de planifier une rencontre avec notre responsable qualité régional pour vous présenter notre nouveau protocole de prise en charge et répondre à toutes vos questions sur notre engagement de service. Quel créneau vous conviendrait ?`; }
+  else if (churnRisk === 'high') { cta += `**Proposition concrète** : Votre satisfaction est notre priorité absolue. Je souhaite organiser un point complet sur votre expérience avec nos services, identifier les axes d'amélioration et vous présenter les évolutions récentes que nous avons mises en place. Pouvons-nous nous voir cette semaine ?`; }
+  else { cta += `**Proposition concrète** : Je vous propose ${isPneumo ? 'un rendez-vous de 30 minutes pour approfondir les solutions les plus adaptées à votre patientèle' : 'une présentation ciblée de 20 minutes sur les solutions qui correspondent le mieux à vos besoins'}. Je peux m'adapter à votre agenda — quel jour vous conviendrait le mieux ?`; }
 
   // ── OBJECTIONS ──
   let objections = '';
   if (config.includeObjections) {
     objections += `**Objection : « Je suis déjà équipé et satisfait de mon prestataire actuel. »**\n→ Je comprends tout à fait. Mon objectif n'est pas de tout changer, mais de vous montrer en quoi le télésuivi intégré d'Air Liquide Santé peut compléter votre dispositif actuel et améliorer l'observance de vos patients, sans surcoût.\n\n`;
-
-    if (config.focusArea === 'price' || notes.some(n => n.content.toLowerCase().includes('prix'))) {
-      objections += `**Objection : « C'est trop cher pour mes patients. »**\n→ Nos solutions sont intégralement remboursées dans le cadre de l'ALD. Le forfait concentrateur LPPR 2025 est d'environ 12€/jour, et le télésuivi est inclus sans aucun surcoût. Le reste à charge pour le patient en ALD est nul.\n\n`;
-    }
-
+    if (config.focusArea === 'price' || notes.some(n => n.content.toLowerCase().includes('prix'))) { objections += `**Objection : « C'est trop cher pour mes patients. »**\n→ Nos solutions sont intégralement remboursées dans le cadre de l'ALD. Le forfait concentrateur LPPR 2025 est d'environ 12€/jour, et le télésuivi est inclus sans aucun surcoût. Le reste à charge pour le patient en ALD est nul.\n\n`; }
     objections += `**Objection : « Je n'ai pas le temps pour une formation. »**\n→ Notre programme est conçu pour s'intégrer à votre pratique : ${isPneumo ? 'sessions de 45 minutes en visioconférence, DPC accrédité, à votre rythme' : 'supports synthétiques de 15 minutes, directement applicables en consultation'}.\n\n`;
-
-    if (isPneumo) {
-      objections += `**Objection : « Les données de télésuivi, c'est encore un écran de plus à surveiller. »**\n→ Notre plateforme est conçue pour être proactive : elle vous alerte uniquement en cas d'anomalie (chute d'observance, désaturation). Vous n'avez pas besoin de la consulter quotidiennement — elle vient à vous quand c'est nécessaire.\n\n`;
-    }
-
+    if (isPneumo) { objections += `**Objection : « Les données de télésuivi, c'est encore un écran de plus à surveiller. »**\n→ Notre plateforme est conçue pour être proactive : elle vous alerte uniquement en cas d'anomalie (chute d'observance, désaturation). Vous n'avez pas besoin de la consulter quotidiennement — elle vient à vous quand c'est nécessaire.\n\n`; }
     objections += `**Objection : « Mon patient ne saura pas utiliser un appareil connecté. »**\n→ Nos techniciens assurent l'installation et la formation du patient à domicile. L'interface patient est volontairement simplifiée. Et notre astreinte 24/7 est là pour accompagner le patient en cas de difficulté.`;
   }
 
@@ -856,34 +1218,138 @@ export function generateLocalPitch(practitioner: Practitioner, config: PitchConf
     talkingPoints += `4. **Donnée clinique** : ${isPneumo ? 'Étude GOLD 2024 — la téléréhabilitation réduit de 30% les réhospitalisations à 90 jours' : 'La BPCO touche 3,5 millions de Français, dont 2/3 non diagnostiqués — rôle clé du MG dans le dépistage'}\n`;
     talkingPoints += `5. **Question ouverte** : « ${isPneumo ? 'Comment gérez-vous actuellement le suivi de l\'observance de vos patients sous O2 ?' : 'Combien de vos patients BPCO sont actuellement sous oxygénothérapie à domicile ?'} »\n`;
     talkingPoints += `6. **Proposition concrète** : Fixer un prochain RDV avec action définie (démo, essai, rencontre technique)\n`;
-    if (awards.length > 0) {
-      talkingPoints += `7. **Félicitations** : Mentionner la distinction « ${awards[0].title} »\n`;
-    }
-    if (churnRisk === 'high') {
-      talkingPoints += `${awards.length > 0 ? '8' : '7'}. **Rétention** : Aborder proactivement la satisfaction — « Comment évaluez-vous notre service actuel ? Y a-t-il des points à améliorer ? »\n`;
-    }
+    if (awards.length > 0) { talkingPoints += `7. **Félicitations** : Mentionner la distinction « ${awards[0].title} »\n`; }
+    if (churnRisk === 'high') { talkingPoints += `${awards.length > 0 ? '8' : '7'}. **Rétention** : Aborder proactivement la satisfaction — « Comment évaluez-vous notre service actuel ? Y a-t-il des points à améliorer ? »\n`; }
   }
 
   // ── FOLLOW UP ──
-  let followUp = `**J+1 — Récapitulatif et engagement**\n`;
-  followUp += `Envoyer un email de remerciement personnalisé à ${titre} récapitulant les points abordés, les produits présentés (${config.products.slice(0, 2).join(', ') || 'gamme discutée'}) et les prochaines étapes convenues.\n\n`;
-  followUp += `**J+7 — Suivi proactif**\n`;
-  followUp += `${pendingActions.length > 0 ? `Relance sur l'action convenue : « ${pendingActions[0]} ». ` : ''}Partager ${isPneumo ? 'un article clinique pertinent ou les dernières recommandations GOLD/HAS' : 'un cas patient anonymisé illustrant les bénéfices du télésuivi'}. Proposer une date pour ${config.focusArea === 'innovation' ? 'la démonstration' : 'le prochain rendez-vous'}.\n\n`;
-  followUp += `**J+30 — Consolidation**\n`;
-  followUp += `${churnRisk === 'high' ? 'Point de satisfaction formalisé. ' : ''}Faire le bilan des actions engagées. ${isKOL ? 'Proposer une collaboration (intervention lors d\'un événement Air Liquide, retour d\'expérience). ' : `Évaluer l'opportunité d'élargir l'offre (${topProducts.length > 0 ? `passage de ${topProducts[0][0]} vers une solution complémentaire` : 'nouveaux produits adaptés à sa patientèle'}).`}`;
+  let followUp = `**J+1 — Récapitulatif et engagement**\nEnvoyer un email de remerciement personnalisé à ${titre} récapitulant les points abordés, les produits présentés (${config.products.slice(0, 2).join(', ') || 'gamme discutée'}) et les prochaines étapes convenues.\n\n`;
+  followUp += `**J+7 — Suivi proactif**\n${pendingActions.length > 0 ? `Relance sur l'action convenue : « ${pendingActions[0]} ». ` : ''}Partager ${isPneumo ? 'un article clinique pertinent ou les dernières recommandations GOLD/HAS' : 'un cas patient anonymisé illustrant les bénéfices du télésuivi'}. Proposer une date pour ${config.focusArea === 'innovation' ? 'la démonstration' : 'le prochain rendez-vous'}.\n\n`;
+  followUp += `**J+30 — Consolidation**\n${churnRisk === 'high' ? 'Point de satisfaction formalisé. ' : ''}Faire le bilan des actions engagées. ${isKOL ? 'Proposer une collaboration (intervention lors d\'un événement Air Liquide, retour d\'expérience). ' : `Évaluer l'opportunité d'élargir l'offre (${topProducts.length > 0 ? `passage de ${topProducts[0][0]} vers une solution complémentaire` : 'nouveaux produits adaptés à sa patientèle'}).`}`;
 
   // ── ASSEMBLE ──
-  let pitch = `[ACCROCHE]\n${accroche}\n\n`;
-  pitch += `[PROPOSITION]\n${proposition}\n\n`;
-  pitch += `[CONCURRENCE]\n${competition}\n\n`;
-  pitch += `[CALL_TO_ACTION]\n${cta}`;
-  if (config.includeObjections) {
-    pitch += `\n\n[OBJECTIONS]\n${objections}`;
-  }
-  if (config.includeTalkingPoints) {
-    pitch += `\n\n[TALKING_POINTS]\n${talkingPoints}`;
-  }
+  let pitch = `[ACCROCHE]\n${accroche}\n\n[PROPOSITION]\n${proposition}\n\n[CONCURRENCE]\n${competition}\n\n[CALL_TO_ACTION]\n${cta}`;
+  if (config.includeObjections) pitch += `\n\n[OBJECTIONS]\n${objections}`;
+  if (config.includeTalkingPoints) pitch += `\n\n[TALKING_POINTS]\n${talkingPoints}`;
   pitch += `\n\n[FOLLOW_UP]\n${followUp}`;
+  return pitch;
+}
 
+function generateLocalPitchEN(practitioner: Practitioner, config: PitchConfig): string {
+  const { publications, conferences, awards, notes, topProducts, daysSinceLastVisit, isKOL, isPneumo, churnRisk, city, titre, pendingActions } = getLocalPitchData(practitioner);
+
+  // ── HOOK ──
+  let accroche = '';
+  if (publications.length > 0) {
+    const pub = publications[0];
+    const pubDate = new Date(pub.date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    accroche = `${titre}, I had the opportunity to read your publication "${pub.title}" published in ${pubDate}. `;
+    if (isPneumo) { accroche += `Your work on this topic significantly contributes to advancing the care of respiratory patients in the region. `; }
+    else { accroche += `This type of research is essential for raising awareness among general practitioners about the importance of early screening. `; }
+    if (isKOL) { accroche += `As a recognized key opinion leader, your expertise is invaluable for our patients.`; }
+  } else if (conferences.length > 0) {
+    accroche = `${titre}, I noticed your participation in "${conferences[0].title}". Your commitment to continuing education is a major asset for your patients. `;
+    accroche += `I wanted to discuss with you the latest advances in respiratory care management.`;
+  } else if (daysSinceLastVisit !== null && daysSinceLastVisit < 60) {
+    accroche = `${titre}, during our last conversation ${daysSinceLastVisit} days ago, we discussed some important topics. `;
+    if (notes.length > 0) { accroche += `You specifically mentioned: "${notes[0].content.substring(0, 80)}...". I'm back today with concrete elements to move forward.`; }
+    else { accroche += `I wanted to follow up and present our latest innovations.`; }
+  } else if (daysSinceLastVisit !== null && daysSinceLastVisit > 90) {
+    accroche = `${titre}, it has been ${daysSinceLastVisit} days since we last had the opportunity to talk. `;
+    accroche += `A lot has evolved at Air Liquide Healthcare since our last contact, and I wanted to share it with you personally.`;
+  } else {
+    accroche = `${titre}, as a ${isPneumo ? 'pulmonologist' : 'general practitioner'} in ${city}, you are a key partner in the care of home oxygen therapy patients in your area. `;
+    if (isKOL) { accroche += `Your status as a key opinion leader and your recognized expertise make you a privileged contact for Air Liquide Healthcare.`; }
+    else { accroche += `I wanted to present how we can optimize together the care pathway for your respiratory patients.`; }
+  }
+
+  // ── PROPOSITION ──
+  let proposition = '';
+  const selectedProducts = config.products;
+  if (config.focusArea === 'innovation' || selectedProducts.some(p => p.toLowerCase().includes('telesuivi'))) {
+    proposition = `**O2 Connect Remote Monitoring** — Our EOVE platform lets you track compliance and parameters (SpO2, flow rate) of your patients in real time, directly from your practitioner portal. `;
+    if (isPneumo) proposition += `For a pulmonologist like you, this means the ability to detect exacerbations early and adjust treatment remotely. `;
+    proposition += `Remote monitoring is included at no extra cost in our packages — no additional fees for the patient or for you.\n\n`;
+  }
+  if (selectedProducts.some(p => p.toLowerCase().includes('vitalaire'))) {
+    proposition += `**VitalAire Confort+** — Our premium concentrator offers a noise level below 39 dB, enabling comfortable nighttime use. Connected to our remote monitoring platform, it automatically uploads compliance data.\n\n`;
+  }
+  if (selectedProducts.some(p => p.toLowerCase().includes('freestyle'))) {
+    proposition += `**FreeStyle Comfort** — At only 2.1 kg with 8 hours of battery life, it's the ideal solution for your active patients who don't want to sacrifice mobility.\n\n`;
+  }
+  if (selectedProducts.some(p => p.toLowerCase().includes('vni') || p.toLowerCase().includes('bilevel'))) {
+    proposition += `**DreamStation BiLevel** — For your hypercapnic COPD patients, our NIV with auto-adaptive algorithm provides optimal comfort and significantly improves treatment adherence.\n\n`;
+  }
+  if (topProducts.length > 0 && proposition.length < 100) {
+    proposition += `During our previous discussions, you showed interest in ${topProducts[0][0]}. I'd like to propose going further with a complementary offer tailored to your patients' profile.\n\n`;
+  }
+  if (config.focusArea === 'service') {
+    proposition += `Our service commitment means **24/7 on-call support** with a technician on-site in under 4 hours, anywhere in France. Your peace of mind and that of your patients is our absolute priority.`;
+  } else if (config.focusArea === 'price') {
+    proposition += `On the reimbursement side, our solutions are fully covered by national health insurance for ALD patients. The concentrator package (LPPR 2025) is approximately 12€/day, and remote monitoring is included at no extra cost — a significant advantage for your patients.`;
+  } else if (proposition.length < 100) {
+    proposition += `At Air Liquide Healthcare, we provide you with a complete, integrated range: from fixed and portable oxygen therapy to connected remote monitoring, through HAS-certified therapeutic education. Everything is designed to simplify your daily practice and improve your patients' compliance.`;
+  }
+
+  // ── COMPETITION ──
+  let competition = '';
+  if (config.competitors.length > 0) {
+    competition = `Compared to ${config.competitors.join(' and ')}, Air Liquide Healthcare stands out on several concrete points:\n\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('vivisol'))) competition += `- **vs Vivisol**: Our national coverage guarantees consistent service across the entire territory, with support in under 4h (versus 8h on average for Vivisol). Our remote monitoring platform, developed in-house, is natively integrated into our equipment.\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('linde'))) competition += `- **vs Linde Healthcare**: Our portable range (FreeStyle Comfort 2.1 kg) surpasses their offering in terms of battery life and weight. Our digital practitioner portal is unique on the market.\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('sos'))) competition += `- **vs SOS Oxygene**: As a global player, we control the entire chain — from oxygen production to equipment maintenance — where SOS Oxygene depends on third-party suppliers.\n`;
+    if (config.competitors.some(c => c.toLowerCase().includes('bastide'))) competition += `- **vs Bastide Medical**: Our respiratory specialization allows us to offer expertise that generalist home care providers cannot match, with technicians trained exclusively in respiratory pathologies.\n`;
+  } else {
+    const noteContent = notes.map(n => n.content).join(' ').toLowerCase();
+    if (noteContent.includes('vivisol') || noteContent.includes('concurrent')) {
+      competition = `We know that other providers are reaching out to you. What differentiates Air Liquide Healthcare:\n\n`;
+      competition += `- **National coverage** with dedicated respiratory technicians — on-site in under 4h\n- **Native remote monitoring** integrated at no extra cost in all our connected equipment\n- **HAS-certified therapeutic education program**, unique in the sector\n- **Continuous innovation**: we invest 300M€/year in healthcare R&D\n`;
+    } else {
+      competition = `What makes Air Liquide Healthcare stand out from other providers:\n\n`;
+      competition += `- **French leader** in home respiratory care, with over 50 years of experience\n- **24/7 on-call support** with a commitment to intervene within 4 hours\n- **Integrated remote monitoring** at no extra cost: real-time compliance monitoring\n- **Therapeutic education** HAS-certified, delivered by dedicated professionals\n`;
+    }
+  }
+
+  // ── CTA ──
+  let cta = '';
+  if (pendingActions.length > 0) { cta = `During our last conversation, we agreed on: "${pendingActions[0]}". I propose we make this happen now.\n\n`; }
+  if (config.focusArea === 'innovation') { cta += `**Concrete proposal**: I can arrange a demonstration of our remote monitoring platform right in your office, with a simulated patient case. This will let you see in 15 minutes how to track your patients' compliance in real time. Would you be available next week?`; }
+  else if (config.focusArea === 'service') { cta += `**Concrete proposal**: I suggest we schedule a meeting with our regional quality manager to present our new care protocol and answer all your questions about our service commitment. What time slot would work for you?`; }
+  else if (churnRisk === 'high') { cta += `**Concrete proposal**: Your satisfaction is our absolute priority. I want to organize a comprehensive review of your experience with our services, identify areas for improvement, and present the recent changes we've implemented. Can we meet this week?`; }
+  else { cta += `**Concrete proposal**: I suggest ${isPneumo ? 'a 30-minute meeting to explore the solutions best suited to your patient base' : 'a focused 20-minute presentation on the solutions that best match your needs'}. I can adapt to your schedule — which day would work best for you?`; }
+
+  // ── OBJECTIONS ──
+  let objections = '';
+  if (config.includeObjections) {
+    objections += `**Objection: "I'm already equipped and satisfied with my current provider."**\n→ I completely understand. My goal isn't to change everything, but to show you how Air Liquide Healthcare's integrated remote monitoring can complement your current setup and improve your patients' compliance, at no extra cost.\n\n`;
+    if (config.focusArea === 'price' || notes.some(n => n.content.toLowerCase().includes('prix'))) { objections += `**Objection: "It's too expensive for my patients."**\n→ Our solutions are fully reimbursed under ALD. The LPPR 2025 concentrator package is approximately 12€/day, and remote monitoring is included at no additional cost. The out-of-pocket cost for ALD patients is zero.\n\n`; }
+    objections += `**Objection: "I don't have time for training."**\n→ Our program is designed to fit into your practice: ${isPneumo ? '45-minute video conference sessions, accredited CPD, at your own pace' : 'concise 15-minute materials, directly applicable in consultation'}.\n\n`;
+    if (isPneumo) { objections += `**Objection: "Remote monitoring data means yet another screen to watch."**\n→ Our platform is designed to be proactive: it alerts you only when there's an anomaly (compliance drop, desaturation). You don't need to check it daily — it comes to you when needed.\n\n`; }
+    objections += `**Objection: "My patient won't know how to use a connected device."**\n→ Our technicians handle installation and patient training at home. The patient interface is intentionally simplified. And our 24/7 on-call support is there to assist the patient with any difficulties.`;
+  }
+
+  // ── TALKING POINTS ──
+  let talkingPoints = '';
+  if (config.includeTalkingPoints) {
+    talkingPoints += `1. **Personalized opening**: ${publications.length > 0 ? `Mention the publication "${publications[0].title}"` : daysSinceLastVisit !== null ? `Reference the last meeting ${daysSinceLastVisit} days ago` : `Highlight expertise in ${practitioner.specialty} in ${city}`}\n`;
+    talkingPoints += `2. **Follow up on commitments**: ${pendingActions.length > 0 ? `Review status of: "${pendingActions[0]}"` : 'Ask how things have evolved since the last contact'}\n`;
+    talkingPoints += `3. **Flagship product**: Present ${config.products[0] || 'VitalAire Confort+'} with focus on ${config.focusArea === 'innovation' ? 'integrated remote monitoring' : config.focusArea === 'service' ? '24/7 on-call support' : config.focusArea === 'price' ? 'full reimbursement' : 'patient benefits'}\n`;
+    talkingPoints += `4. **Clinical data**: ${isPneumo ? 'GOLD 2024 study — tele-rehabilitation reduces rehospitalizations by 30% at 90 days' : 'COPD affects 3.5 million people in France, 2/3 undiagnosed — key role of GPs in screening'}\n`;
+    talkingPoints += `5. **Open-ended question**: "${isPneumo ? 'How do you currently manage compliance monitoring for your O2 patients?' : 'How many of your COPD patients are currently on home oxygen therapy?'}"\n`;
+    talkingPoints += `6. **Concrete proposal**: Schedule next meeting with a defined action (demo, trial, technical meeting)\n`;
+    if (awards.length > 0) { talkingPoints += `7. **Congratulations**: Mention the award "${awards[0].title}"\n`; }
+    if (churnRisk === 'high') { talkingPoints += `${awards.length > 0 ? '8' : '7'}. **Retention**: Proactively address satisfaction — "How would you rate our current service? Are there areas for improvement?"\n`; }
+  }
+
+  // ── FOLLOW UP ──
+  let followUp = `**D+1 — Summary and commitment**\nSend a personalized thank-you email to ${titre} summarizing the topics discussed, products presented (${config.products.slice(0, 2).join(', ') || 'range discussed'}) and the agreed next steps.\n\n`;
+  followUp += `**D+7 — Proactive follow-up**\n${pendingActions.length > 0 ? `Follow up on the agreed action: "${pendingActions[0]}". ` : ''}Share ${isPneumo ? 'a relevant clinical article or the latest GOLD/HAS recommendations' : 'an anonymized patient case illustrating the benefits of remote monitoring'}. Propose a date for ${config.focusArea === 'innovation' ? 'the demonstration' : 'the next meeting'}.\n\n`;
+  followUp += `**D+30 — Consolidation**\n${churnRisk === 'high' ? 'Formal satisfaction review. ' : ''}Review the actions taken. ${isKOL ? 'Propose a collaboration (speaking at an Air Liquide event, experience feedback). ' : `Evaluate the opportunity to expand the offering (${topProducts.length > 0 ? `transitioning from ${topProducts[0][0]} to a complementary solution` : 'new products tailored to their patient base'}).`}`;
+
+  // ── ASSEMBLE ──
+  let pitch = `[ACCROCHE]\n${accroche}\n\n[PROPOSITION]\n${proposition}\n\n[CONCURRENCE]\n${competition}\n\n[CALL_TO_ACTION]\n${cta}`;
+  if (config.includeObjections) pitch += `\n\n[OBJECTIONS]\n${objections}`;
+  if (config.includeTalkingPoints) pitch += `\n\n[TALKING_POINTS]\n${talkingPoints}`;
+  pitch += `\n\n[FOLLOW_UP]\n${followUp}`;
   return pitch;
 }

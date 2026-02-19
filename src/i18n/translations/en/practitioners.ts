@@ -20,6 +20,7 @@ export const practitioners = {
     news: 'News',
     notes: 'Notes',
   },
+  vingtileLabel: 'VIGINTILE',
   volumeLabel: '{{period}} volume',
   trendLabel: 'Trend',
   loyaltyLabel: 'Loyalty',

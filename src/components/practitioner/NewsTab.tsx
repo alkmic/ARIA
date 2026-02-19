@@ -5,6 +5,7 @@ import type { Practitioner } from '../../types';
 import { DataService } from '../../services/dataService';
 import { useTranslation, useLanguage } from '../../i18n';
 import { getLocaleCode } from '../../utils/helpers';
+import { localizeNewsTitle, localizeNewsContent, localizeNewsRelevance, localizeSource } from '../../utils/localizeData';
 
 interface NewsTabProps {
   practitioner: Practitioner;
@@ -88,15 +89,15 @@ export function NewsTab({ practitioner }: NewsTabProps) {
                       {t(labelKey)}
                     </span>
                   </div>
-                  <p className="font-medium text-slate-800">{item.title}</p>
-                  <p className="text-sm text-slate-500 mt-1">{item.content}</p>
+                  <p className="font-medium text-slate-800">{localizeNewsTitle(item.title)}</p>
+                  <p className="text-sm text-slate-500 mt-1">{localizeNewsContent(item.content)}</p>
                   {item.source && (
-                    <p className="text-xs text-slate-400 mt-1 italic">{t('common.source')} : {item.source}</p>
+                    <p className="text-xs text-slate-400 mt-1 italic">{t('common.source')} : {localizeSource(item.source)}</p>
                   )}
                   {item.relevance && (
                     <div className="mt-2 p-2 bg-amber-50 rounded-lg">
                       <p className="text-xs text-amber-700">
-                        <strong>{t('common.relevance')} :</strong> {item.relevance}
+                        <strong>{t('common.relevance')} :</strong> {localizeNewsRelevance(item.relevance)}
                       </p>
                     </div>
                   )}

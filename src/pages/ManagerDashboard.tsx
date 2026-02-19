@@ -310,7 +310,7 @@ export default function ManagerDashboard() {
             />
           </div>
           <p className="text-xs sm:text-xs text-slate-500 mt-1">
-            {totalVisits}/{totalObjective} objectif
+            {totalVisits}/{totalObjective} {getLanguage() === 'en' ? 'objective' : 'objectif'}
           </p>
         </motion.div>
 
@@ -516,7 +516,7 @@ export default function ManagerDashboard() {
             <Tooltip />
             <Legend />
             <Bar dataKey="volume" fill="#0066B3" name="Volume (M L)" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="practitioners" fill="#00B5AD" name="Praticiens" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="practitioners" fill="#00B5AD" name={getLanguage() === 'en' ? 'Practitioners' : 'Praticiens'} radius={[8, 8, 0, 0]} />
             <Bar dataKey="kols" fill="#F59E0B" name="KOLs" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

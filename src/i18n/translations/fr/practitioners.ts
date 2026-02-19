@@ -28,6 +28,7 @@ export const practitioners = {
   },
 
   // Profile card
+  vingtileLabel: 'VINGTILE',
   volumeLabel: 'Volume {{period}}',
   trendLabel: 'Tendance',
   loyaltyLabel: 'Fidélité',

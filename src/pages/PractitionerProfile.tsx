@@ -14,7 +14,7 @@ import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatDate, getLocaleCode } from '../utils/helpers';
 import { useTranslation, useLanguage, getLanguage } from '../i18n';
-import { txt, localizeSpecialty, localizeAiSummary, localizeNextAction, localizeConversationSummary } from '../utils/localizeData';
+import { txt, localizeSpecialty, localizeAiSummary, localizeNextAction, localizeConversationSummary, localizeBattlecardText, localizeNoteContent, localizeNoteNextAction } from '../utils/localizeData';
 import { NewsTab } from '../components/practitioner/NewsTab';
 import { NotesTab } from '../components/practitioner/NotesTab';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
@@ -194,7 +194,7 @@ export default function PractitionerProfile() {
           {/* Key Metrics */}
           <div className="glass-card p-6">
             <div className="mb-4 p-4 bg-gradient-to-br from-al-blue-50 to-al-sky/10 rounded-xl text-center">
-              <p className="text-sm text-slate-600 mb-1">VINGTILE</p>
+              <p className="text-sm text-slate-600 mb-1">{txt('VINGTILE', 'VIGINTILE')}</p>
               <p className="text-4xl font-bold gradient-text">{practitioner.vingtile}</p>
               <p className="text-sm text-slate-600 mt-1">
                 Top {practitioner.vingtile * 5}%
@@ -561,11 +561,11 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
                   </span>
                   <span className="text-xs text-slate-400">{note.author}</span>
                 </div>
-                <p className="text-sm text-slate-700">{note.content.length > 200 ? note.content.substring(0, 200) + '...' : note.content}</p>
+                <p className="text-sm text-slate-700">{(() => { const localized = localizeNoteContent(note.content); return localized.length > 200 ? localized.substring(0, 200) + '...' : localized; })()}</p>
                 {note.nextAction && (
                   <p className="text-xs text-al-blue-600 mt-1 flex items-center gap-1">
                     <Target className="w-3 h-3" />
-                    {note.nextAction}
+                    {localizeNoteNextAction(note.nextAction)}
                   </p>
                 )}
               </div>
@@ -610,14 +610,14 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
                 </p>
                 <div className="text-sm text-slate-700 space-y-1">
                   {bc.ourAdvantages.slice(0, 3).map((adv, i) => (
-                    <p key={i}>✓ {adv}</p>
+                    <p key={i}>✓ {localizeBattlecardText(adv)}</p>
                   ))}
                 </div>
                 {bc.isPrimary && bc.counterArguments.length > 0 && (
                   <div className="mt-3 pt-2 border-t border-amber-200">
                     <p className="text-xs font-semibold text-amber-800 mb-1">{t('practitioners.keyCounterArguments')}</p>
                     {bc.counterArguments.slice(0, 2).map((ca, i) => (
-                      <p key={i} className="text-xs text-amber-700 mb-1">→ {ca}</p>
+                      <p key={i} className="text-xs text-amber-700 mb-1">→ {localizeBattlecardText(ca)}</p>
                     ))}
                   </div>
                 )}
