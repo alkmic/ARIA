@@ -13,7 +13,7 @@ import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { filterVisitsByPeriod } from '../services/metricsCalculator';
 import { useTranslation } from '../i18n';
 import { useLanguage } from '../i18n';
-import { localizeSpecialty, localizeVisitNote } from '../utils/localizeData';
+import { localizeSpecialty, localizeVisitNote, txt } from '../utils/localizeData';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 
@@ -247,7 +247,7 @@ export const Visits: React.FC = () => {
                               </h3>
                               {visit.practitioner.isKOL && (
                                 <Badge variant="warning" size="sm">
-                                  KOL
+                                  {t('common.kol')}
                                 </Badge>
                               )}
                             </div>
@@ -269,7 +269,7 @@ export const Visits: React.FC = () => {
 
                             {practitioner && (
                               <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                                <span>Vingtile {practitioner.vingtile}</span>
+                                <span>{txt('Vingtile', 'Vigintile')} {practitioner.vingtile}</span>
                                 <span>•</span>
                                 <span>{(practitioner.volumeL / 1000).toFixed(0)}{t('visits.perYear')}</span>
                                 <span>•</span>
@@ -284,7 +284,7 @@ export const Visits: React.FC = () => {
                         {visit.notes && (
                           <div className="mt-3 pt-3 border-t border-slate-200">
                             <p className="text-sm text-slate-600">
-                              <span className="font-medium">Notes:</span> {localizeVisitNote(visit.notes)}
+                              <span className="font-medium">{t('visits.notesLabel')}:</span> {localizeVisitNote(visit.notes)}
                             </p>
                           </div>
                         )}

@@ -1709,16 +1709,17 @@ function formatUserCRMContext(data: UserCRMData, question: string): string {
       })
       .slice(0, 8);
 
+    const en = getLanguage() === 'en';
     relevantReports.forEach(r => {
       context += `- [${r.date}] ${r.practitionerName} (${r.extractedInfo.sentiment}) : `;
       if (r.extractedInfo.keyPoints.length > 0) {
-        context += `Points clés: ${r.extractedInfo.keyPoints.join('; ')}. `;
+        context += `${en ? 'Key points' : 'Points clés'}: ${r.extractedInfo.keyPoints.join('; ')}. `;
       }
       if (r.extractedInfo.productsDiscussed.length > 0) {
-        context += `Produits: ${r.extractedInfo.productsDiscussed.join(', ')}. `;
+        context += `${en ? 'Products' : 'Produits'}: ${r.extractedInfo.productsDiscussed.join(', ')}. `;
       }
       if (r.extractedInfo.competitorsMentioned.length > 0) {
-        context += `Concurrents: ${r.extractedInfo.competitorsMentioned.join(', ')}. `;
+        context += `${en ? 'Competitors' : 'Concurrents'}: ${r.extractedInfo.competitorsMentioned.join(', ')}. `;
       }
       if (r.extractedInfo.nextActions.length > 0) {
         context += `Actions: ${r.extractedInfo.nextActions.join('; ')}. `;

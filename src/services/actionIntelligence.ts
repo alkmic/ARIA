@@ -11,6 +11,21 @@ import { getLanguage } from '../i18n/LanguageContext';
 /** Bilingual text helper — returns FR or EN text based on current language */
 const txt = (fr: string, en: string): string => getLanguage() === 'en' ? en : fr;
 
+/** Localize specialty name for display in generated text */
+const locSpec = (spec: string): string => {
+  if (getLanguage() !== 'en') return spec;
+  if (spec === 'Pneumologue') return 'Pulmonologist';
+  if (spec === 'Médecin généraliste') return 'General Practitioner';
+  return spec;
+};
+
+/** Localize competitor/provider name */
+const locComp = (name: string): string => {
+  if (getLanguage() !== 'en') return name;
+  const map: Record<string, string> = { 'Bastide Médical': 'Bastide Medical', 'SOS Oxygène': 'SOS Oxygen' };
+  return map[name] || name;
+};
+
 // Types pour les scores et analyses
 interface ActionScore {
   urgency: number;
@@ -294,7 +309,7 @@ function generateAIJustification(
   } else if (p.metrics.vingtile <= 5) {
     summaryParts.push(txt(`${p.title} ${p.lastName} fait partie de vos Top 25% prescripteurs`, `${p.title} ${p.lastName} is in your Top 25% prescribers`));
   } else {
-    summaryParts.push(`${p.title} ${p.lastName} (${p.specialty})`);
+    summaryParts.push(`${p.title} ${p.lastName} (${locSpec(p.specialty)})`);
   }
 
   if (type === 'risk') {
@@ -450,7 +465,7 @@ export function generateIntelligentActions(
           : '';
 
         const previousProviderInfo = p.previousProvider
-          ? txt(`Ancien prestataire connu : ${p.previousProvider}. Opportunité de reprise.`, `Known previous provider: ${p.previousProvider}. Takeover opportunity.`)
+          ? txt(`Ancien prestataire connu : ${p.previousProvider}. Opportunité de reprise.`, `Known previous provider: ${locComp(p.previousProvider)}. Takeover opportunity.`)
           : txt('Aucun prestataire identifié — territoire vierge.', 'No provider identified — virgin territory.');
 
         actions.push({
@@ -461,19 +476,19 @@ export function generateIntelligentActions(
             ? txt(`🆕 Nouveau praticien détecté — Contact prioritaire`, `🆕 New practitioner detected — Priority contact`)
             : txt(`🆕 Nouveau praticien — Visite de découverte`, `🆕 New practitioner — Discovery visit`),
           reason: isExplicitlyNew
-            ? txt(`Détecté il y a ${detectedDaysAgo}j • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`, `Detected ${detectedDaysAgo}d ago • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`)
-            : txt(`${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`, `${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) has never been visited`),
+            ? txt(`Détecté il y a ${detectedDaysAgo}j • ${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Ex-${p.previousProvider}` : ''}`, `Detected ${detectedDaysAgo}d ago • ${p.title} ${p.firstName} ${p.lastName} (${locSpec(p.specialty)}${p.metrics.isKOL ? ' - KOL' : ''})${p.previousProvider ? ` • Former ${locComp(p.previousProvider)}` : ''}`)
+            : txt(`${p.title} ${p.firstName} ${p.lastName} (${p.specialty}${p.metrics.isKOL ? ' - KOL' : ''}) n'a jamais été visité(e)`, `${p.title} ${p.firstName} ${p.lastName} (${locSpec(p.specialty)}${p.metrics.isKOL ? ' - KOL' : ''}) has never been visited`),
           aiJustification: {
             summary: isExplicitlyNew
-              ? txt(`${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté il y a ${detectedDaysAgo} jour(s) sur le territoire de ${p.address.city}. ${p.specialty}${p.subSpecialty ? ` spécialisé(e) en ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an. ${previousProviderInfo} L'IA recommande un contact dans les 48h pour maximiser les chances de captation avant la concurrence.`, `${p.title} ${p.firstName} ${p.lastName} is a new practitioner detected ${detectedDaysAgo} day(s) ago in the ${p.address.city} territory. ${p.specialty}${p.subSpecialty ? ` specializing in ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), estimated volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year. ${previousProviderInfo} AI recommends contact within 48h to maximize chances before competition.`)
+              ? txt(`${p.title} ${p.firstName} ${p.lastName} est un nouveau praticien détecté il y a ${detectedDaysAgo} jour(s) sur le territoire de ${p.address.city}. ${p.specialty}${p.subSpecialty ? ` spécialisé(e) en ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an. ${previousProviderInfo} L'IA recommande un contact dans les 48h pour maximiser les chances de captation avant la concurrence.`, `${p.title} ${p.firstName} ${p.lastName} is a new practitioner detected ${detectedDaysAgo} day(s) ago in the ${p.address.city} territory. ${locSpec(p.specialty)}${p.subSpecialty ? ` specializing in ${p.subSpecialty}` : ''}, Vingtile ${p.metrics.vingtile} (Top ${p.metrics.vingtile * 5}%), estimated volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year. ${previousProviderInfo} AI recommends contact within 48h to maximize chances before competition.`)
               : txt(`${p.title} ${p.firstName} ${p.lastName} est un praticien non visité sur le territoire de ${p.address.city} (Vingtile ${p.metrics.vingtile}, volume estimé ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an). Une première prise de contact est essentielle.`, `${p.title} ${p.firstName} ${p.lastName} is an unvisited practitioner in the ${p.address.city} territory (Vingtile ${p.metrics.vingtile}, estimated volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year). A first contact is essential.`),
             metrics: [
               txt(`Volume estimé: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`, `Estimated volume: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year`),
               `Vingtile ${p.metrics.vingtile}/20 (Top ${p.metrics.vingtile * 5}%)`,
-              txt(`${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`, `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identified' : p.specialty}`),
+              txt(`${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identifié' : p.specialty}`, `${p.address.city} — ${p.metrics.isKOL ? 'Key Opinion Leader identified' : locSpec(p.specialty)}`),
               txt(`Potentiel de croissance: +${p.metrics.potentialGrowth}%`, `Growth potential: +${p.metrics.potentialGrowth}%`),
               isExplicitlyNew ? txt(`Détecté il y a ${detectedDaysAgo} jour(s)`, `Detected ${detectedDaysAgo} day(s) ago`) : txt(`Aucune visite enregistrée`, `No visit recorded`),
-              ...(p.previousProvider ? [txt(`Ancien prestataire: ${p.previousProvider}`, `Previous provider: ${p.previousProvider}`)] : []),
+              ...(p.previousProvider ? [txt(`Ancien prestataire: ${p.previousProvider}`, `Previous provider: ${locComp(p.previousProvider)}`)] : []),
             ],
             risks: [
               isExplicitlyNew
@@ -482,7 +497,7 @@ export function generateIntelligentActions(
               txt(`Pas de relation établie — aucun levier de fidélisation en place`, `No established relationship — no loyalty leverage in place`),
               txt(`Volume potentiel non capté: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an`, `Uncaptured potential volume: ${(p.metrics.volumeL / 1000).toFixed(0)}K L/year`),
               ...(p.previousProvider
-                ? [txt(`${p.previousProvider} pourrait tenter de le reconquérir rapidement`, `${p.previousProvider} may try to win them back quickly`)]
+                ? [txt(`${p.previousProvider} pourrait tenter de le reconquérir rapidement`, `${locComp(p.previousProvider)} may try to win them back quickly`)]
                 : [txt(`Les concurrents locaux pourraient aussi l'avoir identifié`, `Local competitors may have also identified them`)]),
             ],
             opportunities: [
@@ -496,9 +511,9 @@ export function generateIntelligentActions(
             ],
             suggestedApproach: isExplicitlyNew && recentNews.length > 0
               ? txt(`Contact urgent dans les 48h. Préparez une visite de découverte personnalisée en utilisant l'actualité récente du praticien comme accroche. ${newsContext ? `\n\nActualités du praticien :\n${newsContext}` : ''}\n\nApportez le kit de démonstration complet adapté à ${p.specialty === 'Pneumologue' ? 'un pneumologue' : 'un médecin généraliste'}, la documentation LPPR, et si possible un cas patient anonymisé montrant les bénéfices du télésuivi. L'objectif est d'établir Air Liquide comme partenaire de référence AVANT la concurrence.`, `Urgent contact within 48h. Prepare a personalized discovery visit using the practitioner's recent news as a hook. ${newsContext ? `\n\nPractitioner news:\n${newsContext}` : ''}\n\nBring the complete demo kit adapted for ${p.specialty === 'Pneumologue' ? 'a pulmonologist' : 'a general practitioner'}, LPPR documentation, and if possible an anonymized patient case showing telemonitoring benefits. The goal is to establish Air Liquide as the reference partner BEFORE the competition.`)
-              : txt(`Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`, `Prepare a complete discovery visit: Air Liquide Healthcare presentation, product range adapted to the specialty (${p.specialty}), and proposal to set up a first test patient. Bring the demo kit and LPPR documentation. The goal is to build a trusted relationship and position Air Liquide as the reference partner.`),
+              : txt(`Préparez une visite de découverte complète : présentation Air Liquide Santé, gamme de produits adaptée à la spécialité (${p.specialty}), et proposition de mise en place d'un premier patient test. Apportez le kit de démonstration et la documentation LPPR. L'objectif est d'établir une relation de confiance et de positionner Air Liquide comme partenaire de référence.`, `Prepare a complete discovery visit: Air Liquide Healthcare presentation, product range adapted to the specialty (${locSpec(p.specialty)}), and proposal to set up a first test patient. Bring the demo kit and LPPR documentation. The goal is to build a trusted relationship and position Air Liquide as the reference partner.`),
             competitorAlert: p.previousProvider
-              ? txt(`⚠️ Ancien prestataire : ${p.previousProvider}. Préparez des arguments différenciants spécifiques. Le praticien connaît déjà l'offre concurrente — focalisez sur nos avantages uniques.`, `⚠️ Previous provider: ${p.previousProvider}. Prepare specific differentiating arguments. The practitioner already knows the competitor's offering — focus on our unique advantages.`)
+              ? txt(`⚠️ Ancien prestataire : ${p.previousProvider}. Préparez des arguments différenciants spécifiques. Le praticien connaît déjà l'offre concurrente — focalisez sur nos avantages uniques.`, `⚠️ Previous provider: ${locComp(p.previousProvider)}. Prepare specific differentiating arguments. The practitioner already knows the competitor's offering — focus on our unique advantages.`)
               : txt(`⚠️ Nouveau praticien non affilié — les concurrents pourraient aussi l'avoir identifié. Rapidité d'action recommandée.`, `⚠️ Unaffiliated new practitioner — competitors may have also identified them. Speed of action recommended.`),
             contextualNews: recentNews.length > 0
               ? txt(`📰 Actualité récente : ${recentNews[0].title}. ${recentNews[0].relevance || ''}`, `📰 Recent news: ${recentNews[0].title}. ${recentNews[0].relevance || ''}`)

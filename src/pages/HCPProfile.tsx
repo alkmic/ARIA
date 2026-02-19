@@ -10,7 +10,7 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { getTopPractitioners } from '../services/metricsCalculator';
 import { useTranslation } from '../i18n';
-import { localizeSpecialty, localizeAiSummary } from '../utils/localizeData';
+import { localizeSpecialty, localizeAiSummary, txt } from '../utils/localizeData';
 import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
@@ -136,7 +136,7 @@ export const HCPProfile: React.FC = () => {
                       <Badge variant="success" size="sm">Top {periodLabel}</Badge>
                     )}
                     {practitioner.isKOL && (
-                      <Badge variant="warning" size="sm">KOL</Badge>
+                      <Badge variant="warning" size="sm">{t('common.kol')}</Badge>
                     )}
                   </div>
                   <p className="text-sm text-slate-600 mb-2">{localizeSpecialty(practitioner.specialty)}</p>
@@ -146,7 +146,7 @@ export const HCPProfile: React.FC = () => {
                       <MapPin className="w-3 h-3" />
                       <span>{practitioner.city}</span>
                     </span>
-                    <span>Vingtile {practitioner.vingtile}</span>
+                    <span>{txt('Vingtile', 'Vigintile')} {practitioner.vingtile}</span>
                   </div>
 
                   <div className="flex items-center flex-wrap gap-2">

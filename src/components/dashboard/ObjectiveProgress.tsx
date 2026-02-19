@@ -10,7 +10,7 @@ interface ObjectiveProgressProps {
   periodLabel?: string;
 }
 
-export function ObjectiveProgress({ current, target, daysRemaining, periodLabel = 'du mois' }: ObjectiveProgressProps) {
+export function ObjectiveProgress({ current, target, daysRemaining, periodLabel = '' }: ObjectiveProgressProps) {
   const { t, language } = useTranslation();
   const percentage = Math.round((current / target) * 100);
   const remaining = target - current;

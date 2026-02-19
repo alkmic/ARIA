@@ -18,4 +18,5 @@ export const visits = {
   kolVisits: 'KOL visits',
   loyaltyScore: 'Loyalty {{score}}/10',
   perYear: 'K L/yr',
+  notesLabel: 'Notes',
 };

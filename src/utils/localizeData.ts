@@ -564,6 +564,19 @@ export function localizeNewsRelevance(relevance: string): string {
   return relevance;
 }
 
+// ─── Competitor Name translations ────────────────────────────
+const competitorNameMap: Record<string, string> = {
+  'Bastide Médical': 'Bastide Medical',
+  'SOS Oxygène': 'SOS Oxygen',
+  'Linde Healthcare': 'Linde Healthcare',
+  'Vivisol': 'Vivisol',
+};
+
+export function localizeCompetitorName(name: string): string {
+  if (getLanguage() !== 'en') return name;
+  return competitorNameMap[name] || name;
+}
+
 // ─── Battlecard translations ─────────────────────────────────
 const battlecardTextMap: Record<string, string> = {
   // ── Vivisol ourAdvantages ──

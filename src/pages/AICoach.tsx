@@ -155,7 +155,7 @@ export default function AICoach() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'fr-FR';
+      recognitionRef.current.lang = getLocaleCode(language);
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -210,7 +210,7 @@ export default function AICoach() {
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'fr-FR';
+    utterance.lang = getLocaleCode(language);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
@@ -729,7 +729,7 @@ export default function AICoach() {
                               )}
                             </div>
                             <p className="text-xs sm:text-sm text-slate-500">
-                              {localizeSpecialty(p.specialty)} • Vingtile {p.vingtile} • {(p.volumeL / 1000).toFixed(0)}K {txt('L/an', 'L/yr')}
+                              {localizeSpecialty(p.specialty)} • {txt('Vingtile', 'Vigintile')} {p.vingtile} • {(p.volumeL / 1000).toFixed(0)}K {txt('L/an', 'L/yr')}
                             </p>
                           </div>
                           {p.daysSinceVisit !== undefined && p.daysSinceVisit < 999 && (

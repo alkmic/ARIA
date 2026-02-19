@@ -14,7 +14,7 @@ import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatDate, getLocaleCode } from '../utils/helpers';
 import { useTranslation, useLanguage, getLanguage } from '../i18n';
-import { txt, localizeSpecialty, localizeAiSummary, localizeNextAction, localizeConversationSummary, localizeBattlecardText, localizeNoteContent, localizeNoteNextAction } from '../utils/localizeData';
+import { txt, localizeSpecialty, localizeAiSummary, localizeNextAction, localizeConversationSummary, localizeBattlecardText, localizeNoteContent, localizeNoteNextAction, localizeNewsTitle, localizeCompetitorName } from '../utils/localizeData';
 import { NewsTab } from '../components/practitioner/NewsTab';
 import { NotesTab } from '../components/practitioner/NotesTab';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
@@ -85,7 +85,7 @@ export default function PractitionerProfile() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'success'}>
-            {t('common.risk.label')} {practitioner.riskLevel}
+            {practitioner.riskLevel === 'high' ? t('common.risk.high') : practitioner.riskLevel === 'medium' ? t('common.risk.medium') : t('common.risk.low')}
           </Badge>
           {practitioner.isKOL && (
             <Badge variant="warning">Key Opinion Leader</Badge>
@@ -114,7 +114,7 @@ export default function PractitionerProfile() {
                 <p className="font-bold">{t('practitioners.newPractitioner')}</p>
                 <p className="text-white/80 text-sm">
                   {t('practitioners.detectedDaysAgo', { days: detectedDaysAgo ?? '?' })}
-                  {dbProfile.previousProvider && ` • ${t('practitioners.previousProvider', { provider: dbProfile.previousProvider })}`}
+                  {dbProfile.previousProvider && ` • ${t('practitioners.previousProvider', { provider: localizeCompetitorName(dbProfile.previousProvider) })}`}
                   {t('practitioners.noVisitRecorded')}
                 </p>
               </div>
@@ -584,7 +584,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           {keyPoints.map((point, i) => (
             <li key={i} className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-              <span className="text-slate-700">{point}</span>
+              <span className="text-slate-700">{localizeNewsTitle(point)}</span>
             </li>
           ))}
         </ul>
@@ -597,7 +597,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           {t('practitioners.battlecard')}
           {dbProfile?.previousProvider && (
             <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
-              Ex-{dbProfile.previousProvider}
+              {txt('Ex-', 'Former ')}{localizeCompetitorName(dbProfile.previousProvider)}
             </span>
           )}
         </h3>
@@ -606,7 +606,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
             dbProfile.battlecards.map((bc, idx) => (
               <div key={idx} className={`p-4 rounded-xl ${bc.isPrimary ? 'bg-amber-100/80 ring-2 ring-amber-300' : 'bg-white/80'}`}>
                 <p className={`text-sm font-semibold mb-2 ${bc.isPrimary ? 'text-red-700' : 'text-amber-700'}`}>
-                  vs {bc.competitor} {bc.isPrimary && t('practitioners.directCompetitor')}
+                  vs {localizeCompetitorName(bc.competitor)} {bc.isPrimary && t('practitioners.directCompetitor')}
                 </p>
                 <div className="text-sm text-slate-700 space-y-1">
                   {bc.ourAdvantages.slice(0, 3).map((adv, i) => (
@@ -668,7 +668,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           <Lightbulb className="w-5 h-5 text-green-600" />
           {t('practitioners.nextBestAction')}
         </h3>
-        <p className="text-slate-700 mb-4">{localizeNextAction(practitioner.nextBestAction)}</p>
+        <p className="text-slate-700 mb-4">{(() => { const nba = practitioner.nextBestAction; const localized = localizeNoteNextAction(nba); return localized !== nba ? localized : localizeNextAction(nba); })()}</p>
         <div className="flex gap-2">
           <Button variant="primary" size="sm" onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}>
             <Wand2 className="w-4 h-4 mr-1" />
@@ -776,14 +776,15 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
                   )}
                 </p>
                 <p className="text-sm text-slate-500">
-                  {conv.type || t('practitioners.visitType')} • {conv.duration || '25 min'}
+                  {conv.type === 'visit' ? t('common.contactType.visit') : conv.type === 'phone' ? t('common.contactType.phone') : conv.type === 'email' ? t('common.contactType.email') : conv.type || t('practitioners.visitType')} • {conv.duration || '25 min'}
                 </p>
               </div>
               <Badge variant={
                 conv.sentiment === 'positive' ? 'success' :
                 conv.sentiment === 'negative' ? 'danger' : 'default'
               } size="sm">
-                {conv.sentiment}
+                {conv.sentiment === 'positive' ? t('common.sentiment.positive') :
+                 conv.sentiment === 'negative' ? t('common.sentiment.negative') : t('common.sentiment.neutral')}
               </Badge>
             </div>
 
@@ -798,7 +799,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
                   {conv.actions.map((action: string, j: number) => (
                     <li key={j} className="flex items-center gap-2 text-sm text-slate-600">
                       <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span>{localizeNextAction(action)}</span>
+                      <span>{localizeNoteNextAction(action) !== action ? localizeNoteNextAction(action) : localizeNextAction(action)}</span>
                     </li>
                   ))}
                 </ul>
