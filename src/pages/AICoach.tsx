@@ -72,6 +72,7 @@ import { useUserDataStore } from '../stores/useUserDataStore';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 import { useTranslation } from '../i18n';
 import { localizeSpecialty, txt } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 
 // Types pour les graphiques agentiques
 interface AgenticChartData {
@@ -101,7 +102,7 @@ interface Message {
 const CHART_COLORS = DEFAULT_CHART_COLORS;
 
 export default function AICoach() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -348,7 +349,7 @@ export default function AICoach() {
 
   const exportConversation = () => {
     const text = messages
-      .map(m => `[${m.timestamp.toLocaleTimeString('fr-FR')}] ${m.role === 'user' ? t('coach.you') : t('coach.title')}: ${m.content}`)
+      .map(m => `[${m.timestamp.toLocaleTimeString(getLocaleCode(language))}] ${m.role === 'user' ? t('coach.you') : t('coach.title')}: ${m.content}`)
       .join('\n\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -971,7 +972,7 @@ export default function AICoach() {
                   )}
 
                   <div className="text-[11px] text-slate-400 mt-2 flex items-center gap-2">
-                    <span>{message.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>{message.timestamp.toLocaleTimeString(getLocaleCode(language), { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
 

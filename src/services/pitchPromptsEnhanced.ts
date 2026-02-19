@@ -368,7 +368,7 @@ function extractNoteInsights(profile: PractitionerProfile): string {
     }
     insights += `\nDernières notes (contexte conversationnel):\n`;
     notes.slice(0, 3).forEach(note => {
-      const date = new Date(note.date).toLocaleDateString('fr-FR');
+      const date = new Date(note.date).toLocaleDateString(getLanguage() === 'en' ? 'en-US' : 'fr-FR');
       insights += `- [${date}] ${note.content.substring(0, 150)}${note.content.length > 150 ? '...' : ''}\n`;
     });
   }
@@ -873,7 +873,21 @@ ${config.additionalInstructions ? `INSTRUCTIONS: ${config.additionalInstructions
 Generate the pitch following the required structure.`;
   }
 
-  return `Génère un pitch personnalisé pour ce praticien:
+  const isEn = lang === 'en';
+  return isEn ? `Generate a personalized pitch for this practitioner:
+
+PROFILE:
+- ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
+- ${practitioner.specialty} — ${practitioner.city}
+- Volume: ${practitioner.volumeL.toLocaleString()} L | KOL: ${practitioner.isKOL ? 'Yes' : 'No'}
+- Last visit: ${practitioner.lastVisitDate || 'Never'} | Trend: ${practitioner.trend}
+- Loyalty: ${practitioner.loyaltyScore}/10
+
+HISTORY:
+${conversationHistory}
+
+AI SYNTHESIS:
+${practitioner.aiSummary}` : `Génère un pitch personnalisé pour ce praticien:
 
 PROFIL:
 - ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}
@@ -1110,7 +1124,7 @@ function generateLocalPitchFR(practitioner: Practitioner, config: PitchConfig): 
   let accroche = '';
   if (publications.length > 0) {
     const pub = publications[0];
-    const pubDate = new Date(pub.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const pubDate = new Date(pub.date).toLocaleDateString(getLanguage() === 'en' ? 'en-US' : 'fr-FR', { month: 'long', year: 'numeric' });
     accroche = `${titre}, j'ai eu l'occasion de lire votre publication « ${pub.title} » parue en ${pubDate}. `;
     if (isPneumo) {
       accroche += `Votre travail sur ce sujet contribue significativement à faire avancer la prise en charge des patients respiratoires dans la région. `;

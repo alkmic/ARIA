@@ -42,6 +42,7 @@ export const pitch = {
     service247: '24/7 assistance',
     training: 'Patient education',
   },
+  productsLabel: 'Products',
   competitors: {
     vivisol: 'Vivisol',
     linde: 'Linde Healthcare',

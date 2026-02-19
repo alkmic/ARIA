@@ -1355,9 +1355,9 @@ function buildTargetedContext(
       for (const name of routing.searchTerms.names) {
         const newsResults = DataService.searchNews(name);
         if (newsResults.length > 0) {
-          context += `\n## Actualités trouvées pour "${name}" (${newsResults.length})\n`;
+          context += `\n## ${getLanguage() === 'en' ? 'News found for' : 'Actualités trouvées pour'} "${name}" (${newsResults.length})\n`;
           for (const item of newsResults.slice(0, 10)) {
-            const dateStr = new Date(item.news.date).toLocaleDateString('fr-FR');
+            const dateStr = new Date(item.news.date).toLocaleDateString(getLanguage() === 'en' ? 'en-US' : 'fr-FR');
             context += `- [${dateStr}] ${item.practitioner.title} ${item.practitioner.firstName} ${item.practitioner.lastName} : "${item.news.title}" (${item.news.type})`;
             if (item.news.content) context += ` — ${item.news.content}`;
             if (item.news.source) context += ` | Source: ${item.news.source}`;
@@ -1729,9 +1729,9 @@ function formatUserCRMContext(data: UserCRMData, question: string): string {
 
   // Include user notes (last 10)
   if (data.userNotes.length > 0) {
-    context += `\n### Notes utilisateur (${data.userNotes.length} total)\n`;
+    context += `\n### ${getLanguage() === 'en' ? 'User notes' : 'Notes utilisateur'} (${data.userNotes.length} total)\n`;
     data.userNotes.slice(0, 10).forEach(n => {
-      const date = new Date(n.createdAt).toLocaleDateString('fr-FR');
+      const date = new Date(n.createdAt).toLocaleDateString(getLanguage() === 'en' ? 'en-US' : 'fr-FR');
       context += `- [${date}] (${n.type}) ${n.content.substring(0, 200)}${n.content.length > 200 ? '...' : ''}\n`;
     });
   }

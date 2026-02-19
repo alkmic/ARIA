@@ -5,10 +5,11 @@ import { Calendar, AlertTriangle, Star, TrendingUp, MapPin, Clock, CheckCircle, 
 import { useAppStore } from '../stores/useAppStore';
 import { useTranslation } from '../i18n';
 import { localizeSpecialty, localizePracticeType } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 import type { Practitioner } from '../types';
 
 export const KOLPlanningPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const { practitioners, upcomingVisits } = useAppStore();
   const [selectedKOL, setSelectedKOL] = useState<string | null>(null);
@@ -287,7 +288,7 @@ export const KOLPlanningPage: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-slate-600">{t('manager.kol.suggestedDate')}</span>
                         <span className="font-bold text-blue-700">
-                          {proposedSchedule[index].date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          {proposedSchedule[index].date.toLocaleDateString(getLocaleCode(language), { weekday: 'long', day: 'numeric', month: 'long' })}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

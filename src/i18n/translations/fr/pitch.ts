@@ -49,6 +49,7 @@ export const pitch = {
     training: 'Éducation thérapeutique',
   },
 
+  productsLabel: 'Produits',
   // Competitors
   competitors: {
     vivisol: 'Vivisol',

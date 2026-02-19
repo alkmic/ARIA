@@ -30,6 +30,7 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useTranslation } from '../i18n';
 import { localizeSpecialty, txt } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 import { useGroq } from '../hooks/useGroq';
 import { useSpeech } from '../hooks/useSpeech';
 import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary, SECTION_ID_TO_TAG, generateLocalPitch } from '../services/pitchPromptsEnhanced';
@@ -72,7 +73,7 @@ export function PitchGenerator() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const practitioners = useAppStore((state) => state.practitioners);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   // Translated product descriptions
   const PRODUCTS = PRODUCT_IDS.map(id => ({
@@ -654,7 +655,7 @@ export function PitchGenerator() {
                     {profile?.news?.filter(n => n.type === 'publication').slice(0, 3).map((pub, idx) => (
                       <div key={idx} className="bg-purple-50 rounded-lg p-3">
                         <div className="font-medium text-sm text-purple-900">{pub.title}</div>
-                        <div className="text-xs text-purple-600 mt-1">{new Date(pub.date).toLocaleDateString('fr-FR')}</div>
+                        <div className="text-xs text-purple-600 mt-1">{new Date(pub.date).toLocaleDateString(getLocaleCode(language))}</div>
                       </div>
                     ))}
                   </div>
@@ -674,7 +675,7 @@ export function PitchGenerator() {
                     {profile?.notes?.slice(0, 3).map((note, idx) => (
                       <div key={idx} className="bg-blue-50 rounded-lg p-3">
                         <div className="text-sm text-blue-900">{note.content.substring(0, 100)}...</div>
-                        <div className="text-xs text-blue-600 mt-1">{new Date(note.date).toLocaleDateString('fr-FR')}</div>
+                        <div className="text-xs text-blue-600 mt-1">{new Date(note.date).toLocaleDateString(getLocaleCode(language))}</div>
                       </div>
                     ))}
                   </div>
@@ -694,9 +695,9 @@ export function PitchGenerator() {
                     {profile?.visitHistory?.slice(0, 3).map((visit, idx) => (
                       <div key={idx} className="flex items-center justify-between bg-green-50 rounded-lg p-3">
                         <div>
-                          <div className="text-sm font-medium text-green-900">{new Date(visit.date).toLocaleDateString('fr-FR')}</div>
+                          <div className="text-sm font-medium text-green-900">{new Date(visit.date).toLocaleDateString(getLocaleCode(language))}</div>
                           {visit.productsDiscussed && visit.productsDiscussed.length > 0 && (
-                            <div className="text-xs text-green-600">Produits: {visit.productsDiscussed.join(', ')}</div>
+                            <div className="text-xs text-green-600">{t('pitch.productsLabel')}: {visit.productsDiscussed.join(', ')}</div>
                           )}
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${

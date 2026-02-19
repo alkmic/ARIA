@@ -33,6 +33,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { useTranslation } from '../i18n';
 import { localizeSpecialty, txt } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import type { Practitioner, UpcomingVisit } from '../types';
 import 'leaflet/dist/leaflet.css';
@@ -118,7 +119,7 @@ export const TourOptimizationPage: React.FC = () => {
   const { practitioners, upcomingVisits, addVisits } = useAppStore();
   const [saved, setSaved] = useState(false);
   const { periodLabel } = useTimePeriod();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   // IDs des praticiens déjà planifiés
   const alreadyPlannedIds = useMemo(() => {
@@ -532,7 +533,7 @@ export const TourOptimizationPage: React.FC = () => {
 
       days.push({
         day: d + 1,
-        date: dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+        date: dayDate.toLocaleDateString(getLocaleCode(language), { weekday: 'long', day: 'numeric', month: 'long' }),
         isoDate: dayDate.toISOString().split('T')[0],
         visits,
         totalDistance: roundedDayDist,
@@ -1163,7 +1164,7 @@ export const TourOptimizationPage: React.FC = () => {
                   <h3 className="font-bold text-lg text-slate-800">{t('tour.summary')}</h3>
                   <p className="text-sm text-slate-600 mt-1">
                     {t('tour.summaryText', { count: String(selectedIds.size), days: String(Math.ceil(selectedIds.size / visitsPerDay)) })} •
-                    {t('tour.start')}: {new Date(startDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {t('tour.start')}: {new Date(startDate).toLocaleDateString(getLocaleCode(language), { weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                 </div>
                 <div className="flex gap-3">

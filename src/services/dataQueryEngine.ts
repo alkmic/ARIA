@@ -6,6 +6,8 @@
 
 import { DataService } from './dataService';
 import type { PractitionerProfile } from '../types/database';
+import { getLanguage } from '../i18n/LanguageContext';
+import { getLocaleCode } from '../utils/helpers';
 
 export interface QueryResult {
   practitioners: PractitionerProfile[];
@@ -278,8 +280,10 @@ RÉSUMÉ : ${result.summary}
 
 `;
 
+  const en = getLanguage() === 'en';
+  const locale = getLocaleCode();
   if (result.practitioners.length > 0) {
-    context += `PRATICIENS CORRESPONDANTS (${result.practitioners.length}) :\n\n`;
+    context += `${en ? 'MATCHING PRACTITIONERS' : 'PRATICIENS CORRESPONDANTS'} (${result.practitioners.length}) :\n\n`;
 
     result.practitioners.slice(0, 15).forEach((p, idx) => {
       const publicationCount = p.news?.filter(n => n.type === 'publication').length || 0;
@@ -287,39 +291,38 @@ RÉSUMÉ : ${result.summary}
       const certificationCount = p.news?.filter(n => n.type === 'certification').length || 0;
 
       context += `${idx + 1}. ${p.title} ${p.firstName} ${p.lastName}\n`;
-      context += `   • Spécialité : ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}\n`;
-      context += `   • Adresse complète : ${p.address.street}, ${p.address.postalCode} ${p.address.city}\n`;
-      context += `   • Volume annuel : ${(p.metrics.volumeL / 1000).toFixed(1)}K L/an\n`;
-      context += `   • Fidélité : ${p.metrics.loyaltyScore}/10 | Vingtile : ${p.metrics.vingtile}\n`;
-      context += `   • Statut : ${p.metrics.isKOL ? 'KOL' : 'Praticien standard'}\n`;
+      context += `   • ${en ? 'Specialty' : 'Spécialité'} : ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}\n`;
+      context += `   • ${en ? 'Full address' : 'Adresse complète'} : ${p.address.street}, ${p.address.postalCode} ${p.address.city}\n`;
+      context += `   • ${en ? 'Annual volume' : 'Volume annuel'} : ${(p.metrics.volumeL / 1000).toFixed(1)}K L/${en ? 'yr' : 'an'}\n`;
+      context += `   • ${en ? 'Loyalty' : 'Fidélité'} : ${p.metrics.loyaltyScore}/10 | Vingtile : ${p.metrics.vingtile}\n`;
+      context += `   • ${en ? 'Status' : 'Statut'} : ${p.metrics.isKOL ? 'KOL' : (en ? 'Standard practitioner' : 'Praticien standard')}\n`;
       context += `   • Contact : ${p.contact.email} | ${p.contact.phone}\n`;
 
       if (publicationCount > 0 || conferenceCount > 0 || certificationCount > 0) {
-        context += `   • Actualités : ${publicationCount} publication(s), ${conferenceCount} conférence(s), ${certificationCount} certification(s)\n`;
+        context += `   • ${en ? 'News' : 'Actualités'} : ${publicationCount} publication(s), ${conferenceCount} ${en ? 'conference(s)' : 'conférence(s)'}, ${certificationCount} certification(s)\n`;
       }
 
-      // Détails des publications si pertinent
       if (publicationCount > 0) {
         const publications = p.news?.filter(n => n.type === 'publication') || [];
         publications.forEach(pub => {
-          context += `     → [${new Date(pub.date).toLocaleDateString('fr-FR')}] ${pub.title}: ${pub.content}\n`;
+          context += `     → [${new Date(pub.date).toLocaleDateString(locale)}] ${pub.title}: ${pub.content}\n`;
         });
       }
 
-      context += `   • Dernière visite : ${p.lastVisitDate ? new Date(p.lastVisitDate).toLocaleDateString('fr-FR') : 'Jamais'}\n`;
+      context += `   • ${en ? 'Last visit' : 'Dernière visite'} : ${p.lastVisitDate ? new Date(p.lastVisitDate).toLocaleDateString(locale) : (en ? 'Never' : 'Jamais')}\n`;
       context += '\n';
     });
 
     if (result.practitioners.length > 15) {
-      context += `... et ${result.practitioners.length - 15} autres praticiens.\n\n`;
+      context += `... ${en ? 'and' : 'et'} ${result.practitioners.length - 15} ${en ? 'more practitioners' : 'autres praticiens'}.\n\n`;
     }
   }
 
   if (result.aggregations) {
-    context += `STATISTIQUES AGRÉGÉES :\n`;
-    context += `   • Total praticiens : ${result.aggregations.totalCount}\n`;
-    context += `   • Volume total : ${(result.aggregations.totalVolume / 1000).toFixed(0)}K L/an\n`;
-    context += `   • Fidélité moyenne : ${result.aggregations.avgLoyalty.toFixed(1)}/10\n`;
+    context += `${en ? 'AGGREGATE STATISTICS' : 'STATISTIQUES AGRÉGÉES'} :\n`;
+    context += `   • ${en ? 'Total practitioners' : 'Total praticiens'} : ${result.aggregations.totalCount}\n`;
+    context += `   • ${en ? 'Total volume' : 'Volume total'} : ${(result.aggregations.totalVolume / 1000).toFixed(0)}K L/${en ? 'yr' : 'an'}\n`;
+    context += `   • ${en ? 'Average loyalty' : 'Fidélité moyenne'} : ${result.aggregations.avgLoyalty.toFixed(1)}/10\n`;
     context += `   • KOLs : ${result.aggregations.kolCount}\n`;
 
     if (result.aggregations.byCity) {

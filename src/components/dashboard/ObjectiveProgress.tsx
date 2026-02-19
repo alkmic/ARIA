@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Target, Zap, Calendar } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { getLocaleCode } from '../../utils/helpers';
 
 interface ObjectiveProgressProps {
   current: number;
@@ -10,7 +11,7 @@ interface ObjectiveProgressProps {
 }
 
 export function ObjectiveProgress({ current, target, daysRemaining, periodLabel = 'du mois' }: ObjectiveProgressProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const percentage = Math.round((current / target) * 100);
   const remaining = target - current;
   const visitsPerDay = remaining > 0 && daysRemaining > 0 ? (remaining / daysRemaining).toFixed(1) : '0.0';
@@ -26,11 +27,11 @@ export function ObjectiveProgress({ current, target, daysRemaining, periodLabel 
   // Générer le sous-titre basé sur la période
   const getSubtitle = () => {
     const now = new Date();
-    if (periodLabel.includes('mois')) {
-      return now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    } else if (periodLabel.includes('trimestre')) {
+    if (periodLabel.includes('mois') || periodLabel.includes('month')) {
+      return now.toLocaleDateString(getLocaleCode(language), { month: 'long', year: 'numeric' });
+    } else if (periodLabel.includes('trimestre') || periodLabel.includes('quarter')) {
       const quarter = Math.floor(now.getMonth() / 3) + 1;
-      return `T${quarter} ${now.getFullYear()}`;
+      return `Q${quarter} ${now.getFullYear()}`;
     } else {
       return `${now.getFullYear()}`;
     }

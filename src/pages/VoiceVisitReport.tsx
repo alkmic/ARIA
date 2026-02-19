@@ -30,7 +30,9 @@ import { DataService } from '../services/dataService';
 import { useAppStore } from '../stores/useAppStore';
 import { useUserDataStore } from '../stores/useUserDataStore';
 import { useTranslation } from '../i18n';
+import { getLanguage } from '../i18n/LanguageContext';
 import { localizeSpecialty } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 import type { PractitionerProfile } from '../types/database';
 
 interface ExtractedInfo {
@@ -111,7 +113,7 @@ export default function VoiceVisitReport() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'fr-FR';
+      recognitionRef.current.lang = getLanguage() === 'en' ? 'en-US' : 'fr-FR';
 
       recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
@@ -181,7 +183,29 @@ export default function VoiceVisitReport() {
     setIsProcessing(true);
 
     try {
-      const prompt = `Tu es un assistant IA pour visiteurs médicaux Air Liquide. Analyse ce compte-rendu de visite et extrais les informations structurées.
+      const lang = getLanguage();
+      const prompt = lang === 'en'
+        ? `You are an AI assistant for Air Liquide Healthcare medical sales representatives. Analyze this visit report and extract structured information.
+
+VISITED PRACTITIONER: ${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}
+SPECIALTY: ${selectedPractitioner.specialty}
+CITY: ${selectedPractitioner.address.city}
+
+VISIT REPORT TRANSCRIPT:
+"${transcript}"
+
+Respond ONLY with valid JSON (no text before or after) with this exact structure:
+{
+  "topics": ["list of topics discussed"],
+  "sentiment": "positive" | "neutral" | "negative",
+  "nextActions": ["actions to take after this visit"],
+  "keyPoints": ["key points to remember"],
+  "productsDiscussed": ["Air Liquide products mentioned: Oxygen, COPD, NIV, etc."],
+  "competitorsMentioned": ["competitors mentioned: Vivisol, Linde, etc."],
+  "objections": ["objections or barriers expressed by the practitioner"],
+  "opportunities": ["opportunities detected"]
+}`
+        : `Tu es un assistant IA pour visiteurs médicaux Air Liquide. Analyse ce compte-rendu de visite et extrais les informations structurées.
 
 PRATICIEN VISITÉ: ${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}
 SPÉCIALITÉ: ${selectedPractitioner.specialty}
@@ -369,7 +393,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       practitionerId: selectedPractitioner.id,
       practitionerName: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
       date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      time: new Date().toLocaleTimeString(getLocaleCode(), { hour: '2-digit', minute: '2-digit' }),
       transcript: editedNotes,
       extractedInfo: {
         topics: extractedInfo.topics,
@@ -387,10 +411,12 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
     const accepted = aiDeductions.filter(d => d.accepted);
 
     // Save key points as observation notes
+    const localeDate = new Date().toLocaleDateString(getLocaleCode());
+    const lang = getLanguage();
     if (extractedInfo.keyPoints.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Points clés de la visite du ${new Date().toLocaleDateString('fr-FR')}:\n${extractedInfo.keyPoints.map(p => `• ${p}`).join('\n')}`,
+        content: `${lang === 'en' ? 'Key points from visit on' : 'Points clés de la visite du'} ${localeDate}:\n${extractedInfo.keyPoints.map(p => `• ${p}`).join('\n')}`,
         type: 'observation'
       });
     }
@@ -400,7 +426,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
     if (acceptedOpportunities.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Opportunités validées le ${new Date().toLocaleDateString('fr-FR')}:\n${acceptedOpportunities.map(o => `• ${o.detail}`).join('\n')}`,
+        content: `${lang === 'en' ? 'Validated opportunities on' : 'Opportunités validées le'} ${localeDate}:\n${acceptedOpportunities.map(o => `• ${o.detail}`).join('\n')}`,
         type: 'strategy'
       });
     }
@@ -410,17 +436,17 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
     if (acceptedCompetitors.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Intelligence concurrentielle du ${new Date().toLocaleDateString('fr-FR')}:\n${acceptedCompetitors.map(c => `• ${c.detail}`).join('\n')}`,
+        content: `${lang === 'en' ? 'Competitive intelligence from' : 'Intelligence concurrentielle du'} ${localeDate}:\n${acceptedCompetitors.map(c => `• ${c.detail}`).join('\n')}`,
         type: 'competitive'
       });
     }
 
     // Save relationship alerts
-    const relationshipAlerts = accepted.filter(d => d.category === 'relationship' && d.label.includes('Alerte'));
+    const relationshipAlerts = accepted.filter(d => d.category === 'relationship' && d.label.includes(lang === 'en' ? 'alert' : 'Alerte'));
     if (relationshipAlerts.length > 0) {
       addUserNote({
         practitionerId: selectedPractitioner.id,
-        content: `Alerte relationnelle du ${new Date().toLocaleDateString('fr-FR')}:\n${relationshipAlerts.map(r => `• ${r.detail}`).join('\n')}`,
+        content: `${lang === 'en' ? 'Relationship alert from' : 'Alerte relationnelle du'} ${localeDate}:\n${relationshipAlerts.map(r => `• ${r.detail}`).join('\n')}`,
         type: 'observation'
       });
     }
@@ -748,9 +774,9 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 </p>
                 <p className="text-sm text-slate-500 flex items-center gap-2">
                   <Calendar className="w-3 h-3" />
-                  {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {new Date().toLocaleDateString(getLocaleCode(), { weekday: 'long', day: 'numeric', month: 'long' })}
                   <Clock className="w-3 h-3 ml-2" />
-                  {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date().toLocaleTimeString(getLocaleCode(), { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
               {/* Editable Sentiment */}
