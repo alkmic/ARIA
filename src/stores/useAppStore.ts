@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Practitioner, User, AIInsight, FilterOptions, UpcomingVisit, PerformanceData } from '../types';
 import { DataService } from '../services/dataService';
 import { adaptPractitionerProfiles } from '../services/dataAdapter';
+import { txt, localizeMonth } from '../utils/localizeData';
 
 interface AppState {
   // Data
@@ -27,58 +28,75 @@ interface AppState {
   getTodayVisits: () => UpcomingVisit[];
   addVisits: (visits: UpcomingVisit[]) => void;
   removeVisit: (visitId: string) => void;
+  refreshLanguage: () => void;
 }
 
 // Mock data pour l'utilisateur connecté
-const mockUser: User = {
-  id: 'U001',
-  name: 'Marie Dupont',
-  role: 'Déléguée Pharmaceutique',
-  territory: 'Rhône-Alpes',
-  avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=MarieDupont&backgroundColor=0066B3',
-  objectives: {
-    visitsMonthly: 60,
-    visitsCompleted: 47,
-    newPrescribers: 12,
-  },
-};
+function getMockUser(): User {
+  return {
+    id: 'U001',
+    name: 'Marie Dupont',
+    role: txt('Déléguée Pharmaceutique', 'Pharmaceutical Representative'),
+    territory: 'Rhône-Alpes',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=MarieDupont&backgroundColor=0066B3',
+    objectives: {
+      visitsMonthly: 60,
+      visitsCompleted: 47,
+      newPrescribers: 12,
+    },
+  };
+}
 
-// Mock insights IA
-const mockInsights: AIInsight[] = [
-  {
-    id: 'I001',
-    type: 'opportunity',
-    title: 'Opportunité détectée',
-    message: 'Dr. Martin a augmenté ses prescriptions de 23% ce trimestre. Moment idéal pour renforcer la relation.',
-    priority: 'high',
-    actionLabel: 'Voir le profil',
-    practitionerId: 'P042',
-  },
-  {
-    id: 'I002',
-    type: 'alert',
-    title: '3 KOLs non visités',
-    message: '3 leaders d\'opinion n\'ont pas été contactés depuis plus de 90 jours.',
-    priority: 'high',
-    actionLabel: 'Planifier visites',
-  },
-  {
-    id: 'I003',
-    type: 'reminder',
-    title: 'Visite demain',
-    message: 'Rendez-vous confirmé avec Dr. Dupont demain à 10h. Documents de préparation disponibles.',
-    priority: 'medium',
-    actionLabel: 'Préparer visite',
-    practitionerId: 'P023',
-  },
-  {
-    id: 'I004',
-    type: 'achievement',
-    title: 'Objectif atteint',
-    message: 'Vous avez visité 100% des KOLs ce mois-ci.',
-    priority: 'low',
-  },
-];
+// Mock insights IA - bilingual
+function getMockInsights(): AIInsight[] {
+  return [
+    {
+      id: 'I001',
+      type: 'opportunity',
+      title: txt('Opportunité détectée', 'Opportunity detected'),
+      message: txt(
+        'Dr. Martin a augmenté ses prescriptions de 23% ce trimestre. Moment idéal pour renforcer la relation.',
+        'Dr. Martin increased prescriptions by 23% this quarter. Ideal time to strengthen the relationship.'
+      ),
+      priority: 'high',
+      actionLabel: txt('Voir le profil', 'View profile'),
+      practitionerId: 'P042',
+    },
+    {
+      id: 'I002',
+      type: 'alert',
+      title: txt('3 KOLs non visités', '3 unvisited KOLs'),
+      message: txt(
+        '3 leaders d\'opinion n\'ont pas été contactés depuis plus de 90 jours.',
+        '3 opinion leaders have not been contacted for over 90 days.'
+      ),
+      priority: 'high',
+      actionLabel: txt('Planifier visites', 'Schedule visits'),
+    },
+    {
+      id: 'I003',
+      type: 'reminder',
+      title: txt('Visite demain', 'Visit tomorrow'),
+      message: txt(
+        'Rendez-vous confirmé avec Dr. Dupont demain à 10h. Documents de préparation disponibles.',
+        'Confirmed appointment with Dr. Dupont tomorrow at 10am. Preparation documents available.'
+      ),
+      priority: 'medium',
+      actionLabel: txt('Préparer visite', 'Prepare visit'),
+      practitionerId: 'P023',
+    },
+    {
+      id: 'I004',
+      type: 'achievement',
+      title: txt('Objectif atteint', 'Goal achieved'),
+      message: txt(
+        'Vous avez visité 100% des KOLs ce mois-ci.',
+        'You visited 100% of KOLs this month.'
+      ),
+      priority: 'low',
+    },
+  ];
+}
 
 // Mock upcoming visits
 function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
@@ -103,7 +121,7 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
       date: today.toISOString().split('T')[0],
       time: ['09:00', '14:30', '16:00'][i],
       type: 'scheduled',
-      notes: 'Présentation des nouvelles options thérapeutiques',
+      notes: txt('Présentation des nouvelles options thérapeutiques', 'Presentation of new therapeutic options'),
     });
   });
 
@@ -117,7 +135,7 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
       date: addDays(today, 1).toISOString().split('T')[0],
       time: ['10:00', '15:00'][i],
       type: 'scheduled',
-      notes: 'Suivi KOL - Discussion nouveaux protocoles',
+      notes: txt('Suivi KOL - Discussion nouveaux protocoles', 'KOL follow-up - New protocols discussion'),
     });
   });
 
@@ -133,7 +151,7 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
         date: addDays(today, day).toISOString().split('T')[0],
         time: i === 0 ? '10:30' : '14:00',
         type: 'scheduled',
-        notes: 'Visite de routine - Point sur les prescriptions',
+        notes: txt('Visite de routine - Point sur les prescriptions', 'Routine visit - Prescription review'),
       });
     });
   }
@@ -148,7 +166,7 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
       date: addDays(today, 7 + i).toISOString().split('T')[0],
       time: ['09:30', '11:00', '15:30'][i],
       type: 'scheduled',
-      notes: 'Visite de réactivation - Praticien à risque',
+      notes: txt('Visite de réactivation - Praticien à risque', 'Reactivation visit - At-risk practitioner'),
     });
   });
 
@@ -157,20 +175,23 @@ function generateMockVisits(practitioners: Practitioner[]): UpcomingVisit[] {
 
 // Mock performance data (toutes les valeurs en litres L — cohérence avec les graphiques)
 // Volume mensuel réaliste pour un territoire Rhône-Alpes: ~40-60K L/mois
-const mockPerformanceData: PerformanceData[] = [
-  { month: 'Jan', yourVolume: 42000, objective: 45000, teamAverage: 40000 },
-  { month: 'Fév', yourVolume: 44000, objective: 45000, teamAverage: 41000 },
-  { month: 'Mar', yourVolume: 47000, objective: 46000, teamAverage: 42000 },
-  { month: 'Avr', yourVolume: 46000, objective: 46000, teamAverage: 43000 },
-  { month: 'Mai', yourVolume: 49000, objective: 47000, teamAverage: 44000 },
-  { month: 'Jun', yourVolume: 51000, objective: 48000, teamAverage: 45000 },
-  { month: 'Jul', yourVolume: 48000, objective: 48000, teamAverage: 44000 },
-  { month: 'Aoû', yourVolume: 43000, objective: 48000, teamAverage: 41000 },
-  { month: 'Sep', yourVolume: 52000, objective: 49000, teamAverage: 46000 },
-  { month: 'Oct', yourVolume: 54000, objective: 50000, teamAverage: 47000 },
-  { month: 'Nov', yourVolume: 56000, objective: 50000, teamAverage: 48000 },
-  { month: 'Déc', yourVolume: 53000, objective: 50000, teamAverage: 47000 },
-];
+function getMockPerformanceData(): PerformanceData[] {
+  const m = (fr: string) => localizeMonth(fr);
+  return [
+    { month: m('Jan'), yourVolume: 42000, objective: 45000, teamAverage: 40000 },
+    { month: m('Fév'), yourVolume: 44000, objective: 45000, teamAverage: 41000 },
+    { month: m('Mar'), yourVolume: 47000, objective: 46000, teamAverage: 42000 },
+    { month: m('Avr'), yourVolume: 46000, objective: 46000, teamAverage: 43000 },
+    { month: m('Mai'), yourVolume: 49000, objective: 47000, teamAverage: 44000 },
+    { month: m('Jun'), yourVolume: 51000, objective: 48000, teamAverage: 45000 },
+    { month: m('Jul'), yourVolume: 48000, objective: 48000, teamAverage: 44000 },
+    { month: m('Aoû'), yourVolume: 43000, objective: 48000, teamAverage: 41000 },
+    { month: m('Sep'), yourVolume: 52000, objective: 49000, teamAverage: 46000 },
+    { month: m('Oct'), yourVolume: 54000, objective: 50000, teamAverage: 47000 },
+    { month: m('Nov'), yourVolume: 56000, objective: 50000, teamAverage: 48000 },
+    { month: m('Déc'), yourVolume: 53000, objective: 50000, teamAverage: 47000 },
+  ];
+}
 
 // Charger les praticiens depuis le nouveau service de données
 const loadedPractitioners = adaptPractitionerProfiles(DataService.getAllPractitioners());
@@ -178,10 +199,10 @@ const loadedPractitioners = adaptPractitionerProfiles(DataService.getAllPractiti
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
   practitioners: loadedPractitioners,
-  currentUser: mockUser,
-  insights: mockInsights,
+  currentUser: getMockUser(),
+  insights: getMockInsights(),
   upcomingVisits: generateMockVisits(loadedPractitioners),
-  performanceData: mockPerformanceData,
+  performanceData: getMockPerformanceData(),
   selectedPractitioner: null,
   searchQuery: '',
   isLoading: false,
@@ -279,5 +300,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       upcomingVisits: state.upcomingVisits.filter((v) => v.id !== visitId),
     }));
+  },
+
+  refreshLanguage: () => {
+    set({
+      currentUser: getMockUser(),
+      insights: getMockInsights(),
+      performanceData: getMockPerformanceData(),
+    });
   },
 }));

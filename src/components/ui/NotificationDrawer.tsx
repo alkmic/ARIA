@@ -18,7 +18,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications }: Notificat
     if (notification.practitionerId) {
       navigate(`/practitioner/${notification.practitionerId}`);
       onClose();
-    } else if (notification.actionLabel === 'Planifier visites') {
+    } else if (notification.actionLabel === 'Planifier visites' || notification.actionLabel === 'Schedule visits') {
       navigate('/practitioners');
       onClose();
     }

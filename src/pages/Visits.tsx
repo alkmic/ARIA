@@ -13,6 +13,7 @@ import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { filterVisitsByPeriod } from '../services/metricsCalculator';
 import { useTranslation } from '../i18n';
 import { useLanguage } from '../i18n';
+import { localizeSpecialty, localizeVisitNote } from '../utils/localizeData';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 
@@ -210,7 +211,7 @@ export const Visits: React.FC = () => {
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
                   <Badge variant="info" size="sm">
-                    {dayVisits.length} visite{dayVisits.length > 1 ? 's' : ''}
+                    {dayVisits.length} {dayVisits.length > 1 ? t('visits.visitCountPlural') : t('visits.visitCount')}
                   </Badge>
                 </div>
 
@@ -262,7 +263,7 @@ export const Visits: React.FC = () => {
                               </span>
                               <span className="flex items-center gap-1.5">
                                 <User className="w-4 h-4" />
-                                {visit.practitioner.specialty}
+                                {localizeSpecialty(visit.practitioner.specialty)}
                               </span>
                             </div>
 
@@ -270,9 +271,9 @@ export const Visits: React.FC = () => {
                               <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
                                 <span>Vingtile {practitioner.vingtile}</span>
                                 <span>•</span>
-                                <span>{(practitioner.volumeL / 1000).toFixed(0)}K L/an</span>
+                                <span>{(practitioner.volumeL / 1000).toFixed(0)}{t('visits.perYear')}</span>
                                 <span>•</span>
-                                <span>Fidélité {practitioner.loyaltyScore}/10</span>
+                                <span>{t('visits.loyaltyScore', { score: String(practitioner.loyaltyScore) })}</span>
                               </div>
                             )}
                           </div>
@@ -283,7 +284,7 @@ export const Visits: React.FC = () => {
                         {visit.notes && (
                           <div className="mt-3 pt-3 border-t border-slate-200">
                             <p className="text-sm text-slate-600">
-                              <span className="font-medium">Notes:</span> {visit.notes}
+                              <span className="font-medium">Notes:</span> {localizeVisitNote(visit.notes)}
                             </p>
                           </div>
                         )}
@@ -306,7 +307,7 @@ export const Visits: React.FC = () => {
                 {filteredVisits.length}
               </div>
               <div className="text-sm text-slate-600">
-                Visite{filteredVisits.length > 1 ? 's' : ''} planifiée{filteredVisits.length > 1 ? 's' : ''}
+                {filteredVisits.length > 1 ? t('visits.plannedVisitPlural') : t('visits.plannedVisit')}
               </div>
             </div>
             <div className="text-center">

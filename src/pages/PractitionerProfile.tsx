@@ -14,6 +14,7 @@ import { Button } from '../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatDate, getLocaleCode } from '../utils/helpers';
 import { useTranslation, useLanguage, getLanguage } from '../i18n';
+import { txt, localizeSpecialty, localizeAiSummary, localizeNextAction, localizeConversationSummary } from '../utils/localizeData';
 import { NewsTab } from '../components/practitioner/NewsTab';
 import { NotesTab } from '../components/practitioner/NotesTab';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
@@ -47,10 +48,10 @@ export default function PractitionerProfile() {
 
   // Générer des points clés si absents
   const keyPoints = practitioner.keyPoints || [
-    `${practitioner.specialty === 'Pneumologue' ? 'Expert' : 'Référent'} reconnu en oxygénothérapie BPCO`,
-    `Vingtile ${practitioner.vingtile} - ${practitioner.vingtile <= 2 ? 'Top 10%' : practitioner.vingtile <= 5 ? 'Top 25%' : 'Prescripteur actif'}`,
-    `${practitioner.patientCount} patients suivis, opportunité de croissance`,
-    practitioner.isKOL ? 'Leader d\'opinion - Relais stratégique sur le territoire' : 'Potentiel de développement important'
+    t('practitioners.expertRecognized', { type: practitioner.specialty === 'Pneumologue' ? t('practitioners.expert') : t('practitioners.referent') }),
+    t('practitioners.vingtileDescription', { v: practitioner.vingtile, desc: practitioner.vingtile <= 2 ? t('practitioners.top10') : practitioner.vingtile <= 5 ? t('practitioners.top25') : t('practitioners.activePrescriber') }),
+    t('practitioners.patientsFollowed', { count: practitioner.patientCount }),
+    practitioner.isKOL ? t('practitioners.kolStrategicRelay') : t('practitioners.developmentPotential')
   ];
 
   // Générer l'historique de volumes si absent
@@ -147,7 +148,7 @@ export default function PractitionerProfile() {
             <h1 className="text-2xl font-bold text-slate-800 mb-1">
               {practitioner.title} {practitioner.firstName} {practitioner.lastName}
             </h1>
-            <p className="text-slate-600 mb-2">{practitioner.specialty}</p>
+            <p className="text-slate-600 mb-2">{localizeSpecialty(practitioner.specialty)}</p>
             <div className="flex items-center justify-center gap-1.5 mb-4">
               {practitioner.practiceType === 'ville' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
@@ -251,7 +252,7 @@ export default function PractitionerProfile() {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => navigate(`/coach?q=Analyse complète de ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}`)}
+              onClick={() => navigate(`/coach?q=${t('practitioners.fullAnalysisOf')} ${practitioner.title} ${practitioner.firstName} ${practitioner.lastName}`)}
             >
               <MessageCircle className="w-5 h-5 mr-2" />
               {t('practitioners.askCoachIA')}
@@ -535,7 +536,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           <Sparkles className="w-5 h-5 text-al-blue-500" />
           {t('practitioners.aiSynthesis')}
         </h3>
-        <p className="text-slate-600 leading-relaxed">{practitioner.aiSummary}</p>
+        <p className="text-slate-600 leading-relaxed">{localizeAiSummary(practitioner.aiSummary)}</p>
       </div>
 
       {/* Database Notes Overview (from static data) */}
@@ -625,35 +626,35 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           ) : (
             <>
               <div className="p-4 bg-white/80 rounded-xl">
-                <p className="text-sm font-semibold text-amber-700 mb-2">vs Vivisol</p>
+                <p className="text-sm font-semibold text-amber-700 mb-2">{t('practitioners.battlecardVivisolTitle')}</p>
                 <p className="text-sm text-slate-600">
-                  ✓ Réactivité SAV +30% (astreinte 24/7)<br />
-                  ✓ Télésuivi O₂ inclus gratuitement<br />
-                  ✓ Formation patient à domicile par IDE
+                  ✓ {t('practitioners.battlecardVivisolAdv1')}<br />
+                  ✓ {t('practitioners.battlecardVivisolAdv2')}<br />
+                  ✓ {t('practitioners.battlecardVivisolAdv3')}
                 </p>
               </div>
               <div className="p-4 bg-white/80 rounded-xl">
-                <p className="text-sm font-semibold text-amber-700 mb-2">vs Linde Healthcare</p>
+                <p className="text-sm font-semibold text-amber-700 mb-2">{t('practitioners.battlecardLindeTitle')}</p>
                 <p className="text-sm text-slate-600">
-                  ✓ Connectivité IoT native sur tous les DM<br />
-                  ✓ Chronic Care Connect (suivi digital)<br />
-                  ✓ Plateforme Orkyn' patient dédiée
+                  ✓ {t('practitioners.battlecardLindeAdv1')}<br />
+                  ✓ {t('practitioners.battlecardLindeAdv2')}<br />
+                  ✓ {t('practitioners.battlecardLindeAdv3')}
                 </p>
               </div>
               <div className="p-4 bg-white/80 rounded-xl">
-                <p className="text-sm font-semibold text-amber-700 mb-2">vs SOS Oxygène</p>
+                <p className="text-sm font-semibold text-amber-700 mb-2">{t('practitioners.battlecardSosTitle')}</p>
                 <p className="text-sm text-slate-600">
-                  ✓ Couverture nationale (vs régionale)<br />
-                  ✓ Gamme VNI/PPC complète (ALMS)<br />
-                  ✓ R&D interne et innovation continue
+                  ✓ {t('practitioners.battlecardSosAdv1')}<br />
+                  ✓ {t('practitioners.battlecardSosAdv2')}<br />
+                  ✓ {t('practitioners.battlecardSosAdv3')}
                 </p>
               </div>
               <div className="p-4 bg-white/80 rounded-xl">
-                <p className="text-sm font-semibold text-amber-700 mb-2">vs Bastide Médical</p>
+                <p className="text-sm font-semibold text-amber-700 mb-2">{t('practitioners.battlecardBastideTitle')}</p>
                 <p className="text-sm text-slate-600">
-                  ✓ Expertise respiratoire pure (vs multi-activité)<br />
-                  ✓ LPPR spécialiste avec forfaits optimisés<br />
-                  ✓ Support technique spécialisé 24/7
+                  ✓ {t('practitioners.battlecardBastideAdv1')}<br />
+                  ✓ {t('practitioners.battlecardBastideAdv2')}<br />
+                  ✓ {t('practitioners.battlecardBastideAdv3')}
                 </p>
               </div>
             </>
@@ -667,7 +668,7 @@ function SynthesisTab({ practitioner, keyPoints }: { practitioner: any; keyPoint
           <Lightbulb className="w-5 h-5 text-green-600" />
           {t('practitioners.nextBestAction')}
         </h3>
-        <p className="text-slate-700 mb-4">{practitioner.nextBestAction}</p>
+        <p className="text-slate-700 mb-4">{localizeNextAction(practitioner.nextBestAction)}</p>
         <div className="flex gap-2">
           <Button variant="primary" size="sm" onClick={() => navigate(`/pitch?practitionerId=${practitioner.id}`)}>
             <Wand2 className="w-4 h-4 mr-1" />
@@ -697,10 +698,10 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
   // Convertir les comptes-rendus en format conversation
   const reportConversations = visitReports.map(report => ({
     date: report.date,
-    summary: report.extractedInfo.keyPoints.join('. ') || 'Compte-rendu enregistré',
+    summary: report.extractedInfo.keyPoints.join('. ') || t('practitioners.reportRecorded'),
     sentiment: report.extractedInfo.sentiment,
     actions: report.extractedInfo.nextActions,
-    type: 'Compte-rendu vocal',
+    type: t('practitioners.voiceReport'),
     duration: `${report.time}`,
     isFromReport: true,
   }));
@@ -770,7 +771,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
                   {formatDate(conv.date)}
                   {conv.isFromReport && (
                     <span className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-600">
-                      <Mic className="w-2.5 h-2.5" /> CRV
+                      <Mic className="w-2.5 h-2.5" /> {txt('CRV', 'VR')}
                     </span>
                   )}
                 </p>
@@ -787,7 +788,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
             </div>
 
             {/* Summary */}
-            <p className="text-slate-600 mb-3 ml-13">{conv.summary}</p>
+            <p className="text-slate-600 mb-3 ml-13">{localizeConversationSummary(conv.summary)}</p>
 
             {/* Actions */}
             {conv.actions && conv.actions.length > 0 && (
@@ -797,7 +798,7 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
                   {conv.actions.map((action: string, j: number) => (
                     <li key={j} className="flex items-center gap-2 text-sm text-slate-600">
                       <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span>{action}</span>
+                      <span>{localizeNextAction(action)}</span>
                     </li>
                   ))}
                 </ul>

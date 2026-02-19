@@ -22,6 +22,7 @@ import { DataService } from '../services/dataService';
 import { useTranslation } from '../i18n';
 import { useLanguage } from '../i18n';
 import { getLocaleCode } from '../utils/helpers';
+import { localizeSpecialty } from '../utils/localizeData';
 
 export const Dashboard: React.FC = () => {
   const { currentUser, practitioners, upcomingVisits } = useAppStore();
@@ -332,7 +333,7 @@ function TopActionsWidget({ navigate }: { navigate: (path: string) => void }) {
 
                 {practitioner && (
                   <p className="text-xs text-slate-500 mb-2">
-                    {practitioner.title} {practitioner.firstName} {practitioner.lastName} — {practitioner.specialty}
+                    {practitioner.title} {practitioner.firstName} {practitioner.lastName} — {localizeSpecialty(practitioner.specialty)}
                   </p>
                 )}
 

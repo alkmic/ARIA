@@ -118,15 +118,15 @@ export function NewsTab({ practitioner }: NewsTabProps) {
           <ul className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"Classification ABE simplifie la prise de d\u00e9cision th\u00e9rapeutique"}</span>
+              <span>{t('practitioners.news.guidelineAbeClassification')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"T\u00e9l\u00e9suivi recommand\u00e9 pour am\u00e9liorer l'observance OLD (>15h/jour)"}</span>
+              <span>{t('practitioners.news.guidelineTelesuiviRecommended')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"OLD si PaO\u2082 \u2264 55 mmHg ou 56-59 avec complications"}</span>
+              <span>{t('practitioners.news.guidelineOldThreshold')}</span>
             </li>
           </ul>
         </div>
@@ -142,15 +142,15 @@ export function NewsTab({ practitioner }: NewsTabProps) {
           <ul className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"Prescription initiale par le pneumologue, renouvellement possible par le MG"}</span>
+              <span>{t('practitioners.news.guidelineInitialPrescription')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"Forfait LPPR OLD concentrateur ~12\u20ac/jour, 100% ALD"}</span>
+              <span>{t('practitioners.news.guidelineLpprRate')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"T\u00e9l\u00e9suivi Air Liquide inclus dans le forfait, pas de surco\u00fbt"}</span>
+              <span>{t('practitioners.news.guidelineTelesuiviIncluded')}</span>
             </li>
           </ul>
         </div>

@@ -100,4 +100,39 @@ export const tour = {
   saveToVisits: 'Enregistrer dans mes visites',
   exportIcal: 'Export iCal',
   exportPdf: 'Export PDF',
+
+  // Loading steps
+  loadingSteps: {
+    geolocating: 'Géolocalisation des praticiens',
+    distanceMatrix: 'Calcul de la matrice de distances',
+    strategicPriorities: 'Évaluation des priorités stratégiques',
+    tspOptimization: 'Optimisation TSP par jour',
+    twoOptImprovement: 'Amélioration 2-opt des itinéraires',
+    scheduleAdjustment: 'Ajustement des horaires',
+    gainsCalculation: 'Calcul des gains',
+  },
+
+  // Result details
+  volumeTargeted: 'Volume ciblé : {{volume}}K L',
+  kolsInFirstDays: '{{kolCount}} KOLs dans les {{dayCount}} premiers jours, puis optimisation des trajets',
+  prescribersVisited: '{{count}} prescripteurs visités, triés par volume puis trajets optimisés',
+  vsWithoutOptDist: 'vs {{baseline}} km sans optim.',
+  optimizedVisits: '{{count}} visites optimisées',
+  timeSavedDetail: '{{time}} min économisées (-{{pct}}%)',
+  globalDrivingTime: 'Temps global de conduite',
+  travelLabel: 'trajet',
+  visitLabel: 'visite',
+  arrival: 'Arrivée',
+  departure: 'Départ',
+  visitPlannedNote: 'Visite planifiée via optimisation de tournée ({{criteria}})',
+  exportPdfAlert: 'Export PDF - Fonctionnalité à intégrer avec une vraie génération PDF',
+
+  // Success descriptions
+  kolsPlannedPriority: '{{count}} KOLs planifiés en priorité',
+  kmSavedGeo: '{{km}} km économisés grâce au regroupement géographique',
+  visitsOverDays: '{{visits}} visites sur {{days}} jours',
+  volumeTargetedResult: '{{volume}}K L de volume ciblé',
+  prescribersVisitedResult: '{{count}} prescripteurs visités',
+  geoGrouping: 'Regroupement géographique : {{km}} km économisés (-{{pct}}%) grâce au clustering par zone',
+  visitsPlannedDays: '{{visits}} visites planifiées sur {{days}} jours • Praticiens regroupés par zone géographique',
 };

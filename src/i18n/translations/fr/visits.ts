@@ -16,4 +16,6 @@ export const visits = {
   plannedVisitPlural: 'Visites planifiées',
   differentPractitioners: 'Praticiens différents',
   kolVisits: 'Visites KOL',
+  loyaltyScore: 'Fidélité {{score}}/10',
+  perYear: 'K L/an',
 };

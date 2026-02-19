@@ -24,6 +24,7 @@ import { useGroq } from '../../hooks/useGroq';
 import { DataService } from '../../services/dataService';
 import type { PractitionerProfile } from '../../types/database';
 import { useTranslation, useLanguage } from '../../i18n';
+import { localizeSpecialty } from '../../utils/localizeData';
 
 interface CommandResult {
   type: 'practitioner' | 'action' | 'navigation' | 'answer' | 'loading';
@@ -306,7 +307,7 @@ Answer VERY CONCISELY (1-2 sentences max). Question: ${question}`;
         type: 'practitioner',
         id: p.id,
         title: `${p.title} ${p.firstName} ${p.lastName}`,
-        subtitle: `${p.specialty} \u2022 ${p.address.city}${p.metrics.isKOL ? ' \u2022 KOL' : ''}`,
+        subtitle: `${localizeSpecialty(p.specialty)} \u2022 ${p.address.city}${p.metrics.isKOL ? ' \u2022 KOL' : ''}`,
         icon: <User className="w-4 h-4" />,
         action: () => {
           navigate(`/practitioner/${p.id}`);

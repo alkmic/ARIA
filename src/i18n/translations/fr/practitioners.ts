@@ -161,6 +161,31 @@ export const practitioners = {
     competitorsMentioned: 'Concurrents mentionnés',
   },
 
+  // Coach IA
+  fullAnalysisOf: 'Analyse complète de',
+
+  // History tab - report defaults
+  reportRecorded: 'Compte-rendu enregistré',
+  voiceReport: 'Compte-rendu vocal',
+
+  // Battlecard fallback entries
+  battlecardVivisolTitle: 'vs Vivisol',
+  battlecardVivisolAdv1: 'Réactivité SAV +30% (astreinte 24/7)',
+  battlecardVivisolAdv2: 'Télésuivi O₂ inclus gratuitement',
+  battlecardVivisolAdv3: 'Formation patient à domicile par IDE',
+  battlecardLindeTitle: 'vs Linde Healthcare',
+  battlecardLindeAdv1: 'Connectivité IoT native sur tous les DM',
+  battlecardLindeAdv2: 'Chronic Care Connect (suivi digital)',
+  battlecardLindeAdv3: "Plateforme Orkyn' patient dédiée",
+  battlecardSosTitle: 'vs SOS Oxygène',
+  battlecardSosAdv1: 'Couverture nationale (vs régionale)',
+  battlecardSosAdv2: 'Gamme VNI/PPC complète (ALMS)',
+  battlecardSosAdv3: 'R&D interne et innovation continue',
+  battlecardBastideTitle: 'vs Bastide Médical',
+  battlecardBastideAdv1: 'Expertise respiratoire pure (vs multi-activité)',
+  battlecardBastideAdv2: 'LPPR spécialiste avec forfaits optimisés',
+  battlecardBastideAdv3: 'Support technique spécialisé 24/7',
+
   // NewsTab
   news: {
     title: 'Actualités & Contexte',
@@ -169,5 +194,11 @@ export const practitioners = {
     noNewsDescription: 'Les publications et événements seront affichés ici',
     goldGuidelines: 'Dernières recommandations GOLD 2025',
     oxygenReminders: 'Rappels pratiques oxygénothérapie',
+    guidelineAbeClassification: 'Classification ABE simplifie la prise de décision thérapeutique',
+    guidelineTelesuiviRecommended: "Télésuivi recommandé pour améliorer l'observance OLD (>15h/jour)",
+    guidelineOldThreshold: 'OLD si PaO₂ ≤ 55 mmHg ou 56-59 avec complications',
+    guidelineInitialPrescription: 'Prescription initiale par le pneumologue, renouvellement possible par le MG',
+    guidelineLpprRate: 'Forfait LPPR OLD concentrateur ~12€/jour, 100% ALD',
+    guidelineTelesuiviIncluded: 'Télésuivi Air Liquide inclus dans le forfait, pas de surcoût',
   },
 };

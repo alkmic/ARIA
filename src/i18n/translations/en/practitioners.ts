@@ -138,6 +138,31 @@ export const practitioners = {
     productsDiscussed: 'Products discussed',
     competitorsMentioned: 'Competitors mentioned',
   },
+  // Coach IA
+  fullAnalysisOf: 'Full analysis of',
+
+  // History tab - report defaults
+  reportRecorded: 'Report recorded',
+  voiceReport: 'Voice report',
+
+  // Battlecard fallback entries
+  battlecardVivisolTitle: 'vs Vivisol',
+  battlecardVivisolAdv1: 'After-sales responsiveness +30% (24/7 on-call)',
+  battlecardVivisolAdv2: 'O₂ remote monitoring included free of charge',
+  battlecardVivisolAdv3: 'Patient training at home by nurse',
+  battlecardLindeTitle: 'vs Linde Healthcare',
+  battlecardLindeAdv1: 'Native IoT connectivity on all medical devices',
+  battlecardLindeAdv2: 'Chronic Care Connect (digital monitoring)',
+  battlecardLindeAdv3: "Dedicated Orkyn' patient platform",
+  battlecardSosTitle: 'vs SOS Oxygène',
+  battlecardSosAdv1: 'Nationwide coverage (vs regional)',
+  battlecardSosAdv2: 'Complete NIV/CPAP range (ALMS)',
+  battlecardSosAdv3: 'In-house R&D and continuous innovation',
+  battlecardBastideTitle: 'vs Bastide Médical',
+  battlecardBastideAdv1: 'Pure respiratory expertise (vs multi-activity)',
+  battlecardBastideAdv2: 'Specialist LPPR with optimized packages',
+  battlecardBastideAdv3: 'Specialized 24/7 technical support',
+
   news: {
     title: 'News & Context',
     count: '{{count}} news item{{plural}}',
@@ -145,5 +170,11 @@ export const practitioners = {
     noNewsDescription: 'Publications and events will be displayed here',
     goldGuidelines: 'Latest GOLD 2025 Guidelines',
     oxygenReminders: 'Oxygen therapy practical reminders',
+    guidelineAbeClassification: 'ABE classification simplifies therapeutic decision-making',
+    guidelineTelesuiviRecommended: 'Remote monitoring recommended to improve LTOT compliance (>15h/day)',
+    guidelineOldThreshold: 'LTOT if PaO₂ ≤ 55 mmHg or 56-59 with complications',
+    guidelineInitialPrescription: 'Initial prescription by pulmonologist, renewal possible by GP',
+    guidelineLpprRate: 'LPPR LTOT concentrator package ~€12/day, 100% covered under ALD',
+    guidelineTelesuiviIncluded: 'Air Liquide remote monitoring included in the package, no extra cost',
   },
 };

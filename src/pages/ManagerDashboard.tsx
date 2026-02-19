@@ -13,7 +13,39 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
-import { useTranslation } from '../i18n';
+import { useTranslation, getLanguage } from '../i18n';
+import { localizeSpecialty } from '../utils/localizeData';
+
+// Month abbreviations by language
+const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function getMonthName(index: number): string {
+  const months = getLanguage() === 'en' ? MONTHS_EN : MONTHS_FR;
+  return months[index];
+}
+
+function getMonthlyPerformance() {
+  return [
+    { month: getMonthName(0), actual: 180, objective: 200, previousYear: 165, volume: 2.4 },
+    { month: getMonthName(1), actual: 195, objective: 200, previousYear: 170, volume: 2.6 },
+    { month: getMonthName(2), actual: 210, objective: 200, previousYear: 185, volume: 2.8 },
+    { month: getMonthName(3), actual: 188, objective: 200, previousYear: 175, volume: 2.5 },
+    { month: getMonthName(4), actual: 220, objective: 210, previousYear: 190, volume: 2.9 },
+    { month: getMonthName(5), actual: 205, objective: 210, previousYear: 180, volume: 2.7 },
+  ];
+}
+
+function getProjectionData() {
+  return [
+    { month: getMonthName(6), forecast: 215, objective: 210 },
+    { month: getMonthName(7), forecast: 198, objective: 210 },
+    { month: getMonthName(8), forecast: 225, objective: 220 },
+    { month: getMonthName(9), forecast: 232, objective: 220 },
+    { month: getMonthName(10), forecast: 240, objective: 230 },
+    { month: getMonthName(11), forecast: 245, objective: 230 },
+  ];
+}
 
 // Mock team data - in real app would come from backend
 const teamMembers = [
@@ -24,23 +56,6 @@ const teamMembers = [
   { id: '5', name: 'Emma Leroy', territory: 'Lyon', objective: 55 },
 ];
 
-const monthlyPerformance = [
-  { month: 'Jan', actual: 180, objective: 200, previousYear: 165, volume: 2.4 },
-  { month: 'Fév', actual: 195, objective: 200, previousYear: 170, volume: 2.6 },
-  { month: 'Mar', actual: 210, objective: 200, previousYear: 185, volume: 2.8 },
-  { month: 'Avr', actual: 188, objective: 200, previousYear: 175, volume: 2.5 },
-  { month: 'Mai', actual: 220, objective: 210, previousYear: 190, volume: 2.9 },
-  { month: 'Jun', actual: 205, objective: 210, previousYear: 180, volume: 2.7 },
-];
-
-const projectionData = [
-  { month: 'Jul', forecast: 215, objective: 210 },
-  { month: 'Août', forecast: 198, objective: 210 },
-  { month: 'Sep', forecast: 225, objective: 220 },
-  { month: 'Oct', forecast: 232, objective: 220 },
-  { month: 'Nov', forecast: 240, objective: 230 },
-  { month: 'Déc', forecast: 245, objective: 230 },
-];
 
 export default function ManagerDashboard() {
   const { t } = useTranslation();
@@ -393,7 +408,7 @@ export default function ManagerDashboard() {
             {t('manager.performanceProjection')}
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={[...monthlyPerformance, ...projectionData]}>
+            <AreaChart data={[...getMonthlyPerformance(), ...getProjectionData()]}>
               <defs>
                 <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#0066B3" stopOpacity={0.3} />
@@ -478,7 +493,7 @@ export default function ManagerDashboard() {
                     className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="truncate">{item.name}</span>
+                  <span className="truncate">{localizeSpecialty(item.name)}</span>
                 </div>
                 <span className="font-medium">{item.value}</span>
               </div>

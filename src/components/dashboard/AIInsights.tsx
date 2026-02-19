@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Sparkles, AlertTriangle, TrendingUp, Star, Clock, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
+import { txt } from '../../utils/localizeData';
 import { DataService } from '../../services/dataService';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -79,7 +80,7 @@ export const AIInsights: React.FC = () => {
         id: 'churn-risk',
         type: 'alert',
         title: t('dashboard.churnRiskTitle'),
-        message: `${mostAtRisk.title} ${mostAtRisk.lastName} (${(mostAtRisk.metrics.volumeL / 1000).toFixed(0)}K L/an) ${t('dashboard.churnMessage', { loyalty: mostAtRisk.metrics.loyaltyScore })}`,
+        message: `${mostAtRisk.title} ${mostAtRisk.lastName} (${(mostAtRisk.metrics.volumeL / 1000).toFixed(0)}K ${txt('L/an', 'L/yr')}) ${t('dashboard.churnMessage', { loyalty: mostAtRisk.metrics.loyaltyScore })}`,
         priority: mostAtRisk.metrics.volumeL > 100000 ? 'high' : 'medium',
         actionLabel: t('dashboard.seeProfile'),
         practitionerId: mostAtRisk.id

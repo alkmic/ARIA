@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Landing } from './pages/Landing';
@@ -16,11 +17,21 @@ import TourOptimizationPage from './pages/TourOptimizationPage';
 import VoiceVisitReport from './pages/VoiceVisitReport';
 import NextBestActions from './pages/NextBestActions';
 import { TimePeriodProvider } from './contexts/TimePeriodContext';
-import { LanguageProvider } from './i18n';
+import { LanguageProvider, useLanguage } from './i18n';
+import { useAppStore } from './stores/useAppStore';
+
+/** Refreshes store mock data when language changes */
+function LanguageSync() {
+  const { language } = useLanguage();
+  const refreshLanguage = useAppStore(state => state.refreshLanguage);
+  useEffect(() => { refreshLanguage(); }, [language, refreshLanguage]);
+  return null;
+}
 
 function App() {
   return (
     <LanguageProvider>
+    <LanguageSync />
     <TimePeriodProvider>
       <BrowserRouter>
         <Routes>

@@ -1,5 +1,6 @@
 import type { Practitioner } from '../types';
 import type { PractitionerProfile } from '../types/database';
+import { txt } from '../utils/localizeData';
 
 /**
  * Adaptateur pour convertir PractitionerProfile vers Practitioner
@@ -13,21 +14,26 @@ export function adaptPractitionerProfile(profile: PractitionerProfile): Practiti
     profile.metrics.potentialGrowth < 5 ? 'down' : 'stable';
 
   // Label lisible du type d'exercice
-  const practiceTypeLabel = profile.practiceType === 'ville' ? 'libéral'
-    : profile.practiceType === 'hospitalier' ? 'hospitalier'
-    : 'mixte (ville + hôpital)';
+  const practiceTypeLabel = profile.practiceType === 'ville' ? txt('libéral', 'private practice')
+    : profile.practiceType === 'hospitalier' ? txt('hospitalier', 'hospital-based')
+    : txt('mixte (ville + hôpital)', 'mixed (private + hospital)');
 
   // Générer un résumé IA basé sur les données
+  const vol = (profile.metrics.volumeL / 1000).toFixed(0);
+  const loyalty = profile.metrics.loyaltyScore;
+  const specialty = profile.specialty;
+  const specEN = specialty === 'Pneumologue' ? 'Pulmonology' : 'General Practice';
+  const newsNote = profile.news.length > 0 ? txt('Activité académique récente.', 'Recent academic activity.') : '';
   const aiSummary = profile.metrics.isKOL
-    ? `KOL reconnu en ${profile.specialty} (exercice ${practiceTypeLabel}). Volume annuel: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L. Fidélité ${profile.metrics.loyaltyScore}/10. ${profile.news.length > 0 ? 'Activité académique récente.' : ''}`
-    : `Praticien ${profile.specialty} (${practiceTypeLabel}). Vingtile ${profile.metrics.vingtile}. Volume: ${(profile.metrics.volumeL / 1000).toFixed(0)}K L/an. Potentiel de croissance: +${profile.metrics.potentialGrowth}%.`;
+    ? txt(`KOL reconnu en ${specialty} (exercice ${practiceTypeLabel}). Volume annuel: ${vol}K L. Fidélité ${loyalty}/10. ${newsNote}`, `Recognized KOL in ${specEN} (${practiceTypeLabel}). Annual volume: ${vol}K L. Loyalty ${loyalty}/10. ${newsNote}`)
+    : txt(`Praticien ${specialty} (${practiceTypeLabel}). Vingtile ${profile.metrics.vingtile}. Volume: ${vol}K L/an. Potentiel de croissance: +${profile.metrics.potentialGrowth}%.`, `${specEN} practitioner (${practiceTypeLabel}). Vingtile ${profile.metrics.vingtile}. Volume: ${vol}K L/yr. Growth potential: +${profile.metrics.potentialGrowth}%.`);
 
   // Next best action basé sur les notes
   const nextBestAction = profile.notes.length > 0 && profile.notes[0].nextAction
     ? profile.notes[0].nextAction
     : profile.metrics.isKOL
-    ? "Planifier une visite pour discuter des dernières innovations"
-    : "Visite de courtoisie et point sur les patients actuels";
+    ? txt('Planifier une visite pour discuter des dernières innovations', 'Schedule a visit to discuss the latest innovations')
+    : txt('Visite de courtoisie et point sur les patients actuels', 'Courtesy visit and review of current patients');
 
   // Conversations basées sur les notes
   const conversations = profile.notes.slice(0, 5).map(note => ({

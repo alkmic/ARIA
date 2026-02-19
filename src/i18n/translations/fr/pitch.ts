@@ -135,4 +135,25 @@ export const pitch = {
     discussionPoints: 'Points de discussion',
     followUpPlan: 'Plan de suivi',
   },
+
+  // Error messages
+  generateError: 'Impossible de générer le pitch. Veuillez réessayer.',
+
+  // Loading text
+  loadingAI: "L'IA crée votre pitch ultra-personnalisé",
+  loadingLocal: 'Génération du pitch à partir des données du praticien...',
+
+  // Section tooltips
+  copySectionTooltip: 'Copier cette section',
+  editSectionTooltip: 'Modifier cette section',
+
+  // Streaming
+  generatingNextSections: 'Génération des sections suivantes...',
+
+  // Demo mode
+  demoModeTitle: 'Mode démonstration',
+  demoModeDesc: 'Ce pitch a été généré localement à partir des données réelles du praticien. Pour des pitchs plus riches et adaptatifs, configurez une clé API dans le fichier .env (VITE_LLM_API_KEY).',
+
+  // Error display
+  generationErrorTitle: 'Erreur de génération',
 };

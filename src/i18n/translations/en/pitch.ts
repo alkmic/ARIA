@@ -115,4 +115,25 @@ export const pitch = {
     discussionPoints: 'Discussion Points',
     followUpPlan: 'Follow-up Plan',
   },
+
+  // Error messages
+  generateError: 'Unable to generate the pitch. Please try again.',
+
+  // Loading text
+  loadingAI: 'AI is creating your ultra-personalized pitch',
+  loadingLocal: 'Generating pitch from practitioner data...',
+
+  // Section tooltips
+  copySectionTooltip: 'Copy this section',
+  editSectionTooltip: 'Edit this section',
+
+  // Streaming
+  generatingNextSections: 'Generating next sections...',
+
+  // Demo mode
+  demoModeTitle: 'Demo mode',
+  demoModeDesc: 'This pitch was generated locally from the practitioner\'s real data. For richer and more adaptive pitches, configure an API key in the .env file (VITE_LLM_API_KEY).',
+
+  // Error display
+  generationErrorTitle: 'Generation error',
 };

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty, txt } from '../utils/localizeData';
 import { useGroq } from '../hooks/useGroq';
 import { useSpeech } from '../hooks/useSpeech';
 import { buildEnhancedSystemPrompt, buildEnhancedUserPrompt, buildEnhancedRegenerateSectionPrompt, generatePractitionerSummary, SECTION_ID_TO_TAG, generateLocalPitch } from '../services/pitchPromptsEnhanced';
@@ -199,13 +200,13 @@ export function PitchGenerator() {
     let match;
 
     const sectionMap: Record<string, { id: PitchSection['id']; title: string; icon: string }> = {
-      ACCROCHE: { id: 'hook', title: 'Accroche', icon: '1' },
-      PROPOSITION: { id: 'proposition', title: 'Proposition de valeur', icon: '2' },
-      CONCURRENCE: { id: 'competition', title: 'Differenciation', icon: '3' },
-      CALL_TO_ACTION: { id: 'cta', title: 'Call to Action', icon: '4' },
-      OBJECTIONS: { id: 'objections', title: 'Gestion des objections', icon: '5' },
-      TALKING_POINTS: { id: 'talking_points', title: 'Points de discussion', icon: '6' },
-      FOLLOW_UP: { id: 'follow_up', title: 'Plan de suivi', icon: '7' },
+      ACCROCHE: { id: 'hook', title: t('pitch.sections.hook'), icon: '1' },
+      PROPOSITION: { id: 'proposition', title: t('pitch.sections.valueProposition'), icon: '2' },
+      CONCURRENCE: { id: 'competition', title: t('pitch.sections.differentiation'), icon: '3' },
+      CALL_TO_ACTION: { id: 'cta', title: t('pitch.sections.callToAction'), icon: '4' },
+      OBJECTIONS: { id: 'objections', title: t('pitch.sections.objectionHandling'), icon: '5' },
+      TALKING_POINTS: { id: 'talking_points', title: t('pitch.sections.discussionPoints'), icon: '6' },
+      FOLLOW_UP: { id: 'follow_up', title: t('pitch.sections.followUpPlan'), icon: '7' },
     };
 
     while ((match = sectionRegex.exec(text)) !== null) {
@@ -290,7 +291,7 @@ export function PitchGenerator() {
         await simulateLocalStream(localPitch);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      const msg = err instanceof Error ? err.message : t('pitch.generateError');
       setGenerateError(msg);
       // Fallback to local on any error
       try {
@@ -298,7 +299,7 @@ export function PitchGenerator() {
         const localPitch = generateLocalPitch(selectedPractitioner, config);
         await simulateLocalStream(localPitch);
       } catch {
-        setGenerateError('Impossible de générer le pitch. Veuillez réessayer.');
+        setGenerateError(t('pitch.generateError'));
       }
     } finally {
       setIsGenerating(false);
@@ -503,12 +504,12 @@ export function PitchGenerator() {
                         </h3>
                         {p.isKOL && <Star className="w-4 h-4 text-amber-500 fill-amber-500 flex-shrink-0" />}
                       </div>
-                      <p className="text-sm text-slate-600">{p.specialty}</p>
+                      <p className="text-sm text-slate-600">{localizeSpecialty(p.specialty)}</p>
                       <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
                         <MapPin className="w-3 h-3" />
                         <span>{p.city}</span>
                         <span className="text-slate-300">|</span>
-                        <span>{(p.volumeL / 1000).toFixed(0)}K L/an</span>
+                        <span>{(p.volumeL / 1000).toFixed(0)}K {txt('L/an', 'L/yr')}</span>
                       </div>
                       {(pubCount > 0 || noteCount > 0) && (
                         <div className="flex items-center gap-2 mt-2">
@@ -586,7 +587,7 @@ export function PitchGenerator() {
                   <h2 className="text-xl font-bold text-slate-800">
                     {selectedPractitioner.title} {selectedPractitioner.firstName} {selectedPractitioner.lastName}
                   </h2>
-                  <p className="text-slate-600">{selectedPractitioner.specialty}</p>
+                  <p className="text-slate-600">{localizeSpecialty(selectedPractitioner.specialty)}</p>
                   <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
                     <MapPin className="w-4 h-4" />
                     {selectedPractitioner.city}
@@ -1069,8 +1070,8 @@ export function PitchGenerator() {
           <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
             <Sparkles className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div className="flex-1">
-              <p className="font-medium text-amber-800">Mode demonstration</p>
-              <p className="text-sm text-amber-600">Ce pitch a ete genere localement a partir des donnees reelles du praticien. Pour des pitchs plus riches et adaptatifs, configurez une cle API dans le fichier .env (VITE_LLM_API_KEY).</p>
+              <p className="font-medium text-amber-800">{t('pitch.demoModeTitle')}</p>
+              <p className="text-sm text-amber-600">{t('pitch.demoModeDesc')}</p>
             </div>
           </div>
         )}
@@ -1080,7 +1081,7 @@ export function PitchGenerator() {
           <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
             <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
             <div>
-              <p className="font-medium text-red-800">Erreur de generation</p>
+              <p className="font-medium text-red-800">{t('pitch.generationErrorTitle')}</p>
               <p className="text-sm text-red-600">{generateError}</p>
             </div>
           </div>
@@ -1100,7 +1101,7 @@ export function PitchGenerator() {
                 <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
                 <div>
                   <p className="font-medium text-purple-800">{t('pitch.generating')}</p>
-                  <p className="text-sm text-purple-600">{hasValidApiKey ? "L'IA cree votre pitch ultra-personnalise" : 'Generation du pitch a partir des donnees du praticien...'}</p>
+                  <p className="text-sm text-purple-600">{hasValidApiKey ? t('pitch.loadingAI') : t('pitch.loadingLocal')}</p>
                 </div>
               </div>
               {[1, 2, 3, 4].map((i) => (
@@ -1141,7 +1142,7 @@ export function PitchGenerator() {
                             navigator.clipboard.writeText(section.content);
                           }}
                           className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-slate-100"
-                          title="Copier cette section"
+                          title={t('pitch.copySectionTooltip')}
                         >
                           <Copy className="w-4 h-4 text-slate-500" />
                         </button>
@@ -1152,7 +1153,7 @@ export function PitchGenerator() {
                               setEditInstruction('');
                             }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-purple-50"
-                            title="Modifier cette section"
+                            title={t('pitch.editSectionTooltip')}
                           >
                             <RefreshCw className="w-4 h-4 text-purple-500" />
                           </button>
@@ -1216,7 +1217,7 @@ export function PitchGenerator() {
               {isGenerating && sections.length > 0 && (
                 <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl border border-purple-200">
                   <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
-                  <span className="text-sm text-purple-700 font-medium">Generation des sections suivantes...</span>
+                  <span className="text-sm text-purple-700 font-medium">{t('pitch.generatingNextSections')}</span>
                 </div>
               )}
             </motion.div>

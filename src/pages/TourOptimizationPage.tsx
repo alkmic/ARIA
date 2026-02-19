@@ -32,6 +32,7 @@ import {
 import { useAppStore } from '../stores/useAppStore';
 import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty, txt } from '../utils/localizeData';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import type { Practitioner, UpcomingVisit } from '../types';
 import 'leaflet/dist/leaflet.css';
@@ -349,13 +350,13 @@ export const TourOptimizationPage: React.FC = () => {
 
     const start = startCoords[startPoint];
     const steps = [
-      { label: 'Géolocalisation des praticiens', duration: 600 },
-      { label: 'Calcul de la matrice de distances', duration: 800 },
-      { label: 'Évaluation des priorités stratégiques', duration: 500 },
-      { label: 'Optimisation TSP par jour', duration: 1200 },
-      { label: 'Amélioration 2-opt des itinéraires', duration: 800 },
-      { label: 'Ajustement des horaires', duration: 500 },
-      { label: 'Calcul des gains', duration: 400 },
+      { label: t('tour.loadingSteps.geolocating'), duration: 600 },
+      { label: t('tour.loadingSteps.distanceMatrix'), duration: 800 },
+      { label: t('tour.loadingSteps.strategicPriorities'), duration: 500 },
+      { label: t('tour.loadingSteps.tspOptimization'), duration: 1200 },
+      { label: t('tour.loadingSteps.twoOptImprovement'), duration: 800 },
+      { label: t('tour.loadingSteps.scheduleAdjustment'), duration: 500 },
+      { label: t('tour.loadingSteps.gainsCalculation'), duration: 400 },
     ];
 
     // Animation des étapes
@@ -701,7 +702,7 @@ export const TourOptimizationPage: React.FC = () => {
 
   // Export PDF (simulation)
   const exportPDF = () => {
-    alert('Export PDF - Fonctionnalité à intégrer avec une vraie génération PDF');
+    alert(t('tour.exportPdfAlert'));
   };
 
   // Save to visits
@@ -721,7 +722,7 @@ export const TourOptimizationPage: React.FC = () => {
           date: day.isoDate,
           time: visit.arrivalTime.replace('h', ':').padStart(5, '0'),
           type: 'scheduled',
-          notes: `Visite planifiée via optimisation de tournée (${criteriaOptions.find(c => c.id === criteria)?.label})`,
+          notes: t('tour.visitPlannedNote', { criteria: criteriaOptions.find(c => c.id === criteria)?.label || '' }),
         });
       });
     });
@@ -752,8 +753,8 @@ export const TourOptimizationPage: React.FC = () => {
         ical += `DTSTAMP:${now}\n`;
         ical += `DTSTART:${dtStart}\n`;
         ical += `DTEND:${dtEnd}\n`;
-        ical += `SUMMARY:Visite - ${p.title} ${p.lastName}\n`;
-        ical += `DESCRIPTION:${p.specialty} - ${p.city}\n`;
+        ical += `SUMMARY:${txt('Visite', 'Visit')} - ${p.title} ${p.lastName}\n`;
+        ical += `DESCRIPTION:${localizeSpecialty(p.specialty)} - ${p.city}\n`;
         ical += `LOCATION:${p.city}\n`;
         ical += 'END:VEVENT\n';
       });
@@ -965,7 +966,7 @@ export const TourOptimizationPage: React.FC = () => {
                             </p>
                             {p.isKOL && <Star className="w-4 h-4 text-amber-500 fill-amber-500 flex-shrink-0" />}
                           </div>
-                          <p className="text-xs text-slate-500">{p.specialty}</p>
+                          <p className="text-xs text-slate-500">{localizeSpecialty(p.specialty)}</p>
                           <p className="text-xs text-slate-500">{p.city} • V{p.vingtile}</p>
                         </div>
                         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
@@ -1235,12 +1236,12 @@ export const TourOptimizationPage: React.FC = () => {
                     <div className="font-bold text-amber-800">
                       {criteria === 'kol-first'
                         ? t('tour.kolsPlanned', { count: String(result.totalKOLs) })
-                        : `Volume ciblé : ${Math.round(result.totalVolumeCovered / 1000)}K L`}
+                        : t('tour.volumeTargeted', { volume: String(Math.round(result.totalVolumeCovered / 1000)) })}
                     </div>
                     <div className="text-sm text-amber-700">
                       {criteria === 'kol-first'
-                        ? `${result.kolsInFirstHalf} KOLs dans les ${Math.ceil(result.days.length / 2)} premiers jours, puis optimisation des trajets`
-                        : `${result.totalVisits} prescripteurs visités, triés par volume puis trajets optimisés`}
+                        ? t('tour.kolsInFirstDays', { kolCount: String(result.kolsInFirstHalf), dayCount: String(Math.ceil(result.days.length / 2)) })
+                        : t('tour.prescribersVisited', { count: String(result.totalVisits) })}
                     </div>
                   </div>
                 </div>
@@ -1274,8 +1275,8 @@ export const TourOptimizationPage: React.FC = () => {
                 <div className="text-2xl font-bold text-purple-700">{result.totalDistance} km</div>
                 <div className="text-xs text-slate-500 mt-1">
                   {result.baselineDistance > result.totalDistance
-                    ? `vs ${result.baselineDistance} km sans optim.`
-                    : `${result.totalVisits} visites optimisées`}
+                    ? t('tour.vsWithoutOptDist', { baseline: String(result.baselineDistance) })
+                    : t('tour.optimizedVisits', { count: String(result.totalVisits) })}
                 </div>
               </div>
 
@@ -1292,8 +1293,8 @@ export const TourOptimizationPage: React.FC = () => {
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
                   {result.timeSaved > 0
-                    ? `${result.timeSaved} min économisées (-${result.percentTimeSaved}%)`
-                    : 'Temps global de conduite'}
+                    ? t('tour.timeSavedDetail', { time: String(result.timeSaved), pct: String(result.percentTimeSaved) })
+                    : t('tour.globalDrivingTime')}
                 </div>
               </div>
 
@@ -1366,9 +1367,9 @@ export const TourOptimizationPage: React.FC = () => {
                         <Popup>
                           <div className="p-1">
                             <div className="font-bold">{visit.practitioner.title} {visit.practitioner.lastName}</div>
-                            <div className="text-sm">{visit.practitioner.specialty}</div>
-                            <div className="text-sm text-blue-600">Arrivée: {visit.arrivalTime}</div>
-                            <div className="text-sm text-slate-600">Départ: {visit.departureTime}</div>
+                            <div className="text-sm">{localizeSpecialty(visit.practitioner.specialty)}</div>
+                            <div className="text-sm text-blue-600">{t('tour.arrival')}: {visit.arrivalTime}</div>
+                            <div className="text-sm text-slate-600">{t('tour.departure')}: {visit.departureTime}</div>
                           </div>
                         </Popup>
                       </Marker>
@@ -1401,7 +1402,7 @@ export const TourOptimizationPage: React.FC = () => {
                     {editableResult[activeDay]?.totalDistance} km
                   </span>
                   <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
-                    {Math.floor((editableResult[activeDay]?.totalTravelTime || 0) / 60)}h{((editableResult[activeDay]?.totalTravelTime || 0) % 60).toString().padStart(2, '0')} trajet
+                    {Math.floor((editableResult[activeDay]?.totalTravelTime || 0) / 60)}h{((editableResult[activeDay]?.totalTravelTime || 0) % 60).toString().padStart(2, '0')} {t('tour.travelLabel')}
                   </span>
                 </div>
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -1427,7 +1428,7 @@ export const TourOptimizationPage: React.FC = () => {
                       </div>
                       <div className="text-right text-xs">
                         <div className="font-bold text-blue-600">{visit.arrivalTime} - {visit.departureTime}</div>
-                        <div className="text-slate-500">{visit.travelTime} min trajet • {visit.visitDuration} min visite</div>
+                        <div className="text-slate-500">{visit.travelTime} min {t('tour.travelLabel')} • {visit.visitDuration} min {t('tour.visitLabel')}</div>
                       </div>
                     </div>
                   ))}
@@ -1467,12 +1468,12 @@ export const TourOptimizationPage: React.FC = () => {
                       <h3 className="font-bold text-lg text-slate-800">{t('tour.optimizationSuccess')}</h3>
                       <p className="text-sm text-slate-600 mt-1">
                         {criteria === 'kol-first'
-                          ? `${result.totalKOLs} KOLs planifiés en priorité${result.kmSaved > 0 ? ` • ${result.kmSaved} km économisés grâce au regroupement géographique` : ` • ${result.totalVisits} visites sur ${result.days.length} jours`}`
+                          ? `${t('tour.kolsPlannedPriority', { count: String(result.totalKOLs) })}${result.kmSaved > 0 ? ` • ${t('tour.kmSavedGeo', { km: String(result.kmSaved) })}` : ` • ${t('tour.visitsOverDays', { visits: String(result.totalVisits), days: String(result.days.length) })}`}`
                           : criteria === 'volume'
-                          ? `${Math.round(result.totalVolumeCovered / 1000)}K L de volume ciblé${result.kmSaved > 0 ? ` • ${result.kmSaved} km économisés grâce au regroupement géographique` : ` • ${result.totalVisits} prescripteurs visités`}`
+                          ? `${t('tour.volumeTargetedResult', { volume: String(Math.round(result.totalVolumeCovered / 1000)) })}${result.kmSaved > 0 ? ` • ${t('tour.kmSavedGeo', { km: String(result.kmSaved) })}` : ` • ${t('tour.prescribersVisitedResult', { count: String(result.totalVisits) })}`}`
                           : result.kmSaved > 0
-                          ? `Regroupement géographique : ${result.kmSaved} km économisés (-${result.percentDistSaved}%) grâce au clustering par zone`
-                          : `${result.totalVisits} visites planifiées sur ${result.days.length} jours • Praticiens regroupés par zone géographique`}
+                          ? t('tour.geoGrouping', { km: String(result.kmSaved), pct: String(result.percentDistSaved) })
+                          : t('tour.visitsPlannedDays', { visits: String(result.totalVisits), days: String(result.days.length) })}
                       </p>
                     </>
                   )}

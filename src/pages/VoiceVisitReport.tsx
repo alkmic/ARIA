@@ -30,6 +30,7 @@ import { DataService } from '../services/dataService';
 import { useAppStore } from '../stores/useAppStore';
 import { useUserDataStore } from '../stores/useUserDataStore';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty } from '../utils/localizeData';
 import type { PractitionerProfile } from '../types/database';
 
 interface ExtractedInfo {
@@ -159,7 +160,7 @@ export default function VoiceVisitReport() {
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
-      alert('La reconnaissance vocale n\'est pas supportée. Utilisez Chrome ou Edge.');
+      alert(t('voiceReport.speechNotSupported'));
       return;
     }
 
@@ -236,9 +237,9 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
               name: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
               confidence: 1
             },
-            topics: ['Discussion générale'],
+            topics: [t('voiceReport.fallbackGeneralDiscussion')],
             sentiment: 'neutral',
-            nextActions: ['Suivi à planifier'],
+            nextActions: [t('voiceReport.fallbackFollowUp')],
             keyPoints: [transcript.substring(0, 100) + '...'],
             productsDiscussed: [],
             competitorsMentioned: [],
@@ -258,7 +259,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
           name: `${selectedPractitioner.title} ${selectedPractitioner.firstName} ${selectedPractitioner.lastName}`,
           confidence: 1
         },
-        topics: ['Visite standard'],
+        topics: [t('voiceReport.fallbackStandardVisit')],
         sentiment: 'neutral',
         nextActions: [],
         keyPoints: [],
@@ -289,8 +290,8 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       deductions.push({
         id: `d-${id++}`,
         category: 'product_interest',
-        label: `Intérêt pour ${product}`,
-        detail: `Le praticien a discuté de ${product} lors de cette visite. Ajouter à ses centres d'intérêt produits.`,
+        label: t('voiceReport.deductionLabels.interestIn', { product }),
+        detail: t('voiceReport.deductionLabels.productDiscussed', { product }),
         accepted: true,
       });
     });
@@ -299,8 +300,8 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       deductions.push({
         id: `d-${id++}`,
         category: 'competitor',
-        label: `${competitor} mentionné`,
-        detail: `Le praticien utilise ou a mentionné ${competitor}. Veille concurrentielle activée.`,
+        label: t('voiceReport.deductionLabels.competitorMentioned', { competitor }),
+        detail: t('voiceReport.deductionLabels.competitorDetail', { competitor }),
         accepted: true,
       });
     });
@@ -309,7 +310,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       deductions.push({
         id: `d-${id++}`,
         category: 'objection',
-        label: 'Frein identifié',
+        label: t('voiceReport.deductionLabels.barrierIdentified'),
         detail: objection,
         accepted: true,
       });
@@ -319,7 +320,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       deductions.push({
         id: `d-${id++}`,
         category: 'opportunity',
-        label: 'Opportunité détectée',
+        label: t('voiceReport.deductionLabels.opportunityDetected'),
         detail: opportunity,
         accepted: true,
       });
@@ -330,16 +331,16 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       deductions.push({
         id: `d-${id++}`,
         category: 'relationship',
-        label: 'Relation positive',
-        detail: `Le sentiment global est positif. Le praticien est réceptif — bon moment pour proposer des services additionnels ou une montée en gamme.`,
+        label: t('voiceReport.deductionLabels.positiveRelationship'),
+        detail: t('voiceReport.deductionLabels.positiveDetail'),
         accepted: true,
       });
     } else if (extractedInfo.sentiment === 'negative') {
       deductions.push({
         id: `d-${id++}`,
         category: 'relationship',
-        label: 'Alerte insatisfaction',
-        detail: `Le sentiment global est négatif. Mettre en place un suivi renforcé et identifier les causes d'insatisfaction. Risque de churn potentiel.`,
+        label: t('voiceReport.deductionLabels.dissatisfactionAlert'),
+        detail: t('voiceReport.deductionLabels.negativeDetail'),
         accepted: true,
       });
     }
@@ -349,8 +350,8 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
       deductions.push({
         id: `d-${id++}`,
         category: 'preference',
-        label: `${extractedInfo.nextActions.length} action(s) à planifier`,
-        detail: `Actions identifiées : ${extractedInfo.nextActions.join(' | ')}. Ces actions seront ajoutées au suivi du praticien.`,
+        label: t('voiceReport.deductionLabels.actionsToSchedule', { count: String(extractedInfo.nextActions.length) }),
+        detail: t('voiceReport.deductionLabels.actionsIdentified', { actions: extractedInfo.nextActions.join(' | ') }),
         accepted: true,
       });
     }
@@ -520,7 +521,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                           {visit.practitioner.title} {visit.practitioner.firstName} {visit.practitioner.lastName}
                         </p>
                         <p className="text-sm text-slate-500">
-                          {visit.time} • {visit.practitioner.specialty}
+                          {visit.time} • {localizeSpecialty(visit.practitioner.specialty)}
                         </p>
                       </div>
                       <ChevronRight className="w-5 h-5 text-emerald-500" />
@@ -565,7 +566,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                             <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">KOL</span>
                           )}
                         </p>
-                        <p className="text-sm text-slate-500">{p.specialty} • {p.address.city}</p>
+                        <p className="text-sm text-slate-500">{localizeSpecialty(p.specialty)} • {p.address.city}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400" />
                     </button>
@@ -595,7 +596,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                   {selectedPractitioner.title} {selectedPractitioner.firstName} {selectedPractitioner.lastName}
                 </p>
                 <p className="text-sm text-slate-500">
-                  {selectedPractitioner.specialty} • {selectedPractitioner.address.city}
+                  {localizeSpecialty(selectedPractitioner.specialty)} • {selectedPractitioner.address.city}
                 </p>
               </div>
               <button
@@ -784,7 +785,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, topics: items })}
                 icon={<Tag className="w-4 h-4 text-blue-500" />}
                 color="blue"
-                placeholder="Ajouter un sujet..."
+                placeholder={t('voiceReport.placeholders.addTopic')}
               />
 
               <EditableTagsSection
@@ -793,8 +794,8 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, productsDiscussed: items })}
                 icon={<FileText className="w-4 h-4 text-emerald-500" />}
                 color="emerald"
-                placeholder="Ajouter un produit..."
-                suggestions={['VitalAire Confort+', 'Télésuivi O2', 'VNI DreamStation', 'FreeStyle Comfort', 'PPC ResMed', 'O2 liquide portable', 'Service 24/7', 'Formation patient']}
+                placeholder={t('voiceReport.placeholders.addProduct')}
+                suggestions={[t('voiceReport.productSuggestions.vitalaire'), t('voiceReport.productSuggestions.telesuivi'), t('voiceReport.productSuggestions.vni'), t('voiceReport.productSuggestions.freestyle'), t('voiceReport.productSuggestions.ppc'), t('voiceReport.productSuggestions.o2portable'), t('voiceReport.productSuggestions.service247'), t('voiceReport.productSuggestions.formation')]}
               />
 
               <EditableListSection
@@ -803,7 +804,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, nextActions: items })}
                 icon={<Target className="w-4 h-4 text-purple-500" />}
                 color="purple"
-                placeholder="Ajouter une action..."
+                placeholder={t('voiceReport.placeholders.addAction')}
               />
 
               <EditableListSection
@@ -812,7 +813,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, opportunities: items })}
                 icon={<TrendingUp className="w-4 h-4 text-amber-500" />}
                 color="amber"
-                placeholder="Ajouter une opportunité..."
+                placeholder={t('voiceReport.placeholders.addOpportunity')}
               />
 
               <EditableListSection
@@ -821,7 +822,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, objections: items })}
                 icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
                 color="red"
-                placeholder="Ajouter une objection..."
+                placeholder={t('voiceReport.placeholders.addObjection')}
               />
 
               <EditableListSection
@@ -830,7 +831,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, keyPoints: items })}
                 icon={<Check className="w-4 h-4 text-green-500" />}
                 color="green"
-                placeholder="Ajouter un point clé..."
+                placeholder={t('voiceReport.placeholders.addKeyPoint')}
               />
 
               <EditableTagsSection
@@ -839,7 +840,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 onChange={(items) => setExtractedInfo({ ...extractedInfo, competitorsMentioned: items })}
                 icon={<AlertCircle className="w-4 h-4 text-orange-500" />}
                 color="orange"
-                placeholder="Ajouter un concurrent..."
+                placeholder={t('voiceReport.placeholders.addCompetitor')}
                 suggestions={['Vivisol', 'Linde Healthcare', 'SOS Oxygène', 'Bastide Médical', 'France Oxygène']}
               />
             </div>
@@ -977,9 +978,7 @@ Réponds UNIQUEMENT avec un JSON valide (pas de texte avant ou après) avec cett
                 {t('voiceReport.validatedEnrichments')}
               </h4>
               <p className="text-sm text-emerald-700">
-                {aiDeductions.filter(d => d.accepted).length} déduction(s) sur {aiDeductions.length} seront intégrées à la fiche de{' '}
-                {selectedPractitioner.title} {selectedPractitioner.lastName}.
-                Le compte-rendu complet et les notes IA seront également sauvegardés.
+                {t('voiceReport.deductionsSummary', { accepted: String(aiDeductions.filter(d => d.accepted).length), total: String(aiDeductions.length), name: `${selectedPractitioner.title} ${selectedPractitioner.lastName}` })}
               </p>
             </div>
 
@@ -1157,6 +1156,7 @@ function EditableListSection({
   color: string;
   placeholder: string;
 }) {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -1216,7 +1216,7 @@ function EditableListSection({
                 <span
                   className="flex-1 cursor-pointer hover:text-slate-800"
                   onClick={() => startEdit(i)}
-                  title="Cliquer pour modifier"
+                  title={t('voiceReport.clickToEdit')}
                 >
                   {item}
                 </span>
