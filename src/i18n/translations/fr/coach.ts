@@ -38,6 +38,9 @@ export const coach = {
   you: 'Vous',
   analyzing: 'Analyse en cours...',
   deeperDive: 'Pour approfondir :',
+  knowledgeBaseTooltip: 'Base de connaissances',
+  exportConversation: 'Exporter la conversation',
+  clearConversation: 'Effacer la conversation',
 
   // Suggestions
   suggestions: {

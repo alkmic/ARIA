@@ -10,6 +10,8 @@
 
 import { DataService } from './dataService';
 import type { PractitionerProfile, PractitionerNote, PractitionerNews } from '../types/database';
+import { getLanguage } from '../i18n/LanguageContext';
+import { getLocaleCode } from '../utils/helpers';
 
 // Types de résultats de recherche
 export interface SearchResult {
@@ -267,7 +269,7 @@ function searchInNotes(practitioners: PractitionerProfile[], keywords: string[])
           relevance: Math.min(100, matchCount * 30),
           practitioner: p,
           data: note,
-          summary: `Note de ${p.title} ${p.lastName} (${new Date(note.date).toLocaleDateString('fr-FR')}): ${note.content.substring(0, 100)}...`
+          summary: `${getLanguage() === 'en' ? 'Note from' : 'Note de'} ${p.title} ${p.lastName} (${new Date(note.date).toLocaleDateString(getLocaleCode())}): ${note.content.substring(0, 100)}...`
         });
       }
     }
@@ -330,7 +332,7 @@ function searchInVisits(practitioners: PractitionerProfile[], keywords: string[]
           relevance: Math.min(100, noteMatchCount * 30 + (productMatch ? 40 : 0)),
           practitioner: p,
           data: visit,
-          summary: `Visite ${p.title} ${p.lastName} (${new Date(visit.date).toLocaleDateString('fr-FR')}): ${visitProducts.join(', ')}`
+          summary: `${getLanguage() === 'en' ? 'Visit' : 'Visite'} ${p.title} ${p.lastName} (${new Date(visit.date).toLocaleDateString(getLocaleCode())}): ${visitProducts.join(', ')}`
         });
       }
     }
@@ -551,16 +553,18 @@ function generateLLMContext(
   noteResults: SearchResult[],
   newsResults: SearchResult[]
 ): string {
+  const en = getLanguage() === 'en';
+  const locale = getLocaleCode();
   let context = `
 ═══════════════════════════════════════════════════════════════════
-RÉSULTATS DE RECHERCHE UNIVERSELLE
-Question: "${question}"
+${en ? 'UNIVERSAL SEARCH RESULTS' : 'RÉSULTATS DE RECHERCHE UNIVERSELLE'}
+${en ? 'Question' : 'Question'}: "${question}"
 ═══════════════════════════════════════════════════════════════════
 
 `;
 
   if (practitioners.length > 0) {
-    context += `PRATICIENS CORRESPONDANTS (${practitioners.length}):\n\n`;
+    context += `${en ? 'MATCHING PRACTITIONERS' : 'PRATICIENS CORRESPONDANTS'} (${practitioners.length}):\n\n`;
 
     practitioners.slice(0, 15).forEach((p, idx) => {
       const pubCount = p.news?.filter(n => n.type === 'publication').length || 0;
@@ -568,26 +572,24 @@ Question: "${question}"
       const visitCount = p.visitHistory?.length || 0;
 
       context += `${idx + 1}. **${p.title} ${p.firstName} ${p.lastName}**\n`;
-      context += `   Spécialité: ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}\n`;
-      context += `   Adresse: ${p.address.street}, ${p.address.postalCode} ${p.address.city}\n`;
+      context += `   ${en ? 'Specialty' : 'Spécialité'}: ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}\n`;
+      context += `   ${en ? 'Address' : 'Adresse'}: ${p.address.street}, ${p.address.postalCode} ${p.address.city}\n`;
       context += `   Contact: ${p.contact.phone} | ${p.contact.email}\n`;
-      context += `   Métriques: Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/an | Fidélité ${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}`;
+      context += `   ${en ? 'Metrics' : 'Métriques'}: Volume ${(p.metrics.volumeL / 1000).toFixed(0)}K L/${en ? 'yr' : 'an'} | ${en ? 'Loyalty' : 'Fidélité'} ${p.metrics.loyaltyScore}/10 | V${p.metrics.vingtile}`;
       if (p.metrics.isKOL) context += ' | KOL';
       context += '\n';
-      context += `   Données: ${pubCount} pub | ${noteCount} notes | ${visitCount} visites\n`;
+      context += `   ${en ? 'Data' : 'Données'}: ${pubCount} pub | ${noteCount} notes | ${visitCount} ${en ? 'visits' : 'visites'}\n`;
 
-      // Ajouter les publications si présentes
       if (pubCount > 0) {
         context += `   Publications:\n`;
         p.news?.filter(n => n.type === 'publication').slice(0, 3).forEach(pub => {
-          context += `     - ${pub.title} (${new Date(pub.date).toLocaleDateString('fr-FR')})\n`;
+          context += `     - ${pub.title} (${new Date(pub.date).toLocaleDateString(locale)})\n`;
         });
       }
 
-      // Ajouter la dernière note si présente
       if (p.notes && p.notes.length > 0) {
         const lastNote = p.notes[0];
-        context += `   Dernière note: ${lastNote.content.substring(0, 80)}...\n`;
+        context += `   ${en ? 'Last note' : 'Dernière note'}: ${lastNote.content.substring(0, 80)}...\n`;
       }
 
       context += '\n';
@@ -595,22 +597,22 @@ Question: "${question}"
   }
 
   if (newsResults.length > 0) {
-    context += `\nPUBLICATIONS ET ACTUALITÉS TROUVÉES (${newsResults.length}):\n\n`;
+    context += `\n${en ? 'PUBLICATIONS AND NEWS FOUND' : 'PUBLICATIONS ET ACTUALITÉS TROUVÉES'} (${newsResults.length}):\n\n`;
     newsResults.slice(0, 10).forEach((r, idx) => {
       const news = r.data as PractitionerNews;
       context += `${idx + 1}. [${news.type.toUpperCase()}] ${news.title}\n`;
-      context += `   Par: ${r.practitioner?.title} ${r.practitioner?.lastName} | ${new Date(news.date).toLocaleDateString('fr-FR')}\n`;
+      context += `   ${en ? 'By' : 'Par'}: ${r.practitioner?.title} ${r.practitioner?.lastName} | ${new Date(news.date).toLocaleDateString(locale)}\n`;
       context += `   ${news.content.substring(0, 100)}...\n\n`;
     });
   }
 
   if (noteResults.length > 0) {
-    context += `\nNOTES DE VISITE PERTINENTES (${noteResults.length}):\n\n`;
+    context += `\n${en ? 'RELEVANT VISIT NOTES' : 'NOTES DE VISITE PERTINENTES'} (${noteResults.length}):\n\n`;
     noteResults.slice(0, 10).forEach((r, idx) => {
       const note = r.data as PractitionerNote;
-      context += `${idx + 1}. ${r.practitioner?.title} ${r.practitioner?.lastName} (${new Date(note.date).toLocaleDateString('fr-FR')})\n`;
+      context += `${idx + 1}. ${r.practitioner?.title} ${r.practitioner?.lastName} (${new Date(note.date).toLocaleDateString(locale)})\n`;
       context += `   ${note.content.substring(0, 150)}...\n`;
-      if (note.nextAction) context += `   Action suivante: ${note.nextAction}\n`;
+      if (note.nextAction) context += `   ${en ? 'Next action' : 'Action suivante'}: ${note.nextAction}\n`;
       context += '\n';
     });
   }

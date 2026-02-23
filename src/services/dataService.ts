@@ -1,5 +1,6 @@
 import { practitionersDB } from '../data/practitionersDatabase';
 import type { PractitionerProfile, PractitionerNote, PractitionerNews, VisitRecord } from '../types/database';
+import { getLanguage } from '../i18n/LanguageContext';
 
 /**
  * Service centralisé pour accéder aux données
@@ -64,14 +65,101 @@ export class DataService {
     const p = this.getPractitionerById(practitionerId);
     if (!p) return '';
 
+    const lang = getLanguage();
+    const dateFmt = lang === 'en' ? 'en-US' : 'fr-FR';
     const today = new Date();
     const lastVisit = p.lastVisitDate
-      ? new Date(p.lastVisitDate).toLocaleDateString('fr-FR')
-      : 'jamais visité';
+      ? new Date(p.lastVisitDate).toLocaleDateString(dateFmt)
+      : (lang === 'en' ? 'never visited' : 'jamais visité');
     const daysSinceVisit = p.lastVisitDate
       ? Math.floor((today.getTime() - new Date(p.lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
       : 999;
 
+    const practiceTypeLabel = lang === 'en'
+      ? (p.practiceType === 'ville' ? 'Private practice' : p.practiceType === 'hospitalier' ? 'Hospital practitioner' : 'Mixed practice (private + hospital)')
+      : (p.practiceType === 'ville' ? 'Praticien de ville (libéral)' : p.practiceType === 'hospitalier' ? 'Praticien hospitalier' : 'Praticien mixte (ville + hôpital)');
+
+    const vingtileLabel = lang === 'en'
+      ? (p.metrics.vingtile <= 5 ? 'TOP PRESCRIBER' : p.metrics.vingtile <= 10 ? 'High prescriber' : 'Average prescriber')
+      : (p.metrics.vingtile <= 5 ? 'TOP PRESCRIPTEUR' : p.metrics.vingtile <= 10 ? 'Gros prescripteur' : 'Prescripteur moyen');
+
+    const churnLabel = lang === 'en'
+      ? (p.metrics.churnRisk === 'low' ? 'LOW' : p.metrics.churnRisk === 'medium' ? 'MEDIUM' : 'HIGH')
+      : (p.metrics.churnRisk === 'low' ? 'FAIBLE' : p.metrics.churnRisk === 'medium' ? 'MOYEN' : 'ÉLEVÉ');
+
+    const visitPriority = lang === 'en'
+      ? (p.metrics.isKOL && daysSinceVisit > 60 ? 'VERY URGENT' : daysSinceVisit > 90 ? 'URGENT' : daysSinceVisit > 60 ? 'MEDIUM' : 'Normal')
+      : (p.metrics.isKOL && daysSinceVisit > 60 ? 'TRÈS URGENT' : daysSinceVisit > 90 ? 'URGENT' : daysSinceVisit > 60 ? 'MOYEN' : 'Normal');
+
+    if (lang === 'en') {
+      let context = `
+╔════════════════════════════════════════════════════════════════════════════╗
+║ COMPLETE PROFILE - ${p.title} ${p.firstName} ${p.lastName}
+╚════════════════════════════════════════════════════════════════════════════╝
+
+PERSONAL INFORMATION:
+- Full name: ${p.title} ${p.firstName} ${p.lastName}
+- Specialty: ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}
+- Practice type: ${practiceTypeLabel}
+- Status: ${p.metrics.isKOL ? 'KEY OPINION LEADER (KOL)' : 'Standard practitioner'}
+
+ADDRESS & CONTACT:
+- Full address: ${p.address.street}, ${p.address.postalCode} ${p.address.city}
+- GPS coordinates: ${p.address.coords.lat.toFixed(6)}, ${p.address.coords.lng.toFixed(6)}
+- Email: ${p.contact.email}
+- Phone: ${p.contact.phone}${p.contact.mobile ? `\n- Mobile: ${p.contact.mobile}` : ''}
+
+BUSINESS METRICS:
+- Annual volume: ${(p.metrics.volumeL / 1000).toFixed(1)}K L/yr (${(p.metrics.volumeMonthly / 1000).toFixed(1)}K L/mo)
+- Loyalty score: ${p.metrics.loyaltyScore}/10
+- Vingtile: ${p.metrics.vingtile} (${vingtileLabel})
+- Growth potential: +${p.metrics.potentialGrowth}%
+- Churn risk: ${churnLabel}
+
+RELATIONSHIP HISTORY:
+- Last visit: ${lastVisit} (${daysSinceVisit} days ago)
+- Next scheduled visit: ${p.nextScheduledVisit ? new Date(p.nextScheduledVisit).toLocaleDateString(dateFmt) : 'Not scheduled'}
+- Visit priority: ${visitPriority}
+`;
+
+      if (p.news && p.news.length > 0) {
+        context += `\nNEWS & PUBLICATIONS (${p.news.length}):\n`;
+        p.news.forEach((news, idx) => {
+          context += `\n${idx + 1}. [${new Date(news.date).toLocaleDateString(dateFmt)}] ${news.title}\n`;
+          context += `   Type: ${news.type}\n`;
+          context += `   ${news.content}\n`;
+          if (news.relevance) context += `   ${news.relevance}\n`;
+        });
+      } else {
+        context += `\nNEWS & PUBLICATIONS: No recent news recorded\n`;
+      }
+
+      if (p.notes && p.notes.length > 0) {
+        context += `\nVISIT NOTES (${p.notes.length} latest notes):\n`;
+        p.notes.slice(0, 5).forEach((note, idx) => {
+          context += `\n${idx + 1}. [${new Date(note.date).toLocaleDateString(dateFmt)}] ${note.type.toUpperCase()}\n`;
+          context += `   ${note.content}\n`;
+          if (note.nextAction) context += `   -> Next action: ${note.nextAction}\n`;
+        });
+      } else {
+        context += `\nVISIT NOTES: No notes recorded\n`;
+      }
+
+      if (p.visitHistory && p.visitHistory.length > 0) {
+        context += `\nVISIT HISTORY (${p.visitHistory.length} visits):\n`;
+        p.visitHistory.slice(0, 3).forEach((visit, idx) => {
+          context += `   ${idx + 1}. ${new Date(visit.date).toLocaleDateString(dateFmt)}`;
+          if (visit.duration) context += ` (${visit.duration}min)`;
+          if (visit.productsDiscussed && visit.productsDiscussed.length > 0) context += ` - Products: ${visit.productsDiscussed.join(', ')}`;
+          context += `\n`;
+        });
+      }
+
+      context += `\n═══════════════════════════════════════════════════════════════════════════\n`;
+      return context;
+    }
+
+    // French version (original)
     let context = `
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║ FICHE COMPLÈTE - ${p.title} ${p.firstName} ${p.lastName}
@@ -80,7 +168,7 @@ export class DataService {
 INFORMATIONS PERSONNELLES :
 - Identité complète : ${p.title} ${p.firstName} ${p.lastName}
 - Spécialité : ${p.specialty}${p.subSpecialty ? ` (${p.subSpecialty})` : ''}
-- Type d'exercice : ${p.practiceType === 'ville' ? 'Praticien de ville (libéral)' : p.practiceType === 'hospitalier' ? 'Praticien hospitalier' : 'Praticien mixte (ville + hôpital)'}
+- Type d'exercice : ${practiceTypeLabel}
 - Statut : ${p.metrics.isKOL ? 'KEY OPINION LEADER (KOL)' : 'Praticien standard'}
 
 ADRESSE & CONTACT :
@@ -92,21 +180,21 @@ ADRESSE & CONTACT :
 MÉTRIQUES BUSINESS :
 - Volume annuel : ${(p.metrics.volumeL / 1000).toFixed(1)}K L/an (${(p.metrics.volumeMonthly / 1000).toFixed(1)}K L/mois)
 - Score de fidélité : ${p.metrics.loyaltyScore}/10
-- Vingtile : ${p.metrics.vingtile} (${p.metrics.vingtile <= 5 ? 'TOP PRESCRIPTEUR' : p.metrics.vingtile <= 10 ? 'Gros prescripteur' : 'Prescripteur moyen'})
+- Vingtile : ${p.metrics.vingtile} (${vingtileLabel})
 - Potentiel de croissance : +${p.metrics.potentialGrowth}%
-- Risque de churn : ${p.metrics.churnRisk === 'low' ? 'FAIBLE' : p.metrics.churnRisk === 'medium' ? 'MOYEN' : 'ÉLEVÉ'}
+- Risque de churn : ${churnLabel}
 
 HISTORIQUE DE RELATION :
 - Dernière visite : ${lastVisit} (il y a ${daysSinceVisit} jours)
-- Prochaine visite planifiée : ${p.nextScheduledVisit ? new Date(p.nextScheduledVisit).toLocaleDateString('fr-FR') : 'Non planifiée'}
-- Priorité de visite : ${p.metrics.isKOL && daysSinceVisit > 60 ? 'TRÈS URGENT' : daysSinceVisit > 90 ? 'URGENT' : daysSinceVisit > 60 ? 'MOYEN' : 'Normal'}
+- Prochaine visite planifiée : ${p.nextScheduledVisit ? new Date(p.nextScheduledVisit).toLocaleDateString(dateFmt) : 'Non planifiée'}
+- Priorité de visite : ${visitPriority}
 `;
 
     // Actualités/Publications
     if (p.news && p.news.length > 0) {
       context += `\nACTUALITÉS & PUBLICATIONS (${p.news.length}) :\n`;
       p.news.forEach((news, idx) => {
-        context += `\n${idx + 1}. [${new Date(news.date).toLocaleDateString('fr-FR')}] ${news.title}\n`;
+        context += `\n${idx + 1}. [${new Date(news.date).toLocaleDateString(dateFmt)}] ${news.title}\n`;
         context += `   Type : ${news.type}\n`;
         context += `   ${news.content}\n`;
         if (news.relevance) {
@@ -121,7 +209,7 @@ HISTORIQUE DE RELATION :
     if (p.notes && p.notes.length > 0) {
       context += `\nNOTES DE VISITE (${p.notes.length} dernières notes) :\n`;
       p.notes.slice(0, 5).forEach((note, idx) => {
-        context += `\n${idx + 1}. [${new Date(note.date).toLocaleDateString('fr-FR')}] ${note.type.toUpperCase()}\n`;
+        context += `\n${idx + 1}. [${new Date(note.date).toLocaleDateString(dateFmt)}] ${note.type.toUpperCase()}\n`;
         context += `   ${note.content}\n`;
         if (note.nextAction) {
           context += `   -> Action suivante : ${note.nextAction}\n`;
@@ -135,7 +223,7 @@ HISTORIQUE DE RELATION :
     if (p.visitHistory && p.visitHistory.length > 0) {
       context += `\nHISTORIQUE DE VISITES (${p.visitHistory.length} visites) :\n`;
       p.visitHistory.slice(0, 3).forEach((visit, idx) => {
-        context += `   ${idx + 1}. ${new Date(visit.date).toLocaleDateString('fr-FR')}`;
+        context += `   ${idx + 1}. ${new Date(visit.date).toLocaleDateString(dateFmt)}`;
         if (visit.duration) {
           context += ` (${visit.duration}min)`;
         }
@@ -246,6 +334,8 @@ HISTORIQUE DE RELATION :
    * Utilisé par le Coach IA pour répondre à des questions cross-praticiens sur les publications
    */
   static getNewsDigestForLLM(maxItems: number = 50): string {
+    const lang = getLanguage();
+    const dateFmt = lang === 'en' ? 'en-US' : 'fr-FR';
     const allNews: { practitioner: PractitionerProfile; news: PractitionerNews }[] = [];
 
     for (const p of practitionersDB.practitioners) {
@@ -268,7 +358,7 @@ HISTORIQUE DE RELATION :
       byType[type].push(item);
     }
 
-    const typeLabels: Record<string, string> = {
+    const typeLabelsFr: Record<string, string> = {
       publication: 'Publications scientifiques',
       conference: 'Conférences',
       certification: 'Certifications & Formations',
@@ -276,12 +366,24 @@ HISTORIQUE DE RELATION :
       event: 'Événements',
     };
 
-    let digest = `\n## ACTUALITÉS & PUBLICATIONS DE TOUS LES PRATICIENS (${allNews.length} total)\n`;
+    const typeLabelsEn: Record<string, string> = {
+      publication: 'Scientific Publications',
+      conference: 'Conferences',
+      certification: 'Certifications & Training',
+      award: 'Awards',
+      event: 'Events',
+    };
+
+    const typeLabels = lang === 'en' ? typeLabelsEn : typeLabelsFr;
+
+    let digest = lang === 'en'
+      ? `\n## NEWS & PUBLICATIONS FROM ALL PRACTITIONERS (${allNews.length} total)\n`
+      : `\n## ACTUALITÉS & PUBLICATIONS DE TOUS LES PRATICIENS (${allNews.length} total)\n`;
 
     for (const [type, items] of Object.entries(byType)) {
       digest += `\n### ${typeLabels[type] || type} (${items.length})\n`;
       for (const item of items) {
-        const dateStr = new Date(item.news.date).toLocaleDateString('fr-FR');
+        const dateStr = new Date(item.news.date).toLocaleDateString(dateFmt);
         digest += `- [${dateStr}] ${item.practitioner.title} ${item.practitioner.firstName} ${item.practitioner.lastName} (${item.practitioner.specialty}, ${item.practitioner.address.city}) : "${item.news.title}"`;
         if (item.news.source) digest += ` — Source: ${item.news.source}`;
         digest += '\n';

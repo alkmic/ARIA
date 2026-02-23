@@ -36,7 +36,7 @@ import { useUserDataStore, type AIAction } from '../stores/useUserDataStore';
 // TimePeriodContext no longer needed here
 import { useTranslation } from '../i18n';
 
-// Configuration des types d'actions
+// Configuration des types d'actions (labels are translated via t('nextActions.actionTypes.*'))
 const ACTION_CONFIG = {
   new_practitioner: {
     icon: Zap,
@@ -44,7 +44,6 @@ const ACTION_CONFIG = {
     bg: 'bg-violet-50',
     border: 'border-violet-200',
     text: 'text-violet-700',
-    label: 'Nouveau praticien'
   },
   visit_urgent: {
     icon: AlertTriangle,
@@ -52,7 +51,6 @@ const ACTION_CONFIG = {
     bg: 'bg-red-50',
     border: 'border-red-200',
     text: 'text-red-700',
-    label: 'Visite urgente'
   },
   visit_kol: {
     icon: Star,
@@ -60,7 +58,6 @@ const ACTION_CONFIG = {
     bg: 'bg-amber-50',
     border: 'border-amber-200',
     text: 'text-amber-700',
-    label: 'Visite KOL'
   },
   opportunity: {
     icon: TrendingUp,
@@ -68,7 +65,6 @@ const ACTION_CONFIG = {
     bg: 'bg-emerald-50',
     border: 'border-emerald-200',
     text: 'text-emerald-700',
-    label: 'Opportunité'
   },
   risk: {
     icon: TrendingDown,
@@ -76,7 +72,6 @@ const ACTION_CONFIG = {
     bg: 'bg-purple-50',
     border: 'border-purple-200',
     text: 'text-purple-700',
-    label: 'Risque churn'
   },
   followup: {
     icon: Phone,
@@ -84,7 +79,6 @@ const ACTION_CONFIG = {
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     text: 'text-blue-700',
-    label: 'Suivi'
   },
   upsell: {
     icon: Award,
@@ -92,7 +86,6 @@ const ACTION_CONFIG = {
     bg: 'bg-pink-50',
     border: 'border-pink-200',
     text: 'text-pink-700',
-    label: 'Upsell'
   },
   competitor: {
     icon: Shield,
@@ -100,7 +93,6 @@ const ACTION_CONFIG = {
     bg: 'bg-orange-50',
     border: 'border-orange-200',
     text: 'text-orange-700',
-    label: 'Concurrence'
   },
   publication: {
     icon: Newspaper,
@@ -108,25 +100,18 @@ const ACTION_CONFIG = {
     bg: 'bg-cyan-50',
     border: 'border-cyan-200',
     text: 'text-cyan-700',
-    label: 'Publication'
   }
 };
 
-// Configuration des scores avec explications
+// Configuration des scores (labels/descriptions are translated via t('nextActions.*') in ScoreGauge)
 const SCORE_CONFIG = {
   urgency: {
-    label: 'Urgence',
-    description: 'Délai depuis dernier contact, signaux de risque',
     color: 'bg-red-500'
   },
   impact: {
-    label: 'Impact potentiel',
-    description: 'Volume concerné, influence sur le territoire',
     color: 'bg-blue-500'
   },
   probability: {
-    label: 'Facilité',
-    description: 'Relation existante, historique de succès',
     color: 'bg-green-500'
   }
 };

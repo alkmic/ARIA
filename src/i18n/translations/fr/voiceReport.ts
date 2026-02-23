@@ -84,4 +84,57 @@ export const voiceReport = {
   competitorIntel: 'Intelligence concurrentielle ({{names}}) → Note concurrence',
   actionsToFollow: '{{count}} action(s) à suivre',
   dataAccessible: 'Données accessibles par le Coach IA pour répondre à vos questions',
+
+  // Speech recognition
+  speechNotSupported: 'La reconnaissance vocale n\'est pas supportée. Utilisez Chrome ou Edge.',
+
+  // Mock data fallback
+  fallbackGeneralDiscussion: 'Discussion générale',
+  fallbackFollowUp: 'Suivi à planifier',
+  fallbackStandardVisit: 'Visite standard',
+
+  // Placeholders
+  placeholders: {
+    addTopic: 'Ajouter un sujet...',
+    addProduct: 'Ajouter un produit...',
+    addAction: 'Ajouter une action...',
+    addOpportunity: 'Ajouter une opportunité...',
+    addObjection: 'Ajouter une objection...',
+    addKeyPoint: 'Ajouter un point clé...',
+    addCompetitor: 'Ajouter un concurrent...',
+  },
+
+  // Product suggestions (user-visible labels)
+  productSuggestions: {
+    vitalaire: 'VitalAire Confort+',
+    telesuivi: 'Télésuivi O2',
+    vni: 'VNI DreamStation',
+    freestyle: 'FreeStyle Comfort',
+    ppc: 'PPC ResMed',
+    o2portable: 'O2 liquide portable',
+    service247: 'Service 24/7',
+    formation: 'Formation patient',
+  },
+
+  // Tooltip
+  clickToEdit: 'Cliquer pour modifier',
+
+  // AI deduction labels
+  deductionLabels: {
+    interestIn: 'Intérêt pour {{product}}',
+    productDiscussed: 'Le praticien a discuté de {{product}} lors de cette visite. Ajouter à ses centres d\'intérêt produits.',
+    competitorMentioned: '{{competitor}} mentionné',
+    competitorDetail: 'Le praticien utilise ou a mentionné {{competitor}}. Veille concurrentielle activée.',
+    barrierIdentified: 'Frein identifié',
+    opportunityDetected: 'Opportunité détectée',
+    positiveRelationship: 'Relation positive',
+    positiveDetail: 'Le sentiment global est positif. Le praticien est réceptif — bon moment pour proposer des services additionnels ou une montée en gamme.',
+    dissatisfactionAlert: 'Alerte insatisfaction',
+    negativeDetail: 'Le sentiment global est négatif. Mettre en place un suivi renforcé et identifier les causes d\'insatisfaction. Risque de churn potentiel.',
+    actionsToSchedule: '{{count}} action(s) à planifier',
+    actionsIdentified: 'Actions identifiées : {{actions}}. Ces actions seront ajoutées au suivi du praticien.',
+  },
+
+  // Validated enrichments summary
+  deductionsSummary: '{{accepted}} déduction(s) sur {{total}} seront intégrées à la fiche de {{name}}. Le compte-rendu complet et les notes IA seront également sauvegardés.',
 };

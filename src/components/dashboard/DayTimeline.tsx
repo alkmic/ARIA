@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { MapPin, CheckCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
+import { localizeSpecialty } from '../../utils/localizeData';
 import type { Practitioner } from '../../types';
 
 interface Visit {
@@ -86,7 +87,7 @@ export function DayTimeline({ visits }: { visits: Visit[] }) {
                   {visit.practitioner.title} {visit.practitioner.firstName} {visit.practitioner.lastName}
                 </p>
                 <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-slate-500">
-                  <span className="truncate max-w-[100px] sm:max-w-none">{visit.practitioner.specialty}</span>
+                  <span className="truncate max-w-[100px] sm:max-w-none">{localizeSpecialty(visit.practitioner.specialty)}</span>
                   <span className="hidden sm:inline">&bull;</span>
                   <span className="hidden sm:flex items-center gap-1">
                     <MapPin className="w-3 h-3" />

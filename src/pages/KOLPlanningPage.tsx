@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, AlertTriangle, Star, TrendingUp, MapPin, Clock, CheckCircle, Sparkles, ArrowLeft, Users, Droplets, FileText, Target, Shield } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty, localizePracticeType } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 import type { Practitioner } from '../types';
 
 export const KOLPlanningPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const { practitioners, upcomingVisits } = useAppStore();
   const [selectedKOL, setSelectedKOL] = useState<string | null>(null);
@@ -211,7 +213,7 @@ export const KOLPlanningPage: React.FC = () => {
                         {kol.title} {kol.firstName} {kol.lastName}
                         <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                       </h3>
-                      <p className="text-slate-600 text-sm">{kol.specialty} - {kol.activityType}</p>
+                      <p className="text-slate-600 text-sm">{localizeSpecialty(kol.specialty)} - {localizePracticeType(kol.activityType)}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <MapPin className="w-4 h-4 text-slate-400" />
                         <span className="text-sm text-slate-600">{kol.city}</span>
@@ -286,7 +288,7 @@ export const KOLPlanningPage: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-slate-600">{t('manager.kol.suggestedDate')}</span>
                         <span className="font-bold text-blue-700">
-                          {proposedSchedule[index].date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          {proposedSchedule[index].date.toLocaleDateString(getLocaleCode(language), { weekday: 'long', day: 'numeric', month: 'long' })}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

@@ -5,6 +5,7 @@ import type { Practitioner } from '../../types';
 import { DataService } from '../../services/dataService';
 import { useTranslation, useLanguage } from '../../i18n';
 import { getLocaleCode } from '../../utils/helpers';
+import { localizeNewsTitle, localizeNewsContent, localizeNewsRelevance, localizeSource } from '../../utils/localizeData';
 
 interface NewsTabProps {
   practitioner: Practitioner;
@@ -88,15 +89,15 @@ export function NewsTab({ practitioner }: NewsTabProps) {
                       {t(labelKey)}
                     </span>
                   </div>
-                  <p className="font-medium text-slate-800">{item.title}</p>
-                  <p className="text-sm text-slate-500 mt-1">{item.content}</p>
+                  <p className="font-medium text-slate-800">{localizeNewsTitle(item.title)}</p>
+                  <p className="text-sm text-slate-500 mt-1">{localizeNewsContent(item.content)}</p>
                   {item.source && (
-                    <p className="text-xs text-slate-400 mt-1 italic">{t('common.source')} : {item.source}</p>
+                    <p className="text-xs text-slate-400 mt-1 italic">{t('common.source')} : {localizeSource(item.source)}</p>
                   )}
                   {item.relevance && (
                     <div className="mt-2 p-2 bg-amber-50 rounded-lg">
                       <p className="text-xs text-amber-700">
-                        <strong>{t('common.relevance')} :</strong> {item.relevance}
+                        <strong>{t('common.relevance')} :</strong> {localizeNewsRelevance(item.relevance)}
                       </p>
                     </div>
                   )}
@@ -118,15 +119,15 @@ export function NewsTab({ practitioner }: NewsTabProps) {
           <ul className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"Classification ABE simplifie la prise de d\u00e9cision th\u00e9rapeutique"}</span>
+              <span>{t('practitioners.news.guidelineAbeClassification')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"T\u00e9l\u00e9suivi recommand\u00e9 pour am\u00e9liorer l'observance OLD (>15h/jour)"}</span>
+              <span>{t('practitioners.news.guidelineTelesuiviRecommended')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"OLD si PaO\u2082 \u2264 55 mmHg ou 56-59 avec complications"}</span>
+              <span>{t('practitioners.news.guidelineOldThreshold')}</span>
             </li>
           </ul>
         </div>
@@ -142,15 +143,15 @@ export function NewsTab({ practitioner }: NewsTabProps) {
           <ul className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"Prescription initiale par le pneumologue, renouvellement possible par le MG"}</span>
+              <span>{t('practitioners.news.guidelineInitialPrescription')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"Forfait LPPR OLD concentrateur ~12\u20ac/jour, 100% ALD"}</span>
+              <span>{t('practitioners.news.guidelineLpprRate')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-              <span>{"T\u00e9l\u00e9suivi Air Liquide inclus dans le forfait, pas de surco\u00fbt"}</span>
+              <span>{t('practitioners.news.guidelineTelesuiviIncluded')}</span>
             </li>
           </ul>
         </div>

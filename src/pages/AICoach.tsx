@@ -71,6 +71,8 @@ import { Badge } from '../components/ui/Badge';
 import { useUserDataStore } from '../stores/useUserDataStore';
 import { MarkdownText, InsightBox } from '../components/ui/MarkdownText';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty, txt } from '../utils/localizeData';
+import { getLocaleCode } from '../utils/helpers';
 
 // Types pour les graphiques agentiques
 interface AgenticChartData {
@@ -100,7 +102,7 @@ interface Message {
 const CHART_COLORS = DEFAULT_CHART_COLORS;
 
 export default function AICoach() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -153,7 +155,7 @@ export default function AICoach() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'fr-FR';
+      recognitionRef.current.lang = getLocaleCode(language);
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -208,7 +210,7 @@ export default function AICoach() {
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'fr-FR';
+    utterance.lang = getLocaleCode(language);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
@@ -347,7 +349,7 @@ export default function AICoach() {
 
   const exportConversation = () => {
     const text = messages
-      .map(m => `[${m.timestamp.toLocaleTimeString('fr-FR')}] ${m.role === 'user' ? t('coach.you') : t('coach.title')}: ${m.content}`)
+      .map(m => `[${m.timestamp.toLocaleTimeString(getLocaleCode(language))}] ${m.role === 'user' ? t('coach.you') : t('coach.title')}: ${m.content}`)
       .join('\n\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -387,7 +389,7 @@ export default function AICoach() {
                   ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
               }`}
-              title="Base de connaissances"
+              title={t('coach.knowledgeBaseTooltip')}
             >
               <Database className="w-4 h-4" />
               <span className="hidden sm:inline">{t('coach.knowledge')}</span>
@@ -400,7 +402,7 @@ export default function AICoach() {
                 <button
                   onClick={exportConversation}
                   className="btn-secondary px-3 py-2 text-sm flex items-center gap-2"
-                  title="Exporter la conversation"
+                  title={t('coach.exportConversation')}
                 >
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">{t('coach.export')}</span>
@@ -408,7 +410,7 @@ export default function AICoach() {
                 <button
                   onClick={clearConversation}
                   className="btn-secondary px-3 py-2 text-sm flex items-center gap-2"
-                  title="Effacer la conversation"
+                  title={t('coach.clearConversation')}
                 >
                   <Trash2 className="w-4 h-4" />
                   <span className="hidden sm:inline">{t('coach.clear')}</span>
@@ -727,7 +729,7 @@ export default function AICoach() {
                               )}
                             </div>
                             <p className="text-xs sm:text-sm text-slate-500">
-                              {p.specialty} • Vingtile {p.vingtile} • {(p.volumeL / 1000).toFixed(0)}K L/an
+                              {localizeSpecialty(p.specialty)} • {txt('Vingtile', 'Vigintile')} {p.vingtile} • {(p.volumeL / 1000).toFixed(0)}K {txt('L/an', 'L/yr')}
                             </p>
                           </div>
                           {p.daysSinceVisit !== undefined && p.daysSinceVisit < 999 && (
@@ -970,7 +972,7 @@ export default function AICoach() {
                   )}
 
                   <div className="text-[11px] text-slate-400 mt-2 flex items-center gap-2">
-                    <span>{message.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>{message.timestamp.toLocaleTimeString(getLocaleCode(language), { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
 

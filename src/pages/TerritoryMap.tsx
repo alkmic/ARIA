@@ -7,6 +7,7 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { filterPractitionersByPeriod } from '../services/metricsCalculator';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty } from '../utils/localizeData';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -409,7 +410,7 @@ export default function TerritoryMap() {
                 <Popup>
                   <div className="p-2 min-w-[200px]">
                     <h3 className="font-bold">{p.title} {p.firstName} {p.lastName}</h3>
-                    <p className="text-sm text-slate-600">{p.specialty}</p>
+                    <p className="text-sm text-slate-600">{localizeSpecialty(p.specialty)}</p>
                     <p className="text-sm">{p.city}</p>
                     <div className="mt-2 flex gap-2 text-xs">
                       <span className="px-2 py-1 bg-al-blue-100 text-al-blue-700 rounded">

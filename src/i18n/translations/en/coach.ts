@@ -37,6 +37,9 @@ export const coach = {
   you: 'You',
   analyzing: 'Analyzing...',
   deeperDive: 'To go further:',
+  knowledgeBaseTooltip: 'Knowledge base',
+  exportConversation: 'Export conversation',
+  clearConversation: 'Clear conversation',
   suggestions: {
     topPractitioners: 'Top 15 practitioners by volume',
     compareKols: 'Compare KOLs vs others in volume and loyalty',

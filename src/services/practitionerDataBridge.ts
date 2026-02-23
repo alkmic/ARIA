@@ -11,6 +11,8 @@
 import { DataService } from './dataService';
 import { useUserDataStore, type VisitReportData, type UserNote } from '../stores/useUserDataStore';
 import type { PractitionerProfile, PractitionerNote, VisitRecord } from '../types/database';
+import { getLanguage } from '../i18n/LanguageContext';
+import { getLocaleCode } from '../utils/helpers';
 
 /**
  * Contexte enrichi d'un praticien = profil de base + données utilisateur
@@ -92,31 +94,34 @@ export function getEnrichedPractitionerContext(practitionerId: string): Enriched
  */
 function formatReportAsNote(report: VisitReportData): string {
   const parts: string[] = [];
+  const en = getLanguage() === 'en';
 
   if (report.extractedInfo.keyPoints.length > 0) {
-    parts.push(`Points clés : ${report.extractedInfo.keyPoints.join('. ')}`);
+    parts.push(`${en ? 'Key points' : 'Points clés'} : ${report.extractedInfo.keyPoints.join('. ')}`);
   }
 
   if (report.extractedInfo.productsDiscussed.length > 0) {
-    parts.push(`Produits discutés : ${report.extractedInfo.productsDiscussed.join(', ')}`);
+    parts.push(`${en ? 'Products discussed' : 'Produits discutés'} : ${report.extractedInfo.productsDiscussed.join(', ')}`);
   }
 
   if (report.extractedInfo.competitorsMentioned.length > 0) {
-    parts.push(`Concurrents mentionnés : ${report.extractedInfo.competitorsMentioned.join(', ')}`);
+    parts.push(`${en ? 'Competitors mentioned' : 'Concurrents mentionnés'} : ${report.extractedInfo.competitorsMentioned.join(', ')}`);
   }
 
   if (report.extractedInfo.objections.length > 0) {
-    parts.push(`Objections : ${report.extractedInfo.objections.join('. ')}`);
+    parts.push(`${en ? 'Objections' : 'Objections'} : ${report.extractedInfo.objections.join('. ')}`);
   }
 
   if (report.extractedInfo.opportunities.length > 0) {
-    parts.push(`Opportunités : ${report.extractedInfo.opportunities.join('. ')}`);
+    parts.push(`${en ? 'Opportunities' : 'Opportunités'} : ${report.extractedInfo.opportunities.join('. ')}`);
   }
 
-  const sentiment = report.extractedInfo.sentiment === 'positive' ? 'positif'
-    : report.extractedInfo.sentiment === 'negative' ? 'négatif'
-    : 'neutre';
-  parts.push(`Sentiment général : ${sentiment}`);
+  const sentiment = en
+    ? report.extractedInfo.sentiment
+    : report.extractedInfo.sentiment === 'positive' ? 'positif'
+      : report.extractedInfo.sentiment === 'negative' ? 'négatif'
+      : 'neutre';
+  parts.push(`${en ? 'Overall sentiment' : 'Sentiment général'} : ${sentiment}`);
 
   return parts.join('. ');
 }
@@ -135,50 +140,58 @@ export function getCompletePractitionerContextWithReports(practitionerId: string
   // Contexte de base depuis DataService
   let context = DataService.getCompletePractitionerContext(practitionerId);
 
-  // Enrichir avec les comptes-rendus de visite utilisateur
+  // Enrich with user visit reports
+  const en = getLanguage() === 'en';
+  const locale = getLocaleCode();
   if (userVisitReports.length > 0) {
-    context += `\nCOMPTES-RENDUS DE VISITE RÉCENTS (${userVisitReports.length} rapport(s)) :\n`;
+    context += en
+      ? `\nRECENT VISIT REPORTS (${userVisitReports.length} report(s)):\n`
+      : `\nCOMPTES-RENDUS DE VISITE RÉCENTS (${userVisitReports.length} rapport(s)) :\n`;
     userVisitReports.slice(0, 5).forEach((report, idx) => {
-      const date = new Date(report.date).toLocaleDateString('fr-FR');
-      context += `\n${idx + 1}. [${date}] Compte-rendu de visite\n`;
-      context += `   Sentiment : ${report.extractedInfo.sentiment}\n`;
+      const date = new Date(report.date).toLocaleDateString(locale);
+      context += `\n${idx + 1}. [${date}] ${en ? 'Visit report' : 'Compte-rendu de visite'}\n`;
+      context += `   ${en ? 'Sentiment' : 'Sentiment'} : ${report.extractedInfo.sentiment}\n`;
 
       if (report.extractedInfo.keyPoints.length > 0) {
-        context += `   Points clés : ${report.extractedInfo.keyPoints.join(' | ')}\n`;
+        context += `   ${en ? 'Key points' : 'Points clés'} : ${report.extractedInfo.keyPoints.join(' | ')}\n`;
       }
       if (report.extractedInfo.productsDiscussed.length > 0) {
-        context += `   Produits discutés : ${report.extractedInfo.productsDiscussed.join(', ')}\n`;
+        context += `   ${en ? 'Products discussed' : 'Produits discutés'} : ${report.extractedInfo.productsDiscussed.join(', ')}\n`;
       }
       if (report.extractedInfo.competitorsMentioned.length > 0) {
-        context += `   Concurrents mentionnés : ${report.extractedInfo.competitorsMentioned.join(', ')}\n`;
+        context += `   ${en ? 'Competitors mentioned' : 'Concurrents mentionnés'} : ${report.extractedInfo.competitorsMentioned.join(', ')}\n`;
       }
       if (report.extractedInfo.objections.length > 0) {
-        context += `   Objections : ${report.extractedInfo.objections.join(' | ')}\n`;
+        context += `   ${en ? 'Objections' : 'Objections'} : ${report.extractedInfo.objections.join(' | ')}\n`;
       }
       if (report.extractedInfo.opportunities.length > 0) {
-        context += `   Opportunités : ${report.extractedInfo.opportunities.join(' | ')}\n`;
+        context += `   ${en ? 'Opportunities' : 'Opportunités'} : ${report.extractedInfo.opportunities.join(' | ')}\n`;
       }
       if (report.extractedInfo.nextActions.length > 0) {
-        context += `   -> Actions à suivre : ${report.extractedInfo.nextActions.join(' | ')}\n`;
+        context += `   -> ${en ? 'Actions to follow' : 'Actions à suivre'} : ${report.extractedInfo.nextActions.join(' | ')}\n`;
       }
     });
   }
 
-  // Enrichir avec les notes utilisateur
+  // Enrich with user notes
   if (userNotes.length > 0) {
-    context += `\nNOTES PERSONNELLES (${userNotes.length} note(s)) :\n`;
+    context += en
+      ? `\nPERSONAL NOTES (${userNotes.length} note(s)):\n`
+      : `\nNOTES PERSONNELLES (${userNotes.length} note(s)) :\n`;
     userNotes.slice(0, 5).forEach((note, idx) => {
-      const date = new Date(note.createdAt).toLocaleDateString('fr-FR');
+      const date = new Date(note.createdAt).toLocaleDateString(locale);
       context += `${idx + 1}. [${date}] (${note.type}) ${note.content}\n`;
     });
   }
 
-  // Actualiser la dernière visite si un compte-rendu est plus récent
+  // Update last visit if a report is more recent
   if (effectiveLastVisitDate && effectiveLastVisitDate !== profile.lastVisitDate) {
     const daysSince = Math.floor(
       (Date.now() - new Date(effectiveLastVisitDate).getTime()) / (1000 * 60 * 60 * 24)
     );
-    context += `\nDERNIÈRE VISITE EFFECTIVE : ${new Date(effectiveLastVisitDate).toLocaleDateString('fr-FR')} (il y a ${daysSince} jours) — mise à jour via compte-rendu\n`;
+    context += en
+      ? `\nEFFECTIVE LAST VISIT: ${new Date(effectiveLastVisitDate).toLocaleDateString(locale)} (${daysSince} days ago) — updated via visit report\n`
+      : `\nDERNIÈRE VISITE EFFECTIVE : ${new Date(effectiveLastVisitDate).toLocaleDateString(locale)} (il y a ${daysSince} jours) — mise à jour via compte-rendu\n`;
   }
 
   return context;
@@ -194,20 +207,24 @@ export function getAllRecentReportsForLLM(days: number = 90): string {
 
   if (recentReports.length === 0) return '';
 
-  let context = `\n## COMPTES-RENDUS DE VISITE RÉCENTS (${recentReports.length} rapport(s) ces ${days} derniers jours)\n`;
+  const en = getLanguage() === 'en';
+  const locale = getLocaleCode();
+  let context = en
+    ? `\n## RECENT VISIT REPORTS (${recentReports.length} report(s) over the last ${days} days)\n`
+    : `\n## COMPTES-RENDUS DE VISITE RÉCENTS (${recentReports.length} rapport(s) ces ${days} derniers jours)\n`;
 
   recentReports.forEach((report) => {
-    const date = new Date(report.date).toLocaleDateString('fr-FR');
+    const date = new Date(report.date).toLocaleDateString(locale);
     context += `\n- [${date}] ${report.practitionerName} (${report.extractedInfo.sentiment})`;
 
     if (report.extractedInfo.keyPoints.length > 0) {
       context += ` : ${report.extractedInfo.keyPoints.slice(0, 3).join('; ')}`;
     }
     if (report.extractedInfo.productsDiscussed.length > 0) {
-      context += ` | Produits: ${report.extractedInfo.productsDiscussed.join(', ')}`;
+      context += ` | ${en ? 'Products' : 'Produits'}: ${report.extractedInfo.productsDiscussed.join(', ')}`;
     }
     if (report.extractedInfo.competitorsMentioned.length > 0) {
-      context += ` | Concurrents: ${report.extractedInfo.competitorsMentioned.join(', ')}`;
+      context += ` | ${en ? 'Competitors' : 'Concurrents'}: ${report.extractedInfo.competitorsMentioned.join(', ')}`;
     }
     if (report.extractedInfo.nextActions.length > 0) {
       context += ` | Actions: ${report.extractedInfo.nextActions[0]}`;

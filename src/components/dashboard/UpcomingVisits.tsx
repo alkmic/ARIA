@@ -6,6 +6,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useTranslation } from '../../i18n';
+import { localizeSpecialty } from '../../utils/localizeData';
 
 export const UpcomingVisits: React.FC = () => {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ export const UpcomingVisits: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    {visit.practitioner.specialty}
+                    {localizeSpecialty(visit.practitioner.specialty)}
                   </p>
                 </div>
               </motion.div>
@@ -135,7 +136,7 @@ export const UpcomingVisits: React.FC = () => {
                     )}
                   </div>
                   <p className="text-xs text-slate-600 mb-1">
-                    {practitioner.specialty} &bull; {t('common.vingtile')} {practitioner.vingtile} &bull; {(practitioner.volumeL / 1000).toFixed(0)}K L
+                    {localizeSpecialty(practitioner.specialty)} &bull; {t('common.vingtile')} {practitioner.vingtile} &bull; {(practitioner.volumeL / 1000).toFixed(0)}K L
                   </p>
                   <p className="text-xs text-danger font-medium">
                     {t('dashboard.notSeenSince', { days: daysSinceVisit })}

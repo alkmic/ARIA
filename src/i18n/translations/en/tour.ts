@@ -90,4 +90,39 @@ export const tour = {
   saveToVisits: 'Save to my visits',
   exportIcal: 'Export iCal',
   exportPdf: 'Export PDF',
+
+  // Loading steps
+  loadingSteps: {
+    geolocating: 'Geolocating practitioners',
+    distanceMatrix: 'Computing distance matrix',
+    strategicPriorities: 'Evaluating strategic priorities',
+    tspOptimization: 'TSP optimization per day',
+    twoOptImprovement: '2-opt itinerary improvement',
+    scheduleAdjustment: 'Schedule adjustment',
+    gainsCalculation: 'Calculating gains',
+  },
+
+  // Result details
+  volumeTargeted: 'Targeted volume: {{volume}}K L',
+  kolsInFirstDays: '{{kolCount}} KOLs in the first {{dayCount}} days, then route optimization',
+  prescribersVisited: '{{count}} prescribers visited, sorted by volume then optimized routes',
+  vsWithoutOptDist: 'vs {{baseline}} km without optim.',
+  optimizedVisits: '{{count}} optimized visits',
+  timeSavedDetail: '{{time}} min saved (-{{pct}}%)',
+  globalDrivingTime: 'Total driving time',
+  travelLabel: 'travel',
+  visitLabel: 'visit',
+  arrival: 'Arrival',
+  departure: 'Departure',
+  visitPlannedNote: 'Visit planned via tour optimization ({{criteria}})',
+  exportPdfAlert: 'Export PDF - Feature to integrate with real PDF generation',
+
+  // Success descriptions
+  kolsPlannedPriority: '{{count}} KOLs planned as priority',
+  kmSavedGeo: '{{km}} km saved thanks to geographic grouping',
+  visitsOverDays: '{{visits}} visits over {{days}} days',
+  volumeTargetedResult: '{{volume}}K L of targeted volume',
+  prescribersVisitedResult: '{{count}} prescribers visited',
+  geoGrouping: 'Geographic grouping: {{km}} km saved (-{{pct}}%) through zone clustering',
+  visitsPlannedDays: '{{visits}} visits planned over {{days}} days - Practitioners grouped by geographic zone',
 };

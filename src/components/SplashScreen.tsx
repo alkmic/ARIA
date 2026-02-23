@@ -38,9 +38,9 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
                 ]
               }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6"
+              className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6"
             >
-              <span className="text-4xl font-bold gradient-text">A</span>
+              <span className="text-3xl font-bold gradient-text">A</span>
             </motion.div>
 
             <motion.h1

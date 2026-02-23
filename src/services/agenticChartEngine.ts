@@ -8,6 +8,7 @@
  */
 
 import { DataService } from './dataService';
+import { getLanguage } from '../i18n/LanguageContext';
 
 // Types pour les spécifications de graphiques générées par le LLM
 export interface ChartSpec {
@@ -102,7 +103,7 @@ export function clearChartHistory(): void {
 }
 
 // Schéma de données exposé au LLM
-export const DATA_SCHEMA = `
+const DATA_SCHEMA_FR = `
 ## Schéma des Données Disponibles
 
 ### Praticiens (practitioners)
@@ -149,10 +150,64 @@ Champs disponibles :
 - city contains "Lyon"
 `;
 
-// Prompt système AMÉLIORÉ pour la génération de graphiques
-export const CHART_GENERATION_PROMPT = `Tu es un expert en visualisation de données pour un CRM pharmaceutique Air Liquide Healthcare.
+const DATA_SCHEMA_EN = `
+## Available Data Schema
 
-${DATA_SCHEMA}
+### Practitioners
+Available fields:
+- id: string (unique identifier)
+- title: string ("Dr" | "Pr")
+- firstName: string
+- lastName: string
+- specialty: string ("Pneumologue" | "Médecin généraliste")
+- city: string (practice city)
+- postalCode: string
+- volumeL: number (annual volume in liters O2)
+- loyaltyScore: number (0-10, loyalty score)
+- vingtile: number (1-20, potential segmentation)
+- isKOL: boolean (Key Opinion Leader)
+- lastVisitDate: string | null (ISO date)
+- daysSinceVisit: number (days since last visit)
+- publicationsCount: number
+- riskLevel: "low" | "medium" | "high" (computed)
+
+### Possible Aggregations (groupBy)
+- "city": by city
+- "specialty": by medical specialty
+- "vingtile": by potential segment (1-20)
+- "vingtileBucket": by vingtile group (V1-2 Top, V3-5 High, V6-10 Medium, V11+ Low)
+- "loyaltyBucket": by loyalty level (Very low, Low, Medium, Good, Excellent)
+- "riskLevel": by risk level (Low, Medium, High)
+- "visitBucket": by visit recency (<30d, 30-60d, 60-90d, >90d, Never)
+- "isKOL": KOLs vs Others
+
+### Computable Metrics
+- count: number of elements
+- sum(volumeL): total volume
+- avg(loyaltyScore): average loyalty
+- avg(vingtile): average vingtile
+- sum(publicationsCount): total publications
+
+### Available Filters
+- specialty eq "Pneumologue"
+- isKOL eq true
+- vingtile lte 5
+- loyaltyScore gte 7
+- daysSinceVisit gt 60
+- city contains "Lyon"
+`;
+
+export function getDataSchema(): string {
+  return getLanguage() === 'en' ? DATA_SCHEMA_EN : DATA_SCHEMA_FR;
+}
+
+// Keep DATA_SCHEMA as a default export for backward compatibility
+export const DATA_SCHEMA = DATA_SCHEMA_FR;
+
+// Prompt système AMÉLIORÉ pour la génération de graphiques
+const CHART_GENERATION_PROMPT_FR = `Tu es un expert en visualisation de données pour un CRM pharmaceutique Air Liquide Healthcare.
+
+${DATA_SCHEMA_FR}
 
 ## Ta Mission
 Analyse la demande de l'utilisateur et génère une spécification JSON PRÉCISE pour créer le graphique demandé.
@@ -232,8 +287,97 @@ Réponds UNIQUEMENT avec ce bloc JSON, sans texte avant ni après :
 - chartType: "bar"
 `;
 
+const CHART_GENERATION_PROMPT_EN = `You are a data visualization expert for an Air Liquide Healthcare pharmaceutical CRM.
+
+${DATA_SCHEMA_EN}
+
+## Your Mission
+Analyze the user's request and generate a PRECISE JSON specification to create the requested chart.
+
+## CRITICAL RULES
+1. **RESPECT EXACTLY the requested parameters**:
+   - If the user asks for "15 practitioners" → limit: 15
+   - If the user asks for "top 20" → limit: 20
+   - If the user asks for "KOLs" → filter isKOL: true
+   - If the user asks for "pulmonologists" → filter specialty: "Pneumologue"
+
+2. **Choose the appropriate chart type**:
+   - "bar": for rankings, top N, value comparisons
+   - "pie": for distributions/proportions (max 8 categories)
+   - "composed": to compare 2 metrics (e.g., volume AND loyalty)
+   - "line": for time series only
+
+3. **For KOLs vs Others comparisons**:
+   - groupBy: "isKOL" (will give 2 categories: "KOLs" and "Others")
+
+4. **For distributions by specialty**:
+   - groupBy: "specialty"
+   - With filter if needed (e.g., isKOL: true for "KOLs by specialty")
+
+## MANDATORY Output Format
+Respond ONLY with this JSON block, no text before or after:
+
+\`\`\`json
+{
+  "chartType": "bar",
+  "title": "Descriptive chart title",
+  "description": "This chart shows...",
+  "query": {
+    "source": "practitioners",
+    "filters": [],
+    "groupBy": "city",
+    "metrics": [
+      { "name": "Volume (K L)", "field": "volumeL", "aggregation": "sum", "format": "k" }
+    ],
+    "sortBy": "Volume (K L)",
+    "sortOrder": "desc",
+    "limit": 10
+  },
+  "formatting": {
+    "showLegend": true,
+    "xAxisLabel": "X Label",
+    "yAxisLabel": "Y Label"
+  },
+  "insights": [
+    "Insight based on what the data will show",
+    "Second relevant insight"
+  ],
+  "suggestions": [
+    "Follow-up question 1",
+    "Follow-up question 2"
+  ]
+}
+\`\`\`
+
+## Query Examples
+
+**"Compare KOLs to other practitioners by volume"**:
+- groupBy: "isKOL"
+- metrics: [{ name: "Total Volume (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
+- chartType: "bar"
+
+**"Distribution of KOLs by specialty"**:
+- filters: [{ field: "isKOL", operator: "eq", value: true }]
+- groupBy: "specialty"
+- metrics: [{ name: "Number of KOLs", field: "id", aggregation: "count" }]
+- chartType: "pie"
+
+**"Top 15 practitioners by volume"**:
+- groupBy: null (no grouping, individuals)
+- metrics: [{ name: "Volume (K L)", field: "volumeL", aggregation: "sum", format: "k" }]
+- limit: 15
+- chartType: "bar"
+`;
+
+export function getChartGenerationPrompt(): string {
+  return getLanguage() === 'en' ? CHART_GENERATION_PROMPT_EN : CHART_GENERATION_PROMPT_FR;
+}
+
+// Keep CHART_GENERATION_PROMPT for backward compatibility
+export const CHART_GENERATION_PROMPT = CHART_GENERATION_PROMPT_FR;
+
 // Prompt pour l'analyse conversationnelle (réponse aux questions de suivi)
-export const CONVERSATION_ANALYSIS_PROMPT = `Tu es un assistant expert en analyse de données CRM pharmaceutique.
+const CONVERSATION_ANALYSIS_PROMPT_FR = `Tu es un assistant expert en analyse de données CRM pharmaceutique.
 
 L'utilisateur a posé une question qui fait suite à un graphique précédemment généré.
 
@@ -251,6 +395,32 @@ L'utilisateur a posé une question qui fait suite à un graphique précédemment
 
 Réponds en Markdown de façon concise et précise.
 `;
+
+const CONVERSATION_ANALYSIS_PROMPT_EN = `You are an expert assistant in pharmaceutical CRM data analysis.
+
+The user has asked a follow-up question about a previously generated chart.
+
+## Previous Chart
+{CHART_CONTEXT}
+
+## User's Question
+{USER_QUESTION}
+
+## Instructions
+1. Analyze the question in relation to the previous chart
+2. If the question contradicts what the chart shows, politely explain the difference
+3. If the question asks for details, provide them based on the data
+4. Be precise and use the chart data to support your response
+
+Respond in Markdown concisely and precisely.
+`;
+
+export function getConversationAnalysisPrompt(): string {
+  return getLanguage() === 'en' ? CONVERSATION_ANALYSIS_PROMPT_EN : CONVERSATION_ANALYSIS_PROMPT_FR;
+}
+
+// Keep CONVERSATION_ANALYSIS_PROMPT for backward compatibility
+export const CONVERSATION_ANALYSIS_PROMPT = CONVERSATION_ANALYSIS_PROMPT_FR;
 
 // Extraire les paramètres spécifiques de la question
 export function extractQueryParameters(question: string): {
@@ -308,6 +478,7 @@ export function isFollowUpQuestion(question: string): boolean {
 
 // Construire le contexte des graphiques précédents pour le LLM
 export function buildChartContextForLLM(): string {
+  const lang = getLanguage();
   const history = getChartHistory();
   if (history.length === 0) return '';
 
@@ -319,6 +490,20 @@ export function buildChartContextForLLM(): string {
       .join(', ');
     return `  - ${d.name}: ${metrics}`;
   }).join('\n');
+
+  if (lang === 'en') {
+    return `
+## LAST GENERATED CHART
+Question: "${lastChart.question}"
+Type: ${lastChart.spec.chartType}
+Title: ${lastChart.spec.title}
+
+Displayed data:
+${dataPreview}
+
+Insights: ${lastChart.insights.join(' | ')}
+`;
+  }
 
   return `
 ## DERNIER GRAPHIQUE GÉNÉRÉ
@@ -633,10 +818,11 @@ export function generateChartFromSpec(spec: ChartSpec): ChartResult {
 
 // Générer des insights automatiques améliorés
 function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[] {
+  const lang = getLanguage();
   const insights: string[] = [];
 
   if (data.length === 0) {
-    return ['Aucune donnée ne correspond aux critères'];
+    return [lang === 'en' ? 'No data matches the criteria' : 'Aucune donnée ne correspond aux critères'];
   }
 
   const firstMetric = spec.query.metrics[0]?.name;
@@ -645,14 +831,18 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
   // Top item
   const topItem = data[0];
   if (topItem) {
-    insights.push(`**${topItem.name}** arrive en tête avec ${topItem[firstMetric]} ${spec.formatting?.valueSuffix || ''}`);
+    insights.push(lang === 'en'
+      ? `**${topItem.name}** leads with ${topItem[firstMetric]} ${spec.formatting?.valueSuffix || ''}`
+      : `**${topItem.name}** arrive en tête avec ${topItem[firstMetric]} ${spec.formatting?.valueSuffix || ''}`);
   }
 
   // Total ou moyenne selon le contexte
   if (spec.chartType === 'pie' && data.length > 0) {
     const total = data.reduce((sum, d) => sum + (d[firstMetric] as number || 0), 0);
     const topShare = Math.round(((topItem[firstMetric] as number) / total) * 100);
-    insights.push(`${topItem.name} représente ${topShare}% du total`);
+    insights.push(lang === 'en'
+      ? `${topItem.name} represents ${topShare}% of the total`
+      : `${topItem.name} représente ${topShare}% du total`);
   }
 
   // Comparaison KOL vs Autres
@@ -663,7 +853,9 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
       const kolValue = kolData[firstMetric] as number;
       const autresValue = autresData[firstMetric] as number;
       const total = kolValue + autresValue;
-      insights.push(`Les KOLs représentent ${Math.round(kolValue / total * 100)}% du ${firstMetric.toLowerCase()}`);
+      insights.push(lang === 'en'
+        ? `KOLs represent ${Math.round(kolValue / total * 100)}% of ${firstMetric.toLowerCase()}`
+        : `Les KOLs représentent ${Math.round(kolValue / total * 100)}% du ${firstMetric.toLowerCase()}`);
     }
   }
 
@@ -672,7 +864,9 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
     const lastItem = data[data.length - 1];
     const ratio = Math.round((topItem[firstMetric] as number) / (lastItem[firstMetric] as number || 1));
     if (ratio > 1 && ratio < 100) {
-      insights.push(`Écart de x${ratio} entre ${topItem.name} et ${lastItem.name}`);
+      insights.push(lang === 'en'
+        ? `x${ratio} gap between ${topItem.name} and ${lastItem.name}`
+        : `Écart de x${ratio} entre ${topItem.name} et ${lastItem.name}`);
     }
   }
 
@@ -681,40 +875,69 @@ function generateAutoInsights(spec: ChartSpec, data: ChartDataPoint[]): string[]
 
 // Générer des suggestions de suivi améliorées
 function generateAutoSuggestions(spec: ChartSpec): string[] {
+  const lang = getLanguage();
   const suggestions: string[] = [];
   const groupBy = spec.query.groupBy;
   const hasKOLFilter = spec.query.filters?.some(f => f.field === 'isKOL');
 
-  if (groupBy === 'city') {
-    suggestions.push('Détail des KOLs par ville');
-    suggestions.push('Praticiens à risque par ville');
-  } else if (groupBy === 'specialty') {
-    if (hasKOLFilter) {
-      suggestions.push('Comparer KOLs vs autres praticiens');
-      suggestions.push('Volume par spécialité (tous praticiens)');
-    } else {
-      suggestions.push('KOLs par spécialité');
-      suggestions.push('Fidélité moyenne par spécialité');
+  if (lang === 'en') {
+    if (groupBy === 'city') {
+      suggestions.push('KOL detail by city');
+      suggestions.push('At-risk practitioners by city');
+    } else if (groupBy === 'specialty') {
+      if (hasKOLFilter) {
+        suggestions.push('Compare KOLs vs other practitioners');
+        suggestions.push('Volume by specialty (all practitioners)');
+      } else {
+        suggestions.push('KOLs by specialty');
+        suggestions.push('Average loyalty by specialty');
+      }
+    } else if (groupBy === 'isKOL') {
+      suggestions.push('KOL distribution by specialty');
+      suggestions.push('Top 10 KOLs by volume');
+    } else if (groupBy === 'vingtileBucket' || groupBy === 'vingtile') {
+      suggestions.push('Top segment detail (V1-2)');
+      suggestions.push('KOLs by potential segment');
+    } else if (groupBy === 'riskLevel') {
+      suggestions.push('List of high-risk practitioners');
+      suggestions.push('Priority actions by risk');
+    } else if (!groupBy) {
+      suggestions.push('Distribution by city');
+      suggestions.push('KOLs vs others comparison');
     }
-  } else if (groupBy === 'isKOL') {
-    suggestions.push('Répartition des KOLs par spécialité');
-    suggestions.push('Top 10 KOLs par volume');
-  } else if (groupBy === 'vingtileBucket' || groupBy === 'vingtile') {
-    suggestions.push('Détail du segment Top (V1-2)');
-    suggestions.push('KOLs par segment de potentiel');
-  } else if (groupBy === 'riskLevel') {
-    suggestions.push('Liste des praticiens à risque élevé');
-    suggestions.push('Actions prioritaires par risque');
-  } else if (!groupBy) {
-    // Top N individuel
-    suggestions.push('Répartition par ville');
-    suggestions.push('Comparaison KOLs vs autres');
-  }
-
-  // Suggestions génériques si vide
-  if (!suggestions.length) {
-    suggestions.push('Analyse par ville');
-    suggestions.push('Répartition par segment');
+    if (!suggestions.length) {
+      suggestions.push('Analysis by city');
+      suggestions.push('Distribution by segment');
+    }
+  } else {
+    if (groupBy === 'city') {
+      suggestions.push('Détail des KOLs par ville');
+      suggestions.push('Praticiens à risque par ville');
+    } else if (groupBy === 'specialty') {
+      if (hasKOLFilter) {
+        suggestions.push('Comparer KOLs vs autres praticiens');
+        suggestions.push('Volume par spécialité (tous praticiens)');
+      } else {
+        suggestions.push('KOLs par spécialité');
+        suggestions.push('Fidélité moyenne par spécialité');
+      }
+    } else if (groupBy === 'isKOL') {
+      suggestions.push('Répartition des KOLs par spécialité');
+      suggestions.push('Top 10 KOLs par volume');
+    } else if (groupBy === 'vingtileBucket' || groupBy === 'vingtile') {
+      suggestions.push('Détail du segment Top (V1-2)');
+      suggestions.push('KOLs par segment de potentiel');
+    } else if (groupBy === 'riskLevel') {
+      suggestions.push('Liste des praticiens à risque élevé');
+      suggestions.push('Actions prioritaires par risque');
+    } else if (!groupBy) {
+      suggestions.push('Répartition par ville');
+      suggestions.push('Comparaison KOLs vs autres');
+    }
+    if (!suggestions.length) {
+      suggestions.push('Analyse par ville');
+      suggestions.push('Répartition par segment');
+    }
   }
 
   return suggestions;
@@ -722,6 +945,7 @@ function generateAutoSuggestions(spec: ChartSpec): string[] {
 
 // Créer le contexte de données pour le LLM
 export function getDataContextForLLM(): string {
+  const lang = getLanguage();
   const stats = DataService.getGlobalStats();
   const practitioners = DataService.getAllPractitioners();
   const cities = [...new Set(practitioners.map(p => p.address.city))];
@@ -733,6 +957,21 @@ export function getDataContextForLLM(): string {
       acc[p.specialty] = (acc[p.specialty] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
+
+  if (lang === 'en') {
+    return `
+CURRENT DATA CONTEXT:
+- ${stats.totalPractitioners} total practitioners
+  - ${stats.pneumologues} Pulmonologists
+  - ${stats.generalistes} General Practitioners
+- ${stats.totalKOLs} identified KOLs
+  - Pulmonologists: ${kolsBySpecialty['Pneumologue'] || 0} KOLs
+  - GPs: ${kolsBySpecialty['Médecin généraliste'] || 0} KOLs
+- Total volume: ${Math.round(stats.totalVolume / 1000)}K L/yr
+- Average loyalty: ${stats.averageLoyalty.toFixed(1)}/10
+- Cities present: ${cities.slice(0, 8).join(', ')}${cities.length > 8 ? ` (+${cities.length - 8} others)` : ''}
+`;
+  }
 
   return `
 CONTEXTE DONNÉES ACTUELLES :
@@ -763,74 +1002,80 @@ export interface LocalInterpretation {
  * Utilisé comme fallback quand le LLM n'est pas disponible
  */
 export function interpretQuestionLocally(question: string): LocalInterpretation {
+  const lang = getLanguage();
+  const en = lang === 'en';
   const q = question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   // Extraire les paramètres
   const params = extractQueryParameters(question);
   const limit = params.limit || 10;
 
-  // Patterns pour détecter le type de requête
-  const isTopPrescribers = /top|prescri|volume|plus\s*(de\s*)?volume|qui\s+prescri/i.test(q);
-  const isKOLComparison = /kols?\s*(vs|versus|contre|compar|aux autres)/i.test(q);
-  const isKOLDistribution = /kols?\s*(par|selon|repartition|distribution)/i.test(q);
+  // Patterns pour détecter le type de requête (FR + EN patterns)
+  const isTopPrescribers = /top|prescri|volume|plus\s*(de\s*)?volume|qui\s+prescri|highest/i.test(q);
+  const isKOLComparison = /kols?\s*(vs|versus|contre|compar|aux autres|compared|against)/i.test(q);
+  const isKOLDistribution = /kols?\s*(par|selon|repartition|distribution|by)/i.test(q);
   const isKOLOnly = /\bkols?\b/i.test(q) && !isKOLComparison && !isKOLDistribution;
-  const isByCity = /par\s*ville|ville/i.test(q);
-  const isBySpecialty = /par\s*specialite|specialite|pneumo|generaliste/i.test(q);
-  const isBySegment = /par\s*segment|vingtile|segment/i.test(q);
+  const isByCity = /par\s*ville|ville|by\s*city|city/i.test(q);
+  const isBySpecialty = /par\s*specialite|specialite|pneumo|generaliste|by\s*specialty|specialty/i.test(q);
+  const isBySegment = /par\s*segment|vingtile|segment|by\s*segment/i.test(q);
   const isByLoyalty = /fidelite|fidele|loyal/i.test(q);
-  const isByRisk = /risque|a\s*risque/i.test(q);
-  const wantsPie = /repartition|distribution|camembert|pie|proportion|pourcentage/i.test(q);
+  const isByRisk = /risque|a\s*risque|risk|at.risk/i.test(q);
+  const wantsPie = /repartition|distribution|camembert|pie|proportion|pourcentage|percentage/i.test(q);
+
+  // Bilingual metric names
+  const loyaltyName = en ? 'Loyalty' : 'Fidélité';
+  const countName = en ? 'Count' : 'Nombre';
 
   let spec: ChartSpec;
   let confidence = 0.7;
 
   // ============================================
-  // TOP N PRESCRIPTEURS (défaut le plus courant)
+  // TOP N PRESCRIBERS
   // ============================================
   if (isTopPrescribers && !isByCity && !isBySpecialty && !isKOLDistribution) {
     spec = {
       chartType: 'bar',
-      title: `Top ${limit} prescripteurs par volume`,
-      description: `Les ${limit} praticiens qui prescrivent le plus en volume d'oxygène`,
+      title: en ? `Top ${limit} prescribers by volume` : `Top ${limit} prescripteurs par volume`,
+      description: en ? `The ${limit} practitioners with the highest oxygen prescription volume` : `Les ${limit} praticiens qui prescrivent le plus en volume d'oxygène`,
       query: {
         source: 'practitioners',
         filters: params.wantsKOL ? [{ field: 'isKOL', operator: 'eq', value: true }] : [],
         metrics: [
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Fidélité', field: 'loyaltyScore', aggregation: 'avg' }
+          { name: loyaltyName, field: 'loyaltyScore', aggregation: 'avg' }
         ],
         sortBy: 'Volume (K L)',
         sortOrder: 'desc',
         limit: limit
       },
       formatting: {
-        xAxisLabel: 'Praticien',
-        yAxisLabel: 'Volume (K L/an)',
+        xAxisLabel: en ? 'Practitioner' : 'Praticien',
+        yAxisLabel: en ? 'Volume (K L/yr)' : 'Volume (K L/an)',
         showLegend: true
       }
     };
     confidence = 0.9;
   }
   // ============================================
-  // COMPARAISON KOLs vs AUTRES
+  // KOLs vs OTHERS COMPARISON
   // ============================================
   else if (isKOLComparison) {
     spec = {
       chartType: 'bar',
-      title: 'Comparaison KOLs vs Autres praticiens',
-      description: 'Comparaison du volume entre les Key Opinion Leaders et les autres praticiens',
+      title: en ? 'KOLs vs Other Practitioners Comparison' : 'Comparaison KOLs vs Autres praticiens',
+      description: en ? 'Volume comparison between Key Opinion Leaders and other practitioners' : 'Comparaison du volume entre les Key Opinion Leaders et les autres praticiens',
       query: {
         source: 'practitioners',
         groupBy: 'isKOL',
         metrics: [
-          { name: 'Volume Total (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Nombre', field: 'id', aggregation: 'count' }
+          { name: en ? 'Total Volume (K L)' : 'Volume Total (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
+          { name: countName, field: 'id', aggregation: 'count' }
         ],
-        sortBy: 'Volume Total (K L)',
+        sortBy: en ? 'Total Volume (K L)' : 'Volume Total (K L)',
         sortOrder: 'desc'
       },
       formatting: {
-        xAxisLabel: 'Catégorie',
+        xAxisLabel: en ? 'Category' : 'Catégorie',
         yAxisLabel: 'Volume (K L)',
         showLegend: true
       }
@@ -838,21 +1083,22 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.95;
   }
   // ============================================
-  // DISTRIBUTION KOLs PAR SPÉCIALITÉ
+  // KOLs DISTRIBUTION BY SPECIALTY
   // ============================================
   else if (isKOLDistribution && isBySpecialty) {
+    const metricName = en ? 'Number of KOLs' : 'Nombre de KOLs';
     spec = {
       chartType: wantsPie ? 'pie' : 'bar',
-      title: 'Répartition des KOLs par spécialité',
-      description: 'Distribution des Key Opinion Leaders selon leur spécialité médicale',
+      title: en ? 'KOL Distribution by Specialty' : 'Répartition des KOLs par spécialité',
+      description: en ? 'Distribution of Key Opinion Leaders by medical specialty' : 'Distribution des Key Opinion Leaders selon leur spécialité médicale',
       query: {
         source: 'practitioners',
         filters: [{ field: 'isKOL', operator: 'eq', value: true }],
         groupBy: 'specialty',
         metrics: [
-          { name: 'Nombre de KOLs', field: 'id', aggregation: 'count' }
+          { name: metricName, field: 'id', aggregation: 'count' }
         ],
-        sortBy: 'Nombre de KOLs',
+        sortBy: metricName,
         sortOrder: 'desc'
       },
       formatting: {
@@ -862,27 +1108,27 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.95;
   }
   // ============================================
-  // PAR VILLE
+  // BY CITY
   // ============================================
   else if (isByCity) {
     spec = {
       chartType: wantsPie ? 'pie' : 'bar',
-      title: params.wantsKOL ? 'KOLs par ville' : 'Praticiens par ville',
-      description: 'Répartition géographique des praticiens',
+      title: en ? (params.wantsKOL ? 'KOLs by City' : 'Practitioners by City') : (params.wantsKOL ? 'KOLs par ville' : 'Praticiens par ville'),
+      description: en ? 'Geographic distribution of practitioners' : 'Répartition géographique des praticiens',
       query: {
         source: 'practitioners',
         filters: params.wantsKOL ? [{ field: 'isKOL', operator: 'eq', value: true }] : [],
         groupBy: 'city',
         metrics: [
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Nombre', field: 'id', aggregation: 'count' }
+          { name: countName, field: 'id', aggregation: 'count' }
         ],
         sortBy: 'Volume (K L)',
         sortOrder: 'desc',
         limit: limit
       },
       formatting: {
-        xAxisLabel: 'Ville',
+        xAxisLabel: en ? 'City' : 'Ville',
         yAxisLabel: 'Volume (K L)',
         showLegend: true
       }
@@ -890,20 +1136,20 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.85;
   }
   // ============================================
-  // PAR SPÉCIALITÉ
+  // BY SPECIALTY
   // ============================================
   else if (isBySpecialty) {
     spec = {
       chartType: wantsPie ? 'pie' : 'bar',
-      title: 'Répartition par spécialité',
-      description: 'Distribution des praticiens par spécialité médicale',
+      title: en ? 'Distribution by Specialty' : 'Répartition par spécialité',
+      description: en ? 'Practitioner distribution by medical specialty' : 'Distribution des praticiens par spécialité médicale',
       query: {
         source: 'practitioners',
         filters: params.wantsKOL ? [{ field: 'isKOL', operator: 'eq', value: true }] : [],
         groupBy: 'specialty',
         metrics: [
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Nombre', field: 'id', aggregation: 'count' }
+          { name: countName, field: 'id', aggregation: 'count' }
         ],
         sortBy: 'Volume (K L)',
         sortOrder: 'desc'
@@ -915,19 +1161,19 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.85;
   }
   // ============================================
-  // PAR SEGMENT (VINGTILE)
+  // BY SEGMENT (VINGTILE)
   // ============================================
   else if (isBySegment) {
     spec = {
       chartType: wantsPie ? 'pie' : 'bar',
-      title: 'Répartition par segment de potentiel',
-      description: 'Distribution des praticiens par vingtile',
+      title: en ? 'Distribution by Potential Segment' : 'Répartition par segment de potentiel',
+      description: en ? 'Practitioner distribution by vingtile' : 'Distribution des praticiens par vingtile',
       query: {
         source: 'practitioners',
         groupBy: 'vingtileBucket',
         metrics: [
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Nombre', field: 'id', aggregation: 'count' }
+          { name: countName, field: 'id', aggregation: 'count' }
         ],
         sortBy: 'Volume (K L)',
         sortOrder: 'desc'
@@ -939,21 +1185,21 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.85;
   }
   // ============================================
-  // PAR FIDÉLITÉ
+  // BY LOYALTY
   // ============================================
   else if (isByLoyalty) {
     spec = {
       chartType: wantsPie ? 'pie' : 'bar',
-      title: 'Distribution par niveau de fidélité',
-      description: 'Répartition des praticiens selon leur score de fidélité',
+      title: en ? 'Distribution by Loyalty Level' : 'Distribution par niveau de fidélité',
+      description: en ? 'Practitioner distribution by loyalty score' : 'Répartition des praticiens selon leur score de fidélité',
       query: {
         source: 'practitioners',
         groupBy: 'loyaltyBucket',
         metrics: [
-          { name: 'Nombre', field: 'id', aggregation: 'count' },
+          { name: countName, field: 'id', aggregation: 'count' },
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' }
         ],
-        sortBy: 'Nombre',
+        sortBy: countName,
         sortOrder: 'desc'
       },
       formatting: {
@@ -963,21 +1209,21 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.85;
   }
   // ============================================
-  // PAR RISQUE
+  // BY RISK
   // ============================================
   else if (isByRisk) {
     spec = {
       chartType: 'pie',
-      title: 'Répartition par niveau de risque',
-      description: 'Distribution des praticiens selon leur niveau de risque de désengagement',
+      title: en ? 'Distribution by Risk Level' : 'Répartition par niveau de risque',
+      description: en ? 'Practitioner distribution by churn risk level' : 'Distribution des praticiens selon leur niveau de risque de désengagement',
       query: {
         source: 'practitioners',
         groupBy: 'riskLevel',
         metrics: [
-          { name: 'Nombre', field: 'id', aggregation: 'count' },
+          { name: countName, field: 'id', aggregation: 'count' },
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' }
         ],
-        sortBy: 'Nombre',
+        sortBy: countName,
         sortOrder: 'desc'
       },
       formatting: {
@@ -987,19 +1233,19 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.85;
   }
   // ============================================
-  // KOLs SEULEMENT (liste ou stats)
+  // KOLs ONLY
   // ============================================
   else if (isKOLOnly) {
     spec = {
       chartType: 'bar',
-      title: `Top ${limit} KOLs par volume`,
-      description: 'Les Key Opinion Leaders les plus importants en volume',
+      title: en ? `Top ${limit} KOLs by Volume` : `Top ${limit} KOLs par volume`,
+      description: en ? 'The most important Key Opinion Leaders by volume' : 'Les Key Opinion Leaders les plus importants en volume',
       query: {
         source: 'practitioners',
         filters: [{ field: 'isKOL', operator: 'eq', value: true }],
         metrics: [
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Fidélité', field: 'loyaltyScore', aggregation: 'avg' }
+          { name: loyaltyName, field: 'loyaltyScore', aggregation: 'avg' }
         ],
         sortBy: 'Volume (K L)',
         sortOrder: 'desc',
@@ -1014,26 +1260,26 @@ export function interpretQuestionLocally(question: string): LocalInterpretation 
     confidence = 0.8;
   }
   // ============================================
-  // DÉFAUT: TOP PRESCRIPTEURS
+  // DEFAULT: TOP PRESCRIBERS
   // ============================================
   else {
     spec = {
       chartType: 'bar',
-      title: `Top ${limit} prescripteurs par volume`,
-      description: `Les ${limit} praticiens avec le plus grand volume de prescription`,
+      title: en ? `Top ${limit} prescribers by volume` : `Top ${limit} prescripteurs par volume`,
+      description: en ? `The ${limit} practitioners with the highest prescription volume` : `Les ${limit} praticiens avec le plus grand volume de prescription`,
       query: {
         source: 'practitioners',
         metrics: [
           { name: 'Volume (K L)', field: 'volumeL', aggregation: 'sum', format: 'k' },
-          { name: 'Fidélité', field: 'loyaltyScore', aggregation: 'avg' }
+          { name: loyaltyName, field: 'loyaltyScore', aggregation: 'avg' }
         ],
         sortBy: 'Volume (K L)',
         sortOrder: 'desc',
         limit: limit
       },
       formatting: {
-        xAxisLabel: 'Praticien',
-        yAxisLabel: 'Volume (K L/an)',
+        xAxisLabel: en ? 'Practitioner' : 'Praticien',
+        yAxisLabel: en ? 'Volume (K L/yr)' : 'Volume (K L/an)',
         showLegend: true
       }
     };

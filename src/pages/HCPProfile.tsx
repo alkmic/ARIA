@@ -10,6 +10,7 @@ import { useTimePeriod } from '../contexts/TimePeriodContext';
 import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { getTopPractitioners } from '../services/metricsCalculator';
 import { useTranslation } from '../i18n';
+import { localizeSpecialty, localizeAiSummary, txt } from '../utils/localizeData';
 import type { FilterOptions } from '../types';
 
 export const HCPProfile: React.FC = () => {
@@ -100,7 +101,7 @@ export const HCPProfile: React.FC = () => {
 
       {/* Practitioners Grid - RESPONSIVE */}
       {practitioners.length === 0 ? (
-        <div className="glass-card p-12 text-center">
+        <div className="glass-card p-8 text-center">
           <p className="text-gray-600">
             {searchQuery
               ? t('practitioners.noPractitionerFound', { query: searchQuery })
@@ -135,17 +136,17 @@ export const HCPProfile: React.FC = () => {
                       <Badge variant="success" size="sm">Top {periodLabel}</Badge>
                     )}
                     {practitioner.isKOL && (
-                      <Badge variant="warning" size="sm">KOL</Badge>
+                      <Badge variant="warning" size="sm">{t('common.kol')}</Badge>
                     )}
                   </div>
-                  <p className="text-sm text-slate-600 mb-2">{practitioner.specialty}</p>
+                  <p className="text-sm text-slate-600 mb-2">{localizeSpecialty(practitioner.specialty)}</p>
 
                   <div className="flex items-center flex-wrap gap-3 text-xs text-slate-500 mb-2">
                     <span className="flex items-center space-x-1">
                       <MapPin className="w-3 h-3" />
                       <span>{practitioner.city}</span>
                     </span>
-                    <span>Vingtile {practitioner.vingtile}</span>
+                    <span>{txt('Vingtile', 'Vigintile')} {practitioner.vingtile}</span>
                   </div>
 
                   <div className="flex items-center flex-wrap gap-2">
@@ -154,7 +155,7 @@ export const HCPProfile: React.FC = () => {
                       practitioner.trend === 'down' ? 'text-danger' : 'text-slate-500'
                     }`}>
                       {getTrendIcon(practitioner.trend)}
-                      <span>{(practitioner.volumeL / 1000).toFixed(0)}K L/an</span>
+                      <span>{(practitioner.volumeL / 1000).toFixed(0)}{t('visits.perYear')}</span>
                     </div>
                     <Badge
                       variant={practitioner.riskLevel === 'high' ? 'danger' : practitioner.riskLevel === 'medium' ? 'warning' : 'default'}
@@ -168,7 +169,7 @@ export const HCPProfile: React.FC = () => {
 
               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                 <p className="text-xs text-slate-600 line-clamp-2 flex-1">
-                  {practitioner.aiSummary}
+                  {localizeAiSummary(practitioner.aiSummary)}
                 </p>
                 <button
                   onClick={(e) => {

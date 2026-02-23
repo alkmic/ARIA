@@ -72,4 +72,57 @@ export const voiceReport = {
   competitorIntel: 'Competitive intelligence ({{names}}) → Competition note',
   actionsToFollow: '{{count}} action(s) to follow',
   dataAccessible: 'Data accessible by the AI Coach to answer your questions',
+
+  // Speech recognition
+  speechNotSupported: 'Speech recognition is not supported. Please use Chrome or Edge.',
+
+  // Mock data fallback
+  fallbackGeneralDiscussion: 'General discussion',
+  fallbackFollowUp: 'Follow-up to schedule',
+  fallbackStandardVisit: 'Standard visit',
+
+  // Placeholders
+  placeholders: {
+    addTopic: 'Add a topic...',
+    addProduct: 'Add a product...',
+    addAction: 'Add an action...',
+    addOpportunity: 'Add an opportunity...',
+    addObjection: 'Add an objection...',
+    addKeyPoint: 'Add a key point...',
+    addCompetitor: 'Add a competitor...',
+  },
+
+  // Product suggestions (user-visible labels)
+  productSuggestions: {
+    vitalaire: 'VitalAire Comfort+',
+    telesuivi: 'Remote O2 Monitoring',
+    vni: 'NIV DreamStation',
+    freestyle: 'FreeStyle Comfort',
+    ppc: 'CPAP ResMed',
+    o2portable: 'Portable Liquid O2',
+    service247: '24/7 Service',
+    formation: 'Patient Training',
+  },
+
+  // Tooltip
+  clickToEdit: 'Click to edit',
+
+  // AI deduction labels
+  deductionLabels: {
+    interestIn: 'Interest in {{product}}',
+    productDiscussed: 'The practitioner discussed {{product}} during this visit. Add to their product interests.',
+    competitorMentioned: '{{competitor}} mentioned',
+    competitorDetail: 'The practitioner uses or mentioned {{competitor}}. Competitive monitoring activated.',
+    barrierIdentified: 'Barrier identified',
+    opportunityDetected: 'Opportunity detected',
+    positiveRelationship: 'Positive relationship',
+    positiveDetail: 'Overall sentiment is positive. The practitioner is receptive — good time to propose additional services or an upgrade.',
+    dissatisfactionAlert: 'Dissatisfaction alert',
+    negativeDetail: 'Overall sentiment is negative. Set up enhanced follow-up and identify causes of dissatisfaction. Potential churn risk.',
+    actionsToSchedule: '{{count}} action(s) to schedule',
+    actionsIdentified: 'Identified actions: {{actions}}. These actions will be added to the practitioner follow-up.',
+  },
+
+  // Validated enrichments summary
+  deductionsSummary: '{{accepted}} deduction(s) out of {{total}} will be integrated into {{name}}\'s profile. The full report and AI notes will also be saved.',
 };
