@@ -101,7 +101,7 @@ export const HCPProfile: React.FC = () => {
 
       {/* Practitioners Grid - RESPONSIVE */}
       {practitioners.length === 0 ? (
-        <div className="glass-card p-12 text-center">
+        <div className="glass-card p-8 text-center">
           <p className="text-gray-600">
             {searchQuery
               ? t('practitioners.noPractitionerFound', { query: searchQuery })

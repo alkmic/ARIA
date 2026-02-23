@@ -176,8 +176,8 @@ export const Visits: React.FC = () => {
       {/* Visits List */}
       <div className="space-y-6">
         {sortedDates.length === 0 ? (
-          <div className="glass-card p-12 text-center">
-            <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <div className="glass-card p-8 text-center">
+            <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-800 mb-2">
               {t('visits.noVisits')}
             </h3>

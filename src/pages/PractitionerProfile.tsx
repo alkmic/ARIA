@@ -195,7 +195,7 @@ export default function PractitionerProfile() {
           <div className="glass-card p-6">
             <div className="mb-4 p-4 bg-gradient-to-br from-al-blue-50 to-al-sky/10 rounded-xl text-center">
               <p className="text-sm text-slate-600 mb-1">{txt('VINGTILE', 'VIGINTILE')}</p>
-              <p className="text-4xl font-bold gradient-text">{practitioner.vingtile}</p>
+              <p className="text-3xl font-bold gradient-text">{practitioner.vingtile}</p>
               <p className="text-sm text-slate-600 mt-1">
                 Top {practitioner.vingtile * 5}%
               </p>
@@ -745,8 +745,8 @@ function HistoryTab({ conversations, timePeriod, periodLabel, practitionerId }: 
       </div>
 
       {filteredConversations.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <div className="glass-card p-6 text-center">
+          <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500">{t('practitioners.noConversation')}</p>
         </div>
       ) : (

@@ -68,20 +68,20 @@ const Welcome: React.FC = () => {
         {/* Logo et icône */}
         <div className="mb-8 flex justify-center items-center space-x-4">
           <div className="relative">
-            <Wind className="w-20 h-20 text-al-sky animate-pulse-slow" strokeWidth={1.5} />
+            <Wind className="w-16 h-16 text-al-sky animate-pulse-slow" strokeWidth={1.5} />
             <Sparkles className="w-8 h-8 text-white absolute -top-2 -right-2 animate-pulse" />
           </div>
         </div>
 
         {/* Titre principal */}
-        <h1 className="text-8xl md:text-9xl font-bold mb-6 tracking-tight">
+        <h1 className="text-7xl md:text-8xl font-bold mb-6 tracking-tight">
           <span className="bg-gradient-to-r from-white via-al-sky to-al-teal bg-clip-text text-transparent animate-gradient">
             ARIA
           </span>
         </h1>
 
         {/* Sous-titre */}
-        <p className="text-2xl md:text-3xl text-white/90 mb-4 font-light tracking-wide">
+        <p className="text-xl md:text-2xl text-white/90 mb-4 font-light tracking-wide">
           {t('welcome.mainSubtitle')}
         </p>
 
@@ -107,17 +107,17 @@ const Welcome: React.FC = () => {
         {/* Points clés */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-white/80">
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-al-sky mb-2">{t('welcome.features.generativeAI')}</div>
+            <div className="text-2xl font-bold text-al-sky mb-2">{t('welcome.features.generativeAI')}</div>
             <p className="text-sm">{t('welcome.features.generativeAIDesc')}</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-al-teal mb-2">{t('welcome.features.predictiveAnalysis')}</div>
+            <div className="text-2xl font-bold text-al-teal mb-2">{t('welcome.features.predictiveAnalysis')}</div>
             <p className="text-sm">{t('welcome.features.predictiveAnalysisDesc')}</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-default">
-            <div className="text-3xl font-bold text-white mb-2">{t('welcome.features.virtualCoach')}</div>
+            <div className="text-2xl font-bold text-white mb-2">{t('welcome.features.virtualCoach')}</div>
             <p className="text-sm">{t('welcome.features.virtualCoachDesc')}</p>
           </div>
         </div>
